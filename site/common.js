@@ -19,7 +19,7 @@
   // scale: drawn size relative to the pack's standard characters; fix: per-state horizontal centring (512px frame units); extra: has idle/win/tired sheet
   const BUILTIN_ART = {
     hotdog: { extra: true }, beer: { extra: true }, pretzel: { extra: true }, pizza: { extra: true },
-    dino: { extra: false, scale: 1.45, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
+    dino: { extra: true, scale: 1.45, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
   };
   const decorateOptions = (options) => (options || []).map((o) => {
     const out = { ...o }, art = BUILTIN_ART[out.id];
@@ -73,9 +73,9 @@
       async listVenues() { return state.venues.filter((v) => v.active).sort((a, b) => a.sort_order - b.sort_order); },
       async listAllVenues() { return [...state.venues].sort((a, b) => a.sort_order - b.sort_order); },
       async listGames() { return state.games.filter((g) => g.active); },
-      async createRound({ venue_id, game_key, prize }) {
+      async createRound({ venue_id, game_key, prize, racers }) {
         requireAuth();
-        const r = { id: uuid(), code: makeCode(), venue_id, game_key, prize: prize || null, status: "open", winning_pick: null, created_by: me().id, created_at: new Date().toISOString(), started_at: null, finished_at: null };
+        const r = { id: uuid(), code: makeCode(), venue_id, game_key, prize: prize || null, racers: racers || null, status: "open", winning_pick: null, created_by: me().id, created_at: new Date().toISOString(), started_at: null, finished_at: null };
         state.rounds.push(r); persist(); return r;
       },
       async setRoundStatus(id, status) { requireAuth(); const r = round(id); r.status = status; if (status === "running") r.started_at = new Date().toISOString(); persist(); return r; },
@@ -121,7 +121,7 @@
       async getRoundPublic(code) {
         const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return null;
         const v = state.venues.find((x) => x.id === r.venue_id); const g = state.games.find((x) => x.key === r.game_key);
-        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: g };
+        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options } };
       },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {
         await sleep(300);
@@ -132,7 +132,7 @@
         if (digits.length !== 10) return { ok: false, error: "Please enter a valid 10-digit US phone number." };
         if (String(name || "").trim().length < 2) return { ok: false, error: "Please enter your name." };
         const g = state.games.find((x) => x.key === r.game_key);
-        if (!g.options.some((o) => o.id === pick)) return { ok: false, error: "Please pick one of the options." };
+        if (!g.options.some((o) => o.id === pick) || (r.racers && !r.racers.includes(pick))) return { ok: false, error: "Please pick one of the options." };
         const ex = state.entries.find((e) => e.round_id === r.id && e.phone === digits);
         if (ex) { ex.pick = pick; ex.name = name.trim(); ex.sms_opt_in = ex.sms_opt_in || !!opt_in; }
         else state.entries.push({ id: uuid(), round_id: r.id, name: name.trim(), phone: digits, pick, sms_opt_in: !!opt_in, opt_in_text, is_winner: false, texted: false, notes: null, created_at: new Date().toISOString() });
@@ -192,10 +192,10 @@
       async listVenues() { return throwIf(await sb.from("venues").select("*").eq("active", true).order("sort_order")); },
       async listAllVenues() { return throwIf(await sb.from("venues").select("*").order("sort_order")); },
       async listGames() { return throwIf(await sb.from("games").select("*").eq("active", true).order("sort_order")); },
-      async createRound({ venue_id, game_key, prize }) {
+      async createRound({ venue_id, game_key, prize, racers }) {
         const me = await this.me();
         for (let i = 0; i < 5; i++) {
-          const { data, error } = await sb.from("rounds").insert({ code: makeCode(), venue_id, game_key, prize: prize || null, created_by: me.id }).select().single();
+          const { data, error } = await sb.from("rounds").insert({ code: makeCode(), venue_id, game_key, prize: prize || null, racers: racers || null, created_by: me.id }).select().single();
           if (!error) return data; if (!/duplicate/i.test(error.message)) throw new Error(error.message);
         }
         throw new Error("Could not create a game code, try again.");

@@ -124,6 +124,7 @@
   <div><label>Tonight's prize</label><input id="sPrize"></div>
   <div><label>Sign-up countdown (seconds)</label><input id="sCountdown" type="number" min="20" max="600" step="5"></div>
   <div><label>Game</label><select id="sGame"></select></div>
+  <div><label>Racers (pick 4)</label><div id="sRacers" class="stack" style="gap:.4rem"></div></div>
   <div class="row"><button id="sMute" class="btn small">Mute</button><button id="sFull" class="btn small">Fullscreen</button></div>
   <div class="row"><a href="index.html" class="btn small">Portal</a><button id="sLogout" class="btn small">Log out</button></div>
   <button id="sClose" class="btn primary" style="width:100%">Close (S)</button>
@@ -142,7 +143,7 @@
   const { api, MOCK, $, $$, esc, sleep, decorateOptions } = window.BG;
   const art = (o, h) => o.icon_url ? `<img src="${esc(o.icon_url)}" alt="" style="height:${h}px">` : o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="height:${h}px">` : MASCOTS.standalone(o.id, h, { emoji: o.emoji });
   const state = { me: null, venue: null, venues: [], games: [], game: null, round: null, phase: "console", poll: null, raceCtl: null, timer: null, auto: null, season: null,
-                  settings: { prize: "", countdown: 120, gameKey: "race" } };
+                  settings: { prize: "", countdown: 120, gameKey: "race", racers: null } };
   try { Object.assign(state.settings, JSON.parse(localStorage.getItem("lctg.settings") || "{}")); } catch {}
   const saveSettings = () => { try { localStorage.setItem("lctg.settings", JSON.stringify(state.settings)); } catch {} };
 
@@ -188,18 +189,35 @@
 
   // ---------- settings panel ----------
   const settings = $("#settings");
-  function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
+  function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; renderRacerPicker(); $("#sGame").onchange = renderRacerPicker; $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
   async function closeSettings() {
+    const picked = $$("#sRacers input:checked").map((cb) => cb.value);
+    if (picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
+    const rosterChanged = JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game));
     const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
+    state.settings.racers = picked;
     state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings();
     if (venueChanged) setVenue($("#sVenue").value);
     $("#stPrize").textContent = prizeText(); settings.classList.remove("on");
-    if ((venueChanged || gameChanged || prizeChanged) && state.phase === "landing") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} renderLanding({ fresh: true }); }
+    if ((venueChanged || gameChanged || prizeChanged || rosterChanged) && state.phase === "landing") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} renderLanding({ fresh: true }); }
   }
   $("#sClose").onclick = closeSettings; $("#sMute").onclick = () => { AUDIO.setMuted(!AUDIO.isMuted()); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; }; $("#sFull").onclick = toggleFullscreen; $("#sLogout").onclick = async () => { await api.signOut(); location.reload(); };
 
   // ---------- stage screens ----------
   const stage = $("#stage");
+  const ROSTER_SIZE = 4;
+  function roster(game) {   // the ids in play for this game, always exactly ROSTER_SIZE when the game has that many
+    const ids = (game.options || []).map((o) => o.id);
+    const chosen = (state.settings.racers || []).filter((id) => ids.includes(id));
+    return chosen.length === Math.min(ROSTER_SIZE, ids.length) ? chosen : ids.slice(0, ROSTER_SIZE);
+  }
+  const activeOptions = (game) => { const r = roster(game); return game.options.filter((o) => r.includes(o.id)); };
+  function renderRacerPicker() {
+    const g = state.games.find((x) => x.key === $("#sGame").value) || state.game || state.games[0]; if (!g) return;
+    const cur = roster(g);
+    $("#sRacers").innerHTML = g.options.map((o) => `<label style="display:flex;align-items:center;gap:.6rem;margin:0;color:var(--text)"><input type="checkbox" value="${esc(o.id)}" ${cur.includes(o.id) ? "checked" : ""}> ${art(o, 34)} ${esc(o.label)}</label>`).join("");
+    $$("#sRacers input").forEach((cb) => (cb.onchange = () => { const on = $$("#sRacers input:checked"); if (on.length > ROSTER_SIZE) { cb.checked = false; toast(`Pick ${ROSTER_SIZE} racers.`); } }));
+  }
   const prizeText = () => state.settings.prize || state.venue.default_prize || "";
   function qrSvg(text) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
 
@@ -213,9 +231,9 @@
     $("#stPrize").textContent = prizeText();
     state.game = state.games.find((x) => x.key === state.settings.gameKey) || state.games[0];
     if (!state.round || opts.fresh) {
-      try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: state.game.key, prize: state.settings.prize }); } catch (e) { toast(e.message); return; }
+      try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: state.game.key, prize: state.settings.prize, racers: roster(state.game) }); } catch (e) { toast(e.message); return; }
     }
-    const g = state.game, url = window.BG.entryUrl(state.round.code), secs = state.settings.countdown, C = 2 * Math.PI * 45;
+    const g = { ...state.game, options: activeOptions(state.game) }, url = window.BG.entryUrl(state.round.code), secs = state.settings.countdown, C = 2 * Math.PI * 45;
     $("#stageBody").innerHTML = `<div class="signup">
       <div><div class="qr-wrap">${qrSvg(url)}</div></div>
       <div class="cta">
@@ -267,7 +285,7 @@
     if (state.phase !== "signup" && state.phase !== "landing") return;
     state.phase = "running"; clearTimers(); stage.classList.remove("dark"); keybar("running");
     try { await api.setRoundStatus(state.round.id, "running"); } catch (e) { toast(e.message); }
-    const opts = state.game.options, winner = opts[Math.floor(Math.random() * opts.length)];
+    const opts = activeOptions(state.game), winner = opts[Math.floor(Math.random() * opts.length)];
     $("#stFootLeft").innerHTML = "";
     $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     state.raceCtl = RACE.run($("#raceHost"), { racers: opts, winnerId: winner.id, venue: state.venue,

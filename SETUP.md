@@ -26,7 +26,7 @@ The first account created becomes the admin. Open `admin.html` on the hosted sit
 1. Open the portal on the laptop, log in, choose Showrunner, pick the bar and tonight's prize, click "Go to the TV screen". From here everything on the laptop is safe to mirror to the TVs.
 2. The landing screen is "Wanna play a game?" with the QR code live, so guests can scan any time. Up/down arrows pick the game. Press **Enter** to start the clock (default 2 minutes, change it in settings). The race starts when it hits zero, or press **Enter** again to race now. **Esc** stops the clock.
 3. Race, winner screen (14 s), leaderboard (15 s), then back to the landing screen with a fresh code. **Enter** skips ahead at any point.
-4. The key bar at the bottom of the screen shows what each key does. **S** settings (bar, prize, countdown, game, mute, log out), **F** fullscreen, **M** mute. Clicking the screen also advances.
+4. The key bar at the bottom of the screen shows what each key does. **S** settings (bar, prize, countdown, game, which 4 racers run, mute, log out), **F** fullscreen, **M** mute. Clicking the screen also advances.
 
 ## Leaderboards
 
@@ -47,15 +47,15 @@ Recorded MP3s go in `site/announcer/` named by key (send them to Claude as a zip
 | set | Get set! |
 | go | And they're off! |
 | lead | We've got a new leader! |
-| lead-hotdog / lead-beer / lead-pretzel / lead-pizza | Hot Dog takes the lead! (etc.) |
+| lead-hotdog / lead-beer / lead-pretzel / lead-pizza / lead-dino | Hot Dog takes the lead! (etc.) |
 | down | Oh! Down goes a racer! |
-| down-hotdog / down-beer / down-pretzel / down-pizza | Oh no, Hot Dog goes down! (etc.) |
+| down-hotdog / down-beer / down-pretzel / down-pizza / down-dino | Oh no, Hot Dog goes down! (etc.) |
 | stretch | Here they come down the stretch! |
 | close | It's going to be close! Photo finish! |
 | runaway | And they're running away with it! |
 | comeback | What a comeback! Look at them go! |
 | wins | We have a winner! |
-| wins-hotdog / wins-beer / wins-pretzel / wins-pizza | Hot Dog wins it! Hot Dog takes the race! (etc.) |
+| wins-hotdog / wins-beer / wins-pretzel / wins-pizza / wins-dino | Hot Dog wins it! Hot Dog takes the race! (etc.) |
 
 Keys: M on the console mutes everything. The crowd is generated live and needs no files.
 
