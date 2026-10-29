@@ -112,13 +112,21 @@
     });
     const winner = R.find((r) => r.id === winnerId) || R[0];
 
-    // drama script: two non-winners lead early, one stumbles, winner surges late
+    // drama script. Each race gets a finish style:
+    //  photo   - winner and one rival trade the lead to the line, decided by a nose (slow-mo + PHOTO FINISH)
+    //  comeback- winner sits 3rd/4th until late, then storms past (slow-mo, no banner unless truly close)
+    //  runaway - winner breaks clear with a third to go and wins easily (no slow-mo)
     const others = R.filter((r) => r !== winner).sort(() => Math.random() - 0.5);
-    if (others[0]) others[0].boosts.push([0.12, 0.38, 1.22]);
-    if (others[1]) others[1].boosts.push([0.42, 0.68, 1.24]);
-    if (others[2]) others[2].boosts.push([0.2, 0.3, 1.15], [0.6, 0.72, 1.18]);
-    winner.boosts.push([0.0, 0.1, 1.1], [0.74, 1.0, 1.42]);
-    const stumbler = others.length ? pick(others) : null, stumbleAt = rnd(0.28, 0.6);
+    const style = opts.finishStyle || pick(["photo", "photo", "comeback", "comeback", "runaway"]);
+    const rival = others[0];
+    if (others[0]) others[0].boosts.push([0.12, 0.38, 1.2]);
+    if (others[1]) others[1].boosts.push([0.42, 0.66, 1.22]);
+    if (others[2]) others[2].boosts.push([0.2, 0.3, 1.12], [0.58, 0.7, 1.15]);
+    let margin, surge, slowFactor, photoGap;
+    if (style === "photo") { winner.boosts.push([0.0, 0.1, 1.08], [0.72, 1.0, 1.12]); if (rival) rival.boosts.push([0.7, 1.0, 1.1]); margin = 0.006; surge = 0; slowFactor = 0.3; photoGap = 0.02; }
+    else if (style === "comeback") { winner.boosts.push([0.0, 0.45, 0.9], [0.62, 1.0, 1.5]); margin = 0.03; surge = 1; slowFactor = 0.45; photoGap = 0.012; }
+    else { winner.boosts.push([0.0, 0.1, 1.08], [0.55, 1.0, 1.38]); margin = 0.07; surge = 1; slowFactor = 0.75; photoGap = 0; }
+    const stumbler = others.length ? pick(others.filter((o) => style !== "photo" || o !== rival)) || null : null, stumbleAt = rnd(0.28, 0.6);
     let stumbled = false;
 
     // HUD setup
@@ -151,7 +159,7 @@
       }
       // ---- race ----
       const T = Math.min(1.2, (now - raceStart) / duration);
-      if (slow) dt *= 0.32;
+      if (slow) dt *= slowFactor;
       const leaderP = Math.max(...R.map((r) => r.p));
       R.forEach((r) => {
         if (r.mode === "win" || r.mode === "tired") return;
@@ -159,21 +167,29 @@
         let f = r.burst;
         r.boosts.forEach(([a, b, k]) => { if (T >= a && T <= b) f *= k; });
         if (r !== winner && r.p < leaderP - 0.1) f *= 1.15;               // pack stays together
+        if (style === "photo" && r === rival && T > 0.4 && r.p < winner.p - 0.012) f *= 1.35;   // rival glued to the winner
+        if (style === "photo" && r === winner && T > 0.4 && r.p < rival.p - 0.012) f *= 1.35;
         if (r === stumbler && !stumbled && T >= stumbleAt) { stumbled = true; r.stumbleUntil = now + r.actor.stumbleMs; say(`${r.label} goes down!`); }
         if (now < r.stumbleUntil) { f *= 0.1; r.mode = "stumble"; } else if (r.mode === "stumble") r.mode = "run";
         r.v = f;
         r.p += (f / (duration / 1000)) * dt;
         if (r !== winner) {
-          if (!finished) { if (T > 0.82) r.p = Math.min(r.p, winner.p - 0.012 - 0.006 * r.i); r.p = Math.min(r.p, 0.995); }
-          else if (r.p >= 0.975) { r.p = 0.975; r.mode = "tired"; }
+          if (!finished) {
+            if (T > 0.78) { const m = (style === "photo" && r === rival) ? margin : Math.max(margin, 0.02) + 0.012 * r.i; r.p = Math.min(r.p, winner.p - m); }
+            r.p = Math.min(r.p, 0.995);
+          }
+          else if (r.p >= r.stopAt) { r.p = r.stopAt; r.mode = "tired"; }
         }
       });
       // photo finish / slow-mo
       if (!slow && !finished && winner.p > 0.9) {
         slow = true;
         const second = Math.max(...R.filter((r) => r !== winner).map((r) => r.p));
-        if (winner.p - second < 0.04 && !photoShown) { photoShown = true; const el = document.createElement("div"); el.className = "race-photo"; el.textContent = "PHOTO FINISH"; container.querySelector(".race-hud").appendChild(el); setTimeout(() => el.remove(), 2600); }
-        say("It's going to be close!");
+        const gap = winner.p - second;
+        if (gap < photoGap && !photoShown) { photoShown = true; const el = document.createElement("div"); el.className = "race-photo"; el.textContent = "PHOTO FINISH"; container.querySelector(".race-hud").appendChild(el); setTimeout(() => el.remove(), 2600); say("It's going to be close!"); }
+        else if (style === "comeback") say(`${winner.label} is flying!`);
+        else if (style === "runaway") say(`${winner.label} is running away with it!`);
+        else say("Down the stretch they come!");
       }
       // lead changes
       const leader = [...R].sort((a, b) => b.p - a.p)[0];
@@ -183,12 +199,13 @@
       if (!finished && winner.p >= 1) {
         finished = true; winner.p = 1; winner.mode = "win"; slow = false;
         finalOrder = [winner, ...R.filter((r) => r !== winner).sort((a, b) => b.p - a.p)];
+        R.forEach((r) => { r.finalGap = winner.p - r.p; r.stopAt = r === winner ? 1 : Math.max(0.8, Math.min(0.975, r.p + 0.045)); });
         big.innerHTML = `<div class="t">${esc(winner.label.toUpperCase())} WINS!</div>`;
         say(`${winner.label} wins it!`, 4000);
         setTimeout(() => { if (!stopped) onDone(); }, 3400);
       }
       // draw
-      R.forEach((r) => { r.actor.set(r.mode); r.actor.tick(slow ? dt / 0.32 * 0.6 : dt, r.v); place(r); });
+      R.forEach((r) => { r.actor.set(r.mode); r.actor.tick(slow ? dt / slowFactor * 0.6 : dt, r.v); place(r); });
       const targetCam = Math.max(0, Math.min(L - W, xOf(finished ? winner : leader) - W * 0.62));
       camX = lerp(camX, targetCam, 1 - Math.pow(0.001, dt));
       const cx = Math.round(camX);
@@ -197,7 +214,7 @@
       far.setAttribute("transform", `translate(${-Math.round(cx * PARALLAX.far)} 0)`);
       // HUD
       const order = finalOrder || [...R].sort((a, b) => b.p - a.p);
-      order.forEach((r, i) => { const row = boardRows[r.id]; row.style.order = i; row.querySelector(".pos").textContent = i + 1; row.querySelector(".gap").textContent = i === 0 ? "" : `-${((order[0].p - r.p) * 100).toFixed(1)}m`; });
+      order.forEach((r, i) => { const row = boardRows[r.id]; row.style.order = i; row.querySelector(".pos").textContent = i + 1; row.querySelector(".gap").textContent = i === 0 ? "" : `-${((finalOrder ? r.finalGap : order[0].p - r.p) * 100).toFixed(1)}m`; });
       R.forEach((r) => { dots[r.id].style.left = `${(4 + Math.min(1, r.p) * 84).toFixed(2)}%`; });
       raf = requestAnimationFrame(frame);
     }
