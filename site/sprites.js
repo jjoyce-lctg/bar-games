@@ -13,6 +13,8 @@
   const WIN = { frames: [4, 5, 6, 7, 8, 9, 10, 11], durations: [90, 90, 90, 90, 90, 90, 90, 90], loop: true, extra: true };
   const TIRED = { frames: [12, 13, 14, 15], durations: [90, 90, 90, 90], loop: true, extra: true };
   const ANCHOR = { x: 0.5, y: 0.9375 };
+  // Measured horizontal centre of the artwork per state (512px frame units) differs slightly; shift each state so the character stays put.
+  const XFIX = { run: 16, fall: 0, recover: 0, idle: -14, win: -8, tired: -4 };
   const NS = "http://www.w3.org/2000/svg";
   const sizeCache = {};
 
@@ -41,7 +43,11 @@
       img.setAttribute("href", u); img.setAttribute("width", sz.w); img.setAttribute("height", sz.h);
       inner.setAttribute("viewBox", `${(idx % 4) * fw} ${Math.floor(idx / 4) * fh} ${fw} ${fh}`);
     };
-    const start = (sq, end) => { seq = sq; acc = 0; i = 0; onSeqEnd = end || null; show(seq.frames[0], !!seq.extra); };
+    const start = (sq, end) => {
+      seq = sq; acc = 0; i = 0; onSeqEnd = end || null; show(seq.frames[0], !!seq.extra);
+      const fix = sq === RUN ? XFIX.run : sq === FALL ? XFIX.fall : sq === RECOVER ? XFIX.recover : sq === IDLE ? XFIX.idle : sq === WIN ? XFIX.win : XFIX.tired;
+      inner.setAttribute("x", (-50 + fix * (300 / 512)).toFixed(1));
+    };
     const hasExtra = () => !!extraSize;
     const a = {
       el: g, ready: true, hasExtra: hasExtra(),

@@ -111,6 +111,7 @@
       return { ...r, i, g, actor: null, laneY, p: 0, v: 1, mode: "idle", burstUntil: 0, burst: 1, stumbleUntil: 0, boosts: [] };
     });
     const winner = R.find((r) => r.id === winnerId) || R[0];
+    if (opts.debug) window.__race = R;
 
     // drama script. Each race gets a finish style:
     //  photo   - winner and one rival trade the lead to the line, decided by a nose (slow-mo + PHOTO FINISH)
@@ -180,8 +181,8 @@
           if (!finished) {
             const m = rivals.includes(r) ? margin : Math.max(margin, 0.02) + 0.012 * r.i;
             if (T > 0.7 && r.p > winner.p - m) { r.p -= (f / (duration / 1000)) * dt * (r.p > winner.p - m + 0.01 ? 0.7 : 0.45); }   // ease off, never snap back
-            if (winner.p > 0.985) r.p = Math.min(r.p, winner.p - 0.003);   // last-metre safety, a hair at most
-            r.p = Math.min(r.p, 0.995);
+            if (winner.p > 0.9 && r.p > winner.p - 0.004) r.p -= (f / (duration / 1000)) * dt * 0.75;   // final stretch: cannot overtake, still never moves backward
+            r.p = Math.min(r.p, 0.998);
           }
           else if (r.p >= r.stopAt) { r.p = r.stopAt; r.mode = "tired"; }
         }
@@ -204,7 +205,7 @@
       if (!finished && winner.p >= 1) {
         finished = true; winner.p = 1; winner.mode = "win"; slow = false;
         finalOrder = [winner, ...R.filter((r) => r !== winner).sort((a, b) => b.p - a.p)];
-        R.forEach((r) => { r.finalGap = winner.p - r.p; r.stopAt = r === winner ? 1 : Math.max(0.8, Math.min(0.975, r.p + 0.045)); });
+        R.forEach((r) => { r.finalGap = Math.max(0, winner.p - r.p); r.stopAt = r === winner ? 1 : Math.min(0.999, Math.max(r.p + 0.006, Math.min(0.975, r.p + 0.045))); });
         big.innerHTML = `<div class="t">${esc(winner.label.toUpperCase())} WINS!</div>`;
         say(`${winner.label} wins it!`, 4000);
         setTimeout(() => { if (!stopped) onDone(); }, 3400);
