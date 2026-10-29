@@ -21,13 +21,17 @@ That is all for Supabase. Note: the free tier pauses a project after 7 days with
 
 The first account created becomes the admin. Open `admin.html` on the hosted site, but first create your admin login in Supabase: **Authentication > Users > Add user**, email `jonathan@djs.lastcallgames.app`, any password, and tick "Auto confirm". Then log in to the admin page with username `jonathan`. From there, add DJ logins under **Logins**, upload logos and set colors under **Bars**.
 
-## Day to day (DJ)
+## Day to day (VJ / DJ)
 
-1. Open the site on the laptop connected to the TV, log in, choose Showrunner, pick the bar.
-2. Type tonight's prize, click a game. The TV goes fullscreen with the QR code.
-3. Guests scan, pick, enter name and phone, check the opt-in box.
-4. Press **Enter** to run the race. Press **Enter** again to go back to the game list.
-5. Keys: **F** toggles fullscreen, **Esc** cancels a round. Clicking the screen also advances, for remotes without a keyboard.
+1. Open the portal on the laptop, log in, choose Showrunner, pick the bar and tonight's prize, click "Go to the TV screen". From here everything on the laptop is safe to mirror to the TVs.
+2. The Ready screen shows the LCTG brand, the mascots and tonight's top three. Press **Enter** when you want to run a game.
+3. "Wanna play a game?" appears with the QR code and a countdown (default 2 minutes, change it in settings). Guests scan and pick. The race starts automatically when the clock hits zero, or press **Enter** to start early.
+4. Race, winner screen (14 s), then the leaderboard (15 s), then back to Ready. **Enter** skips ahead at any point.
+5. Keys: **S** settings (bar, prize, countdown, game, mute, log out), **F** fullscreen, **M** mute, **Esc** back to Ready (cancels a sign-up in progress). Clicking the screen also advances.
+
+## Leaderboards
+
+1 point per play, 10 for backing the winning racer. "Tonight" is per bar, Chicago time. The season board covers all six bars for whichever season includes today; manage seasons in Admin > Leaderboard.
 
 ## Sending prizes
 

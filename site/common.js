@@ -36,6 +36,7 @@
                  { id: "u-dj", username: "dj", role: "dj", active: true, password: "dj" },
                  { id: "u-mgr", username: "manager", role: "manager", active: true, password: "manager" }],
       prizes: [],
+      seasons: [{ id: "s1", name: "Fall 2026", starts_on: "2026-09-01", ends_on: "2027-02-15" }],
       venues: [
         { id: "v1", name: "Willie Lill's", slug: "willie-lills", color_primary: "#0a0a0a", color_accent: "#ffcd00", tagline: "Chicago's Hawkeye bar", default_prize: "a round on us", sort_order: 1, active: true, logo_url: null },
         { id: "v2", name: "Duffy's", slug: "duffys", color_primary: "#0f5c2e", color_accent: "#f2f2f2", tagline: "Lincoln Park", default_prize: "a round on us", sort_order: 2, active: true, logo_url: null },
@@ -93,6 +94,18 @@
         const st = this._prizeStatus(p); if (st === "redeemed") return { ok: false, error: "Already redeemed." }; if (st === "not_yet") return { ok: false, error: "Not valid until tomorrow." }; if (st === "expired") return { ok: false, error: "This prize has expired." }; if (st === "voided") return { ok: false, error: "This prize was voided." };
         p.redeemed_at = new Date().toISOString(); p.redeemed_by = me().id; p.redeemed_venue_id = venue_id; persist(); return { ok: true };
       },
+      _short(n) { const p = String(n).trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0]; },
+      async leaderboard(venue_id, kind, limit = 10) {
+        requireAuth(); const today = new Date().toDateString(); const season = (state.seasons || [])[0];
+        const rows = state.entries.map((e) => ({ e, r: round(e.round_id) })).filter(({ r }) => r.status === "finished")
+          .filter(({ e, r }) => kind === "night" ? (r.venue_id === venue_id && new Date(e.created_at).toDateString() === today) : (!season || (e.created_at.slice(0, 10) >= season.starts_on && e.created_at.slice(0, 10) <= season.ends_on)));
+        const m = {}; rows.forEach(({ e }) => { const a = m[e.phone] || (m[e.phone] = { display_name: this._short(e.name), points: 0, wins: 0, plays: 0, last: e.created_at }); a.points += 1 + (e.is_winner ? 10 : 0); a.wins += e.is_winner ? 1 : 0; a.plays++; if (e.created_at > a.last) { a.last = e.created_at; a.display_name = this._short(e.name); } });
+        return Object.values(m).sort((a, b) => b.points - a.points || b.wins - a.wins || a.last.localeCompare(b.last)).slice(0, limit).map((a, i) => ({ rank: i + 1, ...a }));
+      },
+      async currentSeason() { return (state.seasons || [])[0] || null; },
+      async listSeasons() { requireAdmin(); return [...(state.seasons || [])].sort((a, b) => b.starts_on.localeCompare(a.starts_on)); },
+      async saveSeason(sn) { requireAdmin(); state.seasons = state.seasons || []; if (sn.id) Object.assign(state.seasons.find((x) => x.id === sn.id), sn); else state.seasons.push({ ...sn, id: uuid() }); persist(); },
+      async deleteSeason(id) { requireAdmin(); state.seasons = state.seasons.filter((x) => x.id !== id); persist(); },
       async listPrizes(f = {}) { requireAdmin(); return (state.prizes || []).map((p) => this._prizeRow(p)).filter((p) => (!f.status || p.status === f.status) && (!f.venue_id || p.won_venue_id === f.venue_id)).sort((a, b) => b.issued_at.localeCompare(a.issued_at)); },
       async voidPrize(id, reason) { requireAdmin(); const p = state.prizes.find((x) => x.id === id); p.voided_at = new Date().toISOString(); p.void_reason = reason || null; persist(); },
       async roundStats(id) {
@@ -229,6 +242,11 @@
       },
       async updateGameOptions(key, options) { throwIf(await sb.from("games").update({ options }).eq("key", key)); },
       async lookupPrizes(phone) { return throwIf(await sb.rpc("lookup_prizes", { p_phone: phone })); },
+      async leaderboard(venue_id, kind, limit = 10) { return throwIf(await sb.rpc("leaderboard", { p_venue_id: venue_id, p_kind: kind, p_limit: limit })); },
+      async currentSeason() { const r = throwIf(await sb.rpc("current_season")); return Array.isArray(r) ? r[0] || null : r; },
+      async listSeasons() { return throwIf(await sb.from("seasons").select("*").order("starts_on", { ascending: false })); },
+      async saveSeason(sn) { if (sn.id) throwIf(await sb.from("seasons").update({ name: sn.name, starts_on: sn.starts_on, ends_on: sn.ends_on }).eq("id", sn.id)); else throwIf(await sb.from("seasons").insert({ name: sn.name, starts_on: sn.starts_on, ends_on: sn.ends_on })); },
+      async deleteSeason(id) { throwIf(await sb.from("seasons").delete().eq("id", id)); },
       async redeemPrize(id, venue_id) { return throwIf(await sb.rpc("redeem_prize", { p_prize_id: id, p_venue_id: venue_id })); },
       async listPrizes(f = {}) { let q = sb.from("prizes_report").select("*").order("issued_at", { ascending: false }).limit(5000); if (f.status) q = q.eq("status", f.status); if (f.venue_id) q = q.eq("won_venue_id", f.venue_id); return throwIf(await q); },
       async voidPrize(id, reason) { throwIf(await sb.from("prizes").update({ voided_at: new Date().toISOString(), void_reason: reason || null }).eq("id", id)); },

@@ -5,28 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Last Call Tavern Games - Showrunner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&family=Special+Elite&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
   body { min-height: 100vh; }
-  /* ---- console chrome ---- */
   #console { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem; }
   .topbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-  .topbar .brand { font-family: var(--display); font-size: 1.6rem; letter-spacing: .04em; }
-  .topbar .brand span { color: var(--accent); }
-  .venue-pill { background: var(--panel2); border: 1px solid var(--line); padding: .4rem .8rem; border-radius: 999px; font-weight: 600; }
+  .topbar .brand { font-family: var(--display); font-size: 1.6rem; letter-spacing: .04em; } .topbar .brand span { color: var(--accent); }
   .login-box { max-width: 420px; margin: 10vh auto 0; }
-  .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
-  .game-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: transform .1s, border-color .1s; }
-  .game-card:hover { transform: translateY(-2px); border-color: var(--accent); }
-  .game-card .emojis { font-size: 2rem; margin-bottom: .5rem; }
-  .game-card.soon { opacity: .45; cursor: default; }
-  .game-card.soon:hover { transform: none; border-color: var(--line); }
 
   /* ---- TV stage ---- */
   #stage { position: fixed; inset: 0; background: var(--primary); color: #fff; display: none; overflow: hidden;
-           background-image: radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,.18), transparent 60%); }
+           background-image: radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,.18), transparent 60%); transition: background .6s; }
   #stage.on { display: flex; flex-direction: column; }
+  #stage.dark { background: #070304; background-image: radial-gradient(900px 500px at 50% 110%, rgba(170,0,0,.35), transparent 60%), radial-gradient(700px 400px at 50% -10%, rgba(120,0,0,.25), transparent 60%); }
   .stage-head { display: flex; align-items: center; justify-content: space-between; padding: 2.2vh 3vw; }
   .stage-head .venue { display: flex; align-items: center; gap: 1.2vw; }
   .stage-head .venue img { height: 9vh; max-width: 30vw; object-fit: contain; }
@@ -36,88 +28,81 @@
   .stage-head .lctg { font-family: var(--display); font-size: 3.2vh; letter-spacing: .12em; opacity: .75; } .stage-head .lctg span { color: var(--accent); }
   .stage-head .prize b { display: block; font-family: var(--display); font-size: 4.5vh; color: var(--accent); }
   .stage-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 3vw; position: relative; }
-  .stage-foot { padding: 2vh 3vw; display: flex; justify-content: space-between; align-items: center; font-size: 2.4vh; opacity: .9; }
-  .stage-foot .hint { opacity: .75; }
-  .stage-foot .hint .kbd { border-color: rgba(255,255,255,.6); }
+  .stage-foot { padding: 1.2vh 3vw; display: flex; justify-content: space-between; align-items: center; font-size: 2.4vh; opacity: .9; }
+  .stage-foot .hint { opacity: .35; font-size: 1.6vh; } .stage-foot .hint .kbd { border-color: rgba(255,255,255,.5); font-size: 1.4vh; }
 
-  /* lobby */
-  .lobby { display: grid; grid-template-columns: 1fr 1fr; gap: 4vw; align-items: center; width: 100%; max-width: 92vw; }
-  .qr-wrap { background: #fff; padding: 2.5vh; border-radius: 3vh; width: min(62vh, 40vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 30px 60px rgba(0,0,0,.4); }
-  .qr-wrap svg, .qr-wrap img { width: 100%; height: 100%; }
-  .lobby .cta h1 { font-size: 9vh; line-height: .95; margin-bottom: 1.5vh; }
-  .lobby .cta h1 span { color: var(--accent); }
-  .lobby .cta p { font-size: 3.2vh; opacity: .9; margin: 0 0 2vh; }
-  .lobby .code { font-family: var(--display); font-size: 5vh; letter-spacing: .15em; background: rgba(0,0,0,.3); display: inline-block; padding: .5vh 2vh; border-radius: 1.5vh; }
-  .picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4vh; margin-top: 3vh; }
-  .pick { display: flex; align-items: center; gap: 1.2vh; background: rgba(0,0,0,.28); border-radius: 1.8vh; padding: 1.4vh 2vh; font-size: 3vh; }
-  .pick .e { height: 7vh; display: flex; align-items: flex-end; } .pick .e svg, .pick .e img { height: 100%; width: auto; }
-  .pick .n { margin-left: auto; font-family: var(--display); font-size: 4.5vh; color: var(--accent); min-width: 2ch; text-align: right; }
-  .count { font-size: 3vh; opacity: .9; }
-  .count b { font-family: var(--display); font-size: 6vh; color: var(--accent); vertical-align: -.1em; }
+  /* ready */
+  .ready { text-align: center; width: 100%; }
+  .ready .brand { font-family: var(--display); font-size: 14vh; line-height: .95; letter-spacing: .04em; } .ready .brand span { color: var(--accent); }
+  .ready .line { font-size: 3.6vh; opacity: .9; margin-top: 1vh; }
+  .ready .runners { display: flex; justify-content: center; gap: 2vw; margin: 3vh 0; } .ready .runners svg { height: 20vh; overflow: visible; }
+  .ready .top3 { display: flex; justify-content: center; gap: 1.5vw; margin-top: 2vh; }
+  .ready .top3 div { background: rgba(0,0,0,.3); border-radius: 1.5vh; padding: 1.2vh 2.4vh; font-size: 2.8vh; } .ready .top3 b { color: var(--accent); font-family: var(--display); font-size: 3.6vh; margin-right: .6vw; }
 
-  /* race */
-  .race { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; }
-  canvas#track { width: 100%; height: 70vh; display: block; border-radius: 2vh; }
-  .countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 40vh; color: var(--accent); text-shadow: 0 10px 40px rgba(0,0,0,.6); pointer-events: none; }
+  /* sign-up (wanna play a game?) */
+  .signup { display: grid; grid-template-columns: 1fr 1fr; gap: 4vw; align-items: center; width: 100%; max-width: 92vw; }
+  .qr-wrap { background: #fff; padding: 2.5vh; border-radius: 3vh; width: min(58vh, 38vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 0 0 1vh #1a0a0a, 0 30px 60px rgba(0,0,0,.6); }
+  .qr-wrap svg { width: 100%; height: 100%; }
+  .signup .cta h1 { font-family: "Special Elite", "Courier New", monospace; font-size: 8.5vh; line-height: 1; margin-bottom: 1.5vh; color: #f2e9e4; text-shadow: 0 0 2vh rgba(255,0,0,.35); animation: flicker 6s infinite; }
+  .signup .cta h1 span { color: #e01e26; }
+  .signup .cta p { font-size: 3vh; opacity: .9; margin: 0 0 2vh; font-family: "Special Elite", monospace; }
+  .signup .code { font-family: var(--display); font-size: 4.4vh; letter-spacing: .15em; background: rgba(255,255,255,.08); display: inline-block; padding: .5vh 2vh; border-radius: 1.5vh; }
+  .picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2vh; margin-top: 2.4vh; }
+  .pick { display: flex; align-items: center; gap: 1.2vh; background: rgba(255,255,255,.06); border-radius: 1.8vh; padding: 1vh 1.8vh; font-size: 2.8vh; }
+  .pick .e { height: 6.5vh; display: flex; align-items: flex-end; } .pick .e svg, .pick .e img { height: 100%; width: auto; }
+  .pick .n { margin-left: auto; font-family: var(--display); font-size: 4.2vh; color: var(--accent); min-width: 2ch; text-align: right; }
+  .timer { position: relative; width: 22vh; height: 22vh; margin: 0 auto 2vh; }
+  .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer circle { fill: none; stroke-width: 1.6vh; }
+  .timer .bg { stroke: rgba(255,255,255,.12); } .timer .fg { stroke: #e01e26; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+  .timer .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Special Elite", monospace; font-size: 8vh; color: #fff; }
+  .timer.urgent .fg { stroke: #ff4b4b; } .timer.urgent .num { color: #ff4b4b; animation: pulse 1s infinite; }
+  .count { font-size: 3vh; opacity: .9; } .count b { font-family: var(--display); font-size: 6vh; color: var(--accent); vertical-align: -.1em; }
+  @keyframes flicker { 0%, 97%, 100% { opacity: 1; } 97.5% { opacity: .55; } 98% { opacity: 1; } 98.6% { opacity: .4; } 99% { opacity: 1; } }
+  @keyframes pulse { 50% { transform: scale(1.08); } }
 
   /* results */
   .results { text-align: center; }
   .results .big { height: 34vh; display: flex; justify-content: center; filter: drop-shadow(0 20px 30px rgba(0,0,0,.5)); animation: pop .6s cubic-bezier(.2,1.4,.4,1) both; } .results .big svg { height: 100%; width: auto; }
-  .results h1 { font-size: 11vh; line-height: 1; margin: 1vh 0; }
-  .results h1 span { color: var(--accent); }
+  .results h1 { font-size: 11vh; line-height: 1; margin: 1vh 0; } .results h1 span { color: var(--accent); }
   .results p { font-size: 3.4vh; opacity: .95; margin: 1vh 0; }
   .results .names { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2vh; margin-top: 2.5vh; max-width: 90vw; }
   .results .names span { background: rgba(0,0,0,.3); padding: 1vh 2vh; border-radius: 999px; font-size: 2.8vh; }
   @keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .confetti { position: absolute; inset: 0; pointer-events: none; }
+
+  /* leaderboard */
+  .board { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; width: 100%; max-width: 92vw; }
+  .board h2 { font-size: 5vh; margin-bottom: 1vh; } .board h2 span { color: var(--accent); }
+  .board table { width: 100%; border-collapse: collapse; font-size: 2.9vh; }
+  .board td { padding: .7vh 1vh; border-bottom: 1px solid rgba(255,255,255,.15); } .board tr:first-child td { background: rgba(255,205,0,.12); }
+  .board td.r { font-family: var(--display); font-size: 3.6vh; color: var(--accent); width: 6vh; } .board td.p { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; } .board td.w { text-align: right; opacity: .6; width: 10vh; }
+  .board .empty { opacity: .7; font-size: 2.8vh; padding: 2vh 0; }
+
+  /* settings panel (S) */
+  #settings { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 90vw); background: var(--panel); border-left: 1px solid var(--line); padding: 1.5rem; transform: translateX(100%); transition: transform .2s; z-index: 60; overflow: auto; }
+  #settings.on { transform: none; }
+  #settings h2 { margin-bottom: 1rem; }
 </style>
 </head>
 <body>
 
 <div id="console">
-  <div class="topbar">
-    <div class="brand">LAST CALL <span>TAVERN GAMES</span></div>
-    <div class="grow"></div>
-    <div id="who" class="row hidden">
-      <span id="venuePill" class="venue-pill hidden"></span>
-      <a href="index.html" class="btn small">Portal</a><a id="adminLink" href="admin.html" class="btn small hidden">Admin</a>
-      <button id="btnChangeVenue" class="btn small hidden">Change bar</button>
-      <button id="btnLogout" class="btn small">Log out</button>
-    </div>
-  </div>
-
-  <!-- LOGIN -->
+  <div class="topbar"><div class="brand">LAST CALL <span>TAVERN GAMES</span></div><div class="grow"></div><a href="index.html" class="btn small">Portal</a></div>
   <section id="viewLogin" class="card login-box stack">
     <h1>Showrunner login</h1>
     <div id="loginError" class="error hidden"></div>
     <div><label>Username or email</label><input id="username" autocomplete="username" autocapitalize="none"></div>
     <div><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
     <button id="btnLogin" class="btn primary big" style="width:100%">Log in</button>
-    <p id="mockNote" class="muted hidden" style="font-size:.85rem">Preview mode (no database). Try <b>dj</b> / <b>dj</b> or <b>admin</b> / <b>admin</b>.</p>
+    <p id="mockNote" class="muted hidden" style="font-size:.85rem">Preview mode (no database). Try <b>dj</b> / <b>dj</b>.</p>
   </section>
-
-  <!-- VENUE -->
   <section id="viewVenue" class="card login-box stack hidden">
     <h1>Which bar are you at?</h1>
     <select id="venueSelect"></select>
-    <button id="btnVenue" class="btn primary big" style="width:100%">Continue</button>
-  </section>
-
-  <!-- GAMES -->
-  <section id="viewGames" class="stack hidden">
-    <div class="row">
-      <h1 class="grow">Pick a game</h1>
-      <button id="btnFullscreen" class="btn small">Fullscreen <span class="kbd">F</span></button>
-    </div>
-    <div class="card row">
-      <div class="grow"><label>Prize for this round (shown on the TV and texted to winners later)</label><input id="prize" placeholder="e.g. a free round, $10 gift card, a shot"></div>
-    </div>
-    <div id="gameGrid" class="game-grid"></div>
-    <p class="muted">How it runs: pick a game, the TV shows the QR code, guests scan and pick, then you press <span class="kbd">Enter</span> to start. Press <span class="kbd">Enter</span> again after the result to come back here. <span class="kbd">Esc</span> cancels a round.</p>
-    <div class="card">
-      <h3>Recent rounds</h3>
-      <table><thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Entries</th><th>Winner</th><th>Status</th></tr></thead><tbody id="recentRounds"></tbody></table>
-    </div>
+    <div><label>Tonight's prize</label><input id="prize" placeholder="e.g. a free round, $10 gift card, a shot"></div>
+    <button id="btnVenue" class="btn primary big" style="width:100%">Go to the TV screen</button>
+    <p class="muted" style="font-size:.85rem">From here on everything is TV-safe. <span class="kbd">Enter</span> moves to the next screen, <span class="kbd">S</span> opens settings, <span class="kbd">F</span> fullscreen, <span class="kbd">M</span> mute, <span class="kbd">Esc</span> back to the ready screen.</p>
   </section>
 </div>
 
@@ -132,6 +117,18 @@
   <div class="stage-foot"><div id="stFootLeft"></div><div class="hint" id="stHint"></div></div>
 </div>
 
+<!-- SETTINGS (S) -->
+<div id="settings" class="stack">
+  <h2>Settings</h2>
+  <div><label>Bar</label><select id="sVenue"></select></div>
+  <div><label>Tonight's prize</label><input id="sPrize"></div>
+  <div><label>Sign-up countdown (seconds)</label><input id="sCountdown" type="number" min="20" max="600" step="5"></div>
+  <div><label>Game</label><select id="sGame"></select></div>
+  <div class="row"><button id="sMute" class="btn small">Mute</button><button id="sFull" class="btn small">Fullscreen</button></div>
+  <div class="row"><a href="index.html" class="btn small">Portal</a><button id="sLogout" class="btn small">Log out</button></div>
+  <button id="sClose" class="btn primary" style="width:100%">Close (S)</button>
+</div>
+
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="vendor/qrcode.js"></script>
@@ -144,157 +141,161 @@
 (async function () {
   const { api, MOCK, $, $$, esc, sleep, decorateOptions } = window.BG;
   const art = (o, h) => o.icon_url ? `<img src="${esc(o.icon_url)}" alt="" style="height:${h}px">` : o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="height:${h}px">` : MASCOTS.standalone(o.id, h, { emoji: o.emoji });
-  const state = { me: null, venue: null, venues: [], games: [], round: null, game: null, phase: "console", poll: null, raceCtl: null };
+  const state = { me: null, venue: null, venues: [], games: [], game: null, round: null, phase: "console", poll: null, raceCtl: null, timer: null, auto: null, season: null,
+                  settings: { prize: "", countdown: 120, gameKey: "race" } };
+  try { Object.assign(state.settings, JSON.parse(localStorage.getItem("lctg.settings") || "{}")); } catch {}
+  const saveSettings = () => { try { localStorage.setItem("lctg.settings", JSON.stringify(state.settings)); } catch {} };
 
-  // ---------- helpers ----------
-  const show = (id) => { ["viewLogin", "viewVenue", "viewGames"].forEach((v) => $("#" + v).classList.toggle("hidden", v !== id)); };
+  const show = (id) => ["viewLogin", "viewVenue"].forEach((v) => $("#" + v).classList.toggle("hidden", v !== id));
   const toast = (msg) => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); };
   const firstLast = (n) => { const p = String(n).trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0]; };
-  function toggleFullscreen() { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch {} }
-
+  const toggleFullscreen = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch {} };
+  const clearTimers = () => { clearInterval(state.poll); state.poll = null; clearInterval(state.timer); state.timer = null; clearTimeout(state.auto); state.auto = null; if (state.raceCtl) { state.raceCtl.stop(); state.raceCtl = null; } };
   if (MOCK) $("#mockNote").classList.remove("hidden");
 
-  // ---------- login ----------
+  // ---------- login + venue ----------
   async function doLogin() {
-    const err = $("#loginError"); err.classList.add("hidden");
-    $("#btnLogin").disabled = true;
+    const err = $("#loginError"); err.classList.add("hidden"); $("#btnLogin").disabled = true;
     try { state.me = await api.signIn($("#username").value, $("#password").value); await afterLogin(); }
-    catch (e) { err.textContent = e.message || "Login failed."; err.classList.remove("hidden"); }
-    finally { $("#btnLogin").disabled = false; }
+    catch (e) { err.textContent = e.message || "Login failed."; err.classList.remove("hidden"); } finally { $("#btnLogin").disabled = false; }
   }
-  $("#btnLogin").onclick = doLogin;
-  $("#password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
-  $("#username").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#password").focus(); });
-  $("#btnLogout").onclick = async () => { await api.signOut(); location.reload(); };
-
+  $("#btnLogin").onclick = doLogin; $("#password").addEventListener("keydown", (e) => e.key === "Enter" && doLogin()); $("#username").addEventListener("keydown", (e) => e.key === "Enter" && $("#password").focus());
   async function afterLogin() {
-    $("#who").classList.remove("hidden");
-    if (state.me.role === "admin") $("#adminLink").classList.remove("hidden");
     state.venues = await api.listVenues();
     state.games = (await api.listGames()).map((g) => ({ ...g, options: decorateOptions(g.options) }));
-    const sel = $("#venueSelect");
-    sel.innerHTML = state.venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    try { state.season = await api.currentSeason(); } catch {}
+    for (const id of ["venueSelect", "sVenue"]) $("#" + id).innerHTML = state.venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    $("#sGame").innerHTML = state.games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
     let last = null; try { last = localStorage.getItem("bg.venue"); } catch {}
-    if (last && state.venues.some((v) => v.id === last)) sel.value = last;
+    if (last && state.venues.some((v) => v.id === last)) { $("#venueSelect").value = last; $("#prize").value = state.settings.prize || state.venues.find((v) => v.id === last).default_prize || ""; }
+    $("#venueSelect").onchange = () => { $("#prize").value = state.venues.find((v) => v.id === $("#venueSelect").value).default_prize || ""; };
     show("viewVenue");
   }
-
-  // ---------- venue ----------
-  $("#btnVenue").onclick = () => {
-    state.venue = state.venues.find((v) => v.id === $("#venueSelect").value);
-    try { localStorage.setItem("bg.venue", state.venue.id); } catch {}
-    $("#venuePill").textContent = state.venue.name; $("#venuePill").classList.remove("hidden");
-    $("#btnChangeVenue").classList.remove("hidden");
-    $("#prize").value = state.venue.default_prize || "";
-    renderGames(); show("viewGames");
-  };
-  $("#btnChangeVenue").onclick = () => show("viewVenue");
-  $("#btnFullscreen").onclick = toggleFullscreen;
-
-  // ---------- games ----------
-  const SOON = [
-    { name: "Prize Wheel", emojis: "🎡", description: "Everyone enters, the wheel spins, one name wins." },
-    { name: "Score Prediction", emojis: "🏈", description: "Guess the final score. Closest wins." },
-    { name: "Trivia", emojis: "🧠", description: "One question, 30 seconds, random winner from correct answers." },
-  ];
-  async function renderGames() {
-    $("#gameGrid").innerHTML =
-      state.games.map((g) => `<div class="game-card" data-key="${esc(g.key)}"><div class="emojis">${(g.options || []).map((o) => art(o, 44)).join(" ")}</div><h2>${esc(g.name)}</h2><p class="muted">${esc(g.description || "")}</p><button class="btn primary">Start on TV</button></div>`).join("") +
-      SOON.map((g) => `<div class="game-card soon"><div class="emojis">${g.emojis}</div><h2>${g.name}</h2><p class="muted">${g.description}</p><span class="tag no">Coming soon</span></div>`).join("");
-    $$(".game-card[data-key]").forEach((el) => (el.onclick = () => startRound(el.dataset.key)));
-    try {
-      const rounds = await api.listRounds(12);
-      $("#recentRounds").innerHTML = rounds.map((r) => `<tr><td>${new Date(r.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</td><td>${esc(r.venue)}</td><td>${esc(r.game)}</td><td>${r.entries}</td><td>${esc(r.winning_pick || "")}</td><td>${esc(r.status)}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No rounds yet.</td></tr>`;
-    } catch (e) { $("#recentRounds").innerHTML = `<tr><td colspan="6" class="muted">${esc(e.message)}</td></tr>`; }
-  }
-
-  // ---------- stage ----------
-  const stage = $("#stage");
-  function openStage() {
-    const v = state.venue;
-    stage.style.setProperty("--primary", v.color_primary || "#004c54");
-    stage.style.setProperty("--accent", v.color_accent || "#ffcd00");
+  function setVenue(id) {
+    state.venue = state.venues.find((v) => v.id === id); try { localStorage.setItem("bg.venue", id); } catch {}
+    const v = state.venue; stage.style.setProperty("--primary", v.color_primary || "#004c54"); stage.style.setProperty("--accent", v.color_accent || "#ffcd00");
     $("#stVenue").textContent = v.name; $("#stTag").textContent = v.tagline || "";
     const img = $("#stLogo"); if (v.logo_url) { img.src = v.logo_url; img.classList.remove("hidden"); } else img.classList.add("hidden");
-    $("#stPrize").textContent = state.round.prize || v.default_prize || "";
-    stage.classList.add("on");
+    $("#sVenue").value = id;
+  }
+  $("#btnVenue").onclick = () => {
+    state.settings.prize = $("#prize").value.trim(); saveSettings();
+    setVenue($("#venueSelect").value); try { AUDIO.unlock(); } catch {}
+    $("#console").classList.add("hidden"); stage.classList.add("on");
     if (!document.fullscreenElement) { try { document.documentElement.requestFullscreen().catch(() => {}); } catch {} }
-  }
-  function closeStage() { try { AUDIO.event("end"); } catch {} stage.classList.remove("on"); clearInterval(state.poll); state.poll = null; if (state.raceCtl) { state.raceCtl.stop(); state.raceCtl = null; } state.phase = "console"; state.round = null; renderGames(); }
+    renderReady();
+  };
 
-  async function startRound(gameKey) {
-    try { AUDIO.unlock(); } catch {}
-    state.game = state.games.find((g) => g.key === gameKey);
-    try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: gameKey, prize: $("#prize").value.trim() }); }
-    catch (e) { toast(e.message); return; }
-    openStage(); renderLobby();
+  // ---------- settings panel ----------
+  const settings = $("#settings");
+  function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
+  function closeSettings() { state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings(); if ($("#sVenue").value !== state.venue.id) { setVenue($("#sVenue").value); if (state.phase === "ready") renderReady(); } $("#stPrize").textContent = state.settings.prize || state.venue.default_prize || ""; settings.classList.remove("on"); }
+  $("#sClose").onclick = closeSettings; $("#sMute").onclick = () => { AUDIO.setMuted(!AUDIO.isMuted()); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; }; $("#sFull").onclick = toggleFullscreen; $("#sLogout").onclick = async () => { await api.signOut(); location.reload(); };
+
+  // ---------- stage screens ----------
+  const stage = $("#stage");
+  const prizeText = () => state.settings.prize || state.venue.default_prize || "";
+  function qrSvg(text) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
+
+  // READY: TV-safe idle screen
+  async function renderReady() {
+    clearTimers(); state.phase = "ready"; state.round = null; stage.classList.remove("dark");
+    try { AUDIO.event("end"); } catch {}
+    $("#stPrize").textContent = prizeText();
+    $("#stageBody").innerHTML = `<div class="ready">
+      <div class="brand">LAST CALL <span>TAVERN GAMES</span></div>
+      <div class="line">Next game coming up. Have your phone ready.</div>
+      <div class="runners" id="readyRunners"></div>
+      <div class="top3" id="readyTop3"></div></div>`;
+    $("#stFootLeft").innerHTML = ""; $("#stHint").innerHTML = `<span class="kbd">Enter</span> start sign-up · <span class="kbd">S</span> settings`;
+    // idle mascots
+    const g = state.games.find((x) => x.key === state.settings.gameKey) || state.games[0];
+    const host = $("#readyRunners"); const actors = [];
+    for (const o of (g?.options || []).slice(0, 4)) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("viewBox", "0 0 200 250"); svg.innerHTML = MASCOTS.DEFS; host.appendChild(svg);
+      let a = null; if (o.sprite_url) { try { a = await SPRITES.actor(o.sprite_url, o.extra_url); } catch {} }
+      if (!a) { const gg = document.createElementNS("http://www.w3.org/2000/svg", "g"); gg.innerHTML = MASCOTS.markup(o.id, { emoji: o.emoji }); a = SPRITES.vectorActor(gg.querySelector(".mascot")); }
+      svg.appendChild(a.el); a.set("idle"); actors.push(a);
+    }
+    let last = performance.now(); (function loop(now) { if (state.phase !== "ready") return; actors.forEach((a) => a.tick((now - last) / 1000, 1)); last = now; requestAnimationFrame(loop); })(last);
+    try { const top = await api.leaderboard(state.venue.id, "night", 3); $("#readyTop3").innerHTML = top.length ? `<div style="background:none;font-size:2.4vh;opacity:.7;align-self:center">Tonight's leaders</div>` + top.map((t) => `<div><b>${t.rank}</b>${esc(t.display_name)} <span style="opacity:.7">${t.points} pts</span></div>`).join("") : ""; } catch {}
   }
 
-  function qrSvg(text) {
-    const q = qrcode(0, "M"); q.addData(text); q.make();
-    return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
-  }
-
-  function renderLobby() {
-    state.phase = "lobby";
-    const g = state.game, url = window.BG.entryUrl(state.round.code);
-    $("#stageBody").innerHTML = `
-      <div class="lobby">
-        <div class="qr-wrap">${qrSvg(url)}</div>
-        <div class="cta">
-          <h1>SCAN TO <span>PLAY</span></h1>
-          <p>${esc(g.name)}. Pick your racer. If it wins, you win <b>${esc(state.round.prize || state.venue.default_prize || "")}</b>.</p>
-          <div class="code">CODE ${esc(state.round.code)}</div>
-          <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
+  // SIGN-UP: "Wanna play a game?" with countdown
+  async function startSignup() {
+    if (state.phase !== "ready") return;
+    state.game = state.games.find((x) => x.key === state.settings.gameKey) || state.games[0];
+    try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: state.game.key, prize: state.settings.prize }); } catch (e) { toast(e.message); return; }
+    state.phase = "signup"; stage.classList.add("dark");
+    const g = state.game, url = window.BG.entryUrl(state.round.code), secs = state.settings.countdown;
+    const C = 2 * Math.PI * 45;
+    $("#stageBody").innerHTML = `<div class="signup">
+      <div><div class="qr-wrap">${qrSvg(url)}</div></div>
+      <div class="cta">
+        <h1>WANNA PLAY <span>A GAME?</span></h1>
+        <p>Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.<br>The race starts when the clock runs out.</p>
+        <div class="row" style="gap:3vw;align-items:center">
+          <div class="timer" id="timer"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="45"/><circle class="fg" cx="50" cy="50" r="45" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><div class="num" id="timerNum">${secs}</div></div>
+          <div><div class="code">CODE ${esc(state.round.code)}</div><div class="count" style="margin-top:1.5vh"><b id="stCount">0</b> players in</div></div>
         </div>
-      </div>`;
-    $("#stFootLeft").innerHTML = `<span class="count"><b id="stCount">0</b> players in</span>`;
-    $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> to start the race &nbsp;·&nbsp; <span class="kbd">Esc</span> cancel &nbsp;·&nbsp; <span class="kbd">M</span> mute`;
+        <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
+      </div></div>`;
+    $("#stFootLeft").innerHTML = ""; $("#stHint").innerHTML = `<span class="kbd">Enter</span> start now · <span class="kbd">Esc</span> cancel`;
     try { AUDIO.event("lobby"); } catch {}
     const tick = async () => { try { const s = await api.roundStats(state.round.id); $("#stCount").textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0)); } catch {} };
     tick(); state.poll = setInterval(tick, 2500);
+    let left = secs; const t0 = Date.now();
+    state.timer = setInterval(() => {
+      left = Math.max(0, secs - Math.round((Date.now() - t0) / 1000));
+      const el = $("#timerNum"), fg = $("#timer .fg"); if (!el) return;
+      el.textContent = left; fg.style.strokeDashoffset = (C * (1 - left / secs)).toFixed(1);
+      if (left <= 10) { $("#timer").classList.add("urgent"); if (left > 0) { try { AUDIO.event("countbeep"); } catch {} } }
+      if (left <= 0) { clearInterval(state.timer); state.timer = null; startRace(); }
+    }, 250);
   }
 
   async function startRace() {
-    if (state.phase !== "lobby") return;
-    state.phase = "running"; clearInterval(state.poll); state.poll = null;
+    if (state.phase !== "signup") return;
+    state.phase = "running"; clearTimers(); stage.classList.remove("dark");
     try { await api.setRoundStatus(state.round.id, "running"); } catch (e) { toast(e.message); }
-    const opts = state.game.options;
-    const winner = opts[Math.floor(Math.random() * opts.length)];
-    $("#stHint").innerHTML = "";
-    $("#stFootLeft").innerHTML = "";
+    const opts = state.game.options, winner = opts[Math.floor(Math.random() * opts.length)];
+    $("#stHint").innerHTML = ""; $("#stFootLeft").innerHTML = "";
     $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
-    state.raceCtl = RACE.run($("#raceHost"), {
-      racers: opts, winnerId: winner.id, venue: state.venue,
-      onDone: async () => {
-        try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); }
-        renderResults(winner);
-      },
-    });
+    state.raceCtl = RACE.run($("#raceHost"), { racers: opts, winnerId: winner.id, venue: state.venue,
+      onDone: async () => { try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); } renderResults(winner); } });
   }
 
   async function renderResults(winner) {
     state.phase = "results"; try { AUDIO.event("results"); } catch {}
     let s = { winners: [], count: 0 }; try { s = await api.roundStats(state.round.id); } catch {}
     const names = s.winners.map(firstLast);
-    $("#stageBody").innerHTML = `
-      <div class="results">
+    $("#stageBody").innerHTML = `<div class="results">
         <div class="big"><svg viewBox="0 0 200 260" style="height:100%;overflow:visible" id="winArt"></svg></div>
         <h1><span>${esc(winner.label.toUpperCase())}</span> WINS!</h1>
         <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize. Valid from tomorrow for 14 days at any LCTG bar.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
         <div class="names">${names.slice(0, 40).map((x) => `<span>${esc(x)}</span>`).join("")}${names.length > 40 ? `<span>+${names.length - 40} more</span>` : ""}</div>
       </div><canvas class="confetti" id="confetti"></canvas>`;
-    $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`;
-    $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> for the next game`;
+    $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`; $("#stHint").innerHTML = `<span class="kbd">Enter</span> leaderboard`;
     (async () => {
-      let a;
-      if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url, winner.extra_url); } catch {} }
+      let a; if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url, winner.extra_url); } catch {} }
       if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = winner.image_url ? `<image href="${esc(winner.image_url)}" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>` : MASCOTS.markup(winner.id, { emoji: winner.emoji }); a = winner.image_url ? { el: g, set() {}, tick() {} } : SPRITES.vectorActor(g.querySelector(".mascot")); }
-      const host = $("#winArt"); if (!host) return; host.innerHTML = MASCOTS.DEFS; host.appendChild(a.el);
-      a.set("win"); let lastT = performance.now();
+      const host = $("#winArt"); if (!host) return; host.innerHTML = MASCOTS.DEFS; host.appendChild(a.el); a.set("win"); let lastT = performance.now();
       const tick = (now) => { if (state.phase !== "results") return; a.tick((now - lastT) / 1000, 1); lastT = now; requestAnimationFrame(tick); }; requestAnimationFrame(tick);
     })();
     confetti($("#confetti"));
+    state.auto = setTimeout(renderBoard, 14000);
+  }
+
+  async function renderBoard() {
+    if (!["results", "ready"].includes(state.phase)) return;
+    clearTimers(); state.phase = "board";
+    let night = [], season = []; try { [night, season] = await Promise.all([api.leaderboard(state.venue.id, "night", 10), api.leaderboard(state.venue.id, "season", 10)]); } catch (e) { toast(e.message); }
+    const table = (rows, empty) => rows.length ? `<table>${rows.map((t) => `<tr><td class="r">${t.rank}</td><td>${esc(t.display_name)}</td><td class="w">${t.wins ? t.wins + "W" : ""}</td><td class="p">${t.points}</td></tr>`).join("")}</table>` : `<div class="empty">${empty}</div>`;
+    $("#stageBody").innerHTML = `<div class="board">
+      <div><h2>TONIGHT AT <span>${esc(state.venue.name.toUpperCase())}</span></h2>${table(night, "Be the first on tonight's board.")}</div>
+      <div><h2><span>${esc((state.season?.name || "SEASON").toUpperCase())}</span> STANDINGS</h2>${table(season, "Season standings start with the first race.")}</div></div>`;
+    $("#stFootLeft").innerHTML = `<span style="opacity:.7;font-size:2.2vh">1 point per play, 10 for backing the winner</span>`; $("#stHint").innerHTML = `<span class="kbd">Enter</span> next`;
+    state.auto = setTimeout(renderReady, 15000);
   }
 
   function confetti(canvas) {
@@ -303,26 +304,30 @@
     const cols = [accent, "#fff", "#ff5c5c", "#5cc8ff", "#7ee2a8"];
     const ps = Array.from({ length: 220 }, () => ({ x: Math.random() * canvas.width, y: -Math.random() * canvas.height, w: 6 + Math.random() * 8, h: 10 + Math.random() * 10, c: cols[Math.floor(Math.random() * cols.length)], vy: 2 + Math.random() * 4, vx: -1 + Math.random() * 2, a: Math.random() * 6, va: -0.1 + Math.random() * 0.2 }));
     const t0 = performance.now();
-    (function f(now) {
-      if (state.phase !== "results" || now - t0 > 9000) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    (function f(now) { if (state.phase !== "results" || now - t0 > 9000) return; ctx.clearRect(0, 0, canvas.width, canvas.height);
       ps.forEach((p) => { p.y += p.vy; p.x += p.vx; p.a += p.va; if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; } ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); });
-      requestAnimationFrame(f);
-    })(t0);
+      requestAnimationFrame(f); })(t0);
   }
 
-  // ---------- keyboard ----------
+  // ---------- keys: Enter advances, Esc returns to ready, S settings ----------
+  async function advance() {
+    try { AUDIO.unlock(); } catch {}
+    if (state.phase === "ready") startSignup();
+    else if (state.phase === "signup") startRace();
+    else if (state.phase === "results") renderBoard();
+    else if (state.phase === "board") renderReady();
+  }
   document.addEventListener("keydown", async (e) => {
     const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
-    if (e.key === "f" || e.key === "F") { if (!typing) toggleFullscreen(); return; }
-    if (state.phase === "console") return;
-    if (e.key === "Enter") { e.preventDefault(); try { AUDIO.unlock(); } catch {} if (state.phase === "lobby") startRace(); else if (state.phase === "results") closeStage(); }
-    if (e.key === "Escape") { if (state.phase === "lobby") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} closeStage(); } else if (state.phase === "results") closeStage(); }
+    if (settings.classList.contains("on")) { if (e.key === "Escape" || (e.key.toLowerCase() === "s" && !typing)) { e.preventDefault(); closeSettings(); } return; }
+    if (typing || state.phase === "console") return;
+    if (e.key.toLowerCase() === "f") { toggleFullscreen(); return; }
+    if (e.key.toLowerCase() === "s") { e.preventDefault(); openSettings(); return; }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advance(); }
+    if (e.key === "Escape") { if (state.phase === "signup") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} } if (state.phase !== "running") renderReady(); }
   });
-  // Click/tap also advances, for TVs without a keyboard handy.
-  stage.addEventListener("click", () => { if (state.phase === "lobby") startRace(); else if (state.phase === "results") closeStage(); });
+  stage.addEventListener("click", () => { if (!settings.classList.contains("on") && state.phase !== "running") advance(); });
 
-  // ---------- boot ----------
   try { state.me = await api.me(); } catch {}
   if (state.me) await afterLogin(); else show("viewLogin");
 })();

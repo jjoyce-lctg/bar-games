@@ -10,9 +10,9 @@ const B = 'http://localhost:8767';
   const tv = await ctx.newPage(); tv.on('pageerror', e => errs.push('tv ' + e.message));
   await tv.goto(B + '/showrunner.html?mock=1'); await tv.evaluate(() => { localStorage.removeItem('barGamesMock'); window.__mockNoWait = true; });
   await tv.reload(); await tv.evaluate(() => { window.__mockNoWait = true; });
-  await tv.fill('#username', 'dj'); await tv.fill('#password', 'dj'); await tv.click('#btnLogin'); await tv.waitForSelector('#viewVenue:not(.hidden)'); await tv.click('#btnVenue'); await tv.waitForSelector('#viewGames:not(.hidden)');
-  await tv.fill('#prize', 'a free round'); await tv.click('.game-card[data-key="race"]'); await tv.waitForSelector('#stage.on .qr-wrap svg');
-  const code = (await tv.textContent('.lobby .code')).replace('CODE', '').trim();
+  await tv.fill('#username', 'dj'); await tv.fill('#password', 'dj'); await tv.click('#btnLogin'); await tv.waitForSelector('#viewVenue:not(.hidden)'); await tv.fill('#prize', 'a free round'); await tv.click('#btnVenue'); await tv.waitForSelector('#stage.on .ready');
+  await tv.keyboard.press('Enter'); await tv.waitForSelector('#stage.on .qr-wrap svg');
+  const code = (await tv.textContent('.signup .code')).replace('CODE', '').trim();
   for (const [n, ph, pick] of [['Marcus Lee', '3125551000', 'hotdog'], ['Dana Ortiz', '3125551001', 'beer'], ['Sam Patel', '3125551002', 'pretzel'], ['Kelly Nguyen', '3125551003', 'pizza']]) {
     const p = await ctx.newPage(); await p.goto(`${B}/entry.html?c=${code}&mock=1`); await p.waitForSelector('.opt'); await p.click(`.opt[data-id="${pick}"]`); await p.fill('#name', n); await p.fill('#phone', ph); await p.check('#optin'); await p.click('#submit'); await p.waitForSelector('.done'); await p.close(); }
   await tv.keyboard.press('Enter'); await tv.waitForSelector('.results', { timeout: 60000 });

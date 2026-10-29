@@ -53,6 +53,7 @@
       <button data-tab="venues">Bars</button>
       <button data-tab="racers">Racers</button>
       <button data-tab="prizes">Prizes</button>
+      <button data-tab="board">Leaderboard</button>
       <button data-tab="users">Logins</button>
     </div>
 
@@ -130,6 +131,24 @@
       <p class="muted" style="font-size:.85rem">Managers redeem at <a href="staff.html">Prize Redemption</a> by looking up the guest's phone number. Compare redeemed counts per bar with the LCTG Prize comps in Toast.</p>
     </div>
 
+    <!-- LEADERBOARD -->
+    <div id="tab-board" class="stack hidden">
+      <div class="card filters">
+        <div><label>Bar (tonight's board)</label><select id="bVenue"></select></div>
+        <div class="row"><button id="btnBoard" class="btn primary">Refresh</button></div>
+      </div>
+      <div class="row" style="align-items:flex-start;gap:1rem">
+        <div class="card grow"><h3>Tonight</h3><table><thead><tr><th>#</th><th>Name</th><th>Plays</th><th>Wins</th><th>Points</th></tr></thead><tbody id="boardNight"></tbody></table></div>
+        <div class="card grow"><h3 id="boardSeasonTitle">Season</h3><table><thead><tr><th>#</th><th>Name</th><th>Plays</th><th>Wins</th><th>Points</th></tr></thead><tbody id="boardSeason"></tbody></table></div>
+      </div>
+      <div class="card stack">
+        <h3>Seasons</h3>
+        <div class="row"><div class="grow"><label>Name</label><input id="snName" placeholder="e.g. Fall 2026"></div><div><label>Starts</label><input id="snStart" type="date"></div><div><label>Ends</label><input id="snEnd" type="date"></div><button id="btnAddSeason" class="btn primary" style="align-self:flex-end">Add</button></div>
+        <table><thead><tr><th>Name</th><th>Starts</th><th>Ends</th><th></th></tr></thead><tbody id="seasonsBody"></tbody></table>
+        <p class="muted" style="font-size:.85rem">The season board uses whichever season contains today's date. Points: 1 per play, 10 for backing the winning racer.</p>
+      </div>
+    </div>
+
     <!-- USERS -->
     <div id="tab-users" class="stack hidden">
       <div class="card stack">
@@ -185,6 +204,7 @@
     [venues, games] = await Promise.all([api.listAllVenues(), api.listGames()]);
     $("#fVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
     $("#pVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    $("#bVenue").innerHTML = venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
     $("#fGame").innerHTML += games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
     await loadEntries();
   }
@@ -192,8 +212,8 @@
   // ---- tabs ----
   $$(".tabs button").forEach((b) => (b.onclick = () => {
     $$(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
-    ["entries", "contacts", "rounds", "venues", "racers", "prizes", "users"].forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
-    ({ contacts: loadContacts, rounds: loadRounds, venues: renderVenues, racers: renderRacers, prizes: loadPrizes, users: loadUsers, entries: loadEntries })[b.dataset.tab]();
+    ["entries", "contacts", "rounds", "venues", "racers", "prizes", "board", "users"].forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+    ({ contacts: loadContacts, rounds: loadRounds, venues: renderVenues, racers: renderRacers, prizes: loadPrizes, board: loadBoard, users: loadUsers, entries: loadEntries })[b.dataset.tab]();
   }));
 
   // ---- entries ----
@@ -336,6 +356,19 @@
   $("#btnExportPrizes").onclick = () => downloadCsv(`prizes-${stamp()}.csv`, prizes, [
     { label: "Won", get: (p) => fmt(p.issued_at) }, { label: "Bar", get: (p) => p.won_venue }, { label: "Game", get: (p) => p.game }, { label: "Name", get: (p) => p.name }, { label: "Phone", get: (p) => p.phone }, { label: "Prize", get: (p) => p.prize },
     { label: "Valid from", get: (p) => fmtDay(p.valid_from) }, { label: "Expires", get: (p) => fmtDay(p.expires_at) }, { label: "Status", get: (p) => PLABEL[p.status] || p.status }, { label: "Redeemed at", get: (p) => fmt(p.redeemed_at) }, { label: "Redeemed bar", get: (p) => p.redeemed_venue }, { label: "Redeemed by", get: (p) => p.redeemed_by }]);
+
+  // ---- leaderboard + seasons ----
+  async function loadBoard() {
+    const rows = (r) => r.map((t) => `<tr><td>${t.rank}</td><td>${esc(t.display_name)}</td><td>${t.plays}</td><td>${t.wins}</td><td><b>${t.points}</b></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nothing yet.</td></tr>`;
+    try {
+      const [night, season, cur, seasons] = await Promise.all([api.leaderboard($("#bVenue").value, "night", 25), api.leaderboard($("#bVenue").value, "season", 25), api.currentSeason(), api.listSeasons()]);
+      $("#boardNight").innerHTML = rows(night); $("#boardSeason").innerHTML = rows(season); $("#boardSeasonTitle").textContent = cur ? `${cur.name} (${cur.starts_on} to ${cur.ends_on})` : "Season (none covers today)";
+      $("#seasonsBody").innerHTML = seasons.map((sn) => `<tr data-id="${sn.id}"><td>${esc(sn.name)}</td><td>${sn.starts_on}</td><td>${sn.ends_on}</td><td><button class="btn small danger del">✕</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">No seasons. Add one.</td></tr>`;
+      $$("#seasonsBody .del").forEach((b) => (b.onclick = async () => { const tr = b.closest("tr"); if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Sure?"; setTimeout(() => { delete b.dataset.armed; b.textContent = "✕"; }, 3000); return; } try { await api.deleteSeason(tr.dataset.id); loadBoard(); } catch (e) { toast(e.message); } }));
+    } catch (e) { toast(e.message); }
+  }
+  $("#btnBoard").onclick = loadBoard; $("#bVenue").onchange = loadBoard;
+  $("#btnAddSeason").onclick = async () => { const name = $("#snName").value.trim(), starts_on = $("#snStart").value, ends_on = $("#snEnd").value; if (!name || !starts_on || !ends_on || ends_on < starts_on) return toast("Give the season a name and a valid date range."); try { await api.saveSeason({ name, starts_on, ends_on }); $("#snName").value = ""; loadBoard(); } catch (e) { toast(e.message); } };
 
   // ---- users ----
   async function loadUsers() {

@@ -21,13 +21,12 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   await tv.screenshot({ path: out + '/01-login.png' });
   await tv.fill('#username', 'dj'); await tv.fill('#password', 'dj'); await tv.click('#btnLogin');
   await tv.waitForSelector('#viewVenue:not(.hidden)');
-  await tv.selectOption('#venueSelect', { label: 'The Reveler' }); await tv.click('#btnVenue');
-  await tv.waitForSelector('#viewGames:not(.hidden)');
-  await tv.fill('#prize', 'a free round');
-  await tv.screenshot({ path: out + '/02-games.png' });
-  await tv.click('.game-card[data-key="race"]');
+  await tv.selectOption('#venueSelect', { label: 'The Reveler' }); await tv.fill('#prize', 'a free round'); await tv.click('#btnVenue');
+  await tv.waitForSelector('#stage.on .ready'); await tv.waitForTimeout(800);
+  await tv.screenshot({ path: out + '/02-ready.png' });
+  await tv.keyboard.press('Enter');
   await tv.waitForSelector('#stage.on .qr-wrap svg');
-  const code = (await tv.textContent('.lobby .code')).replace('CODE', '').trim();
+  const code = (await tv.textContent('.signup .code')).replace('CODE', '').trim();
   console.log('round code', code);
   await tv.screenshot({ path: out + '/03-lobby.png' });
 
@@ -61,9 +60,10 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   await tv.screenshot({ path: out + '/08-results.png' });
   console.log('result:', (await tv.textContent('.results h1')).trim(), '|', (await tv.textContent('.results p')).trim());
   await tv.keyboard.press('Enter');
-  await tv.waitForSelector('#viewGames:not(.hidden)');
-  await tv.waitForTimeout(500);
-  await tv.screenshot({ path: out + '/09-back.png' });
+  await tv.waitForSelector('.board'); await tv.waitForTimeout(500);
+  await tv.screenshot({ path: out + '/09-board.png' });
+  console.log('board rows:', await tv.$$eval('.board tr', r => r.length));
+  await tv.keyboard.press('Enter'); await tv.waitForSelector('.ready');
 
   // admin
   const ad = await ctx.newPage(); ad.on('pageerror', (e) => errors.push('Admin: ' + e.message));
