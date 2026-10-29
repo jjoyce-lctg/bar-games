@@ -154,7 +154,7 @@
       // ---- countdown ----
       if (phaseT === "count") {
         if (now >= countNext) {
-          if (countIdx < countdown.length) { big.innerHTML = `<div class="t" style="font-size:${countIdx === 2 ? 34 : 16}vh">${countdown[countIdx]}</div>`; audio(["marks", "set", "go"][countIdx]); countNext = now + (countIdx === 2 ? 700 : 1300); countIdx++; }
+          if (countIdx < countdown.length) { big.innerHTML = `<div class="t" style="font-size:${countIdx === 2 ? 34 : 16}vh">${countdown[countIdx]}</div>`; audio(["marks", "set", "go"][countIdx]); countNext = now + [2100, 1250, 700][countIdx]; countIdx++; }
           else { big.innerHTML = ""; phaseT = "race"; raceStart = now; R.forEach((r) => (r.mode = "run")); say("And they're off!"); }
         }
         R.forEach((r) => { r.actor.set("idle"); r.actor.tick(dt, 1); place(r); });
