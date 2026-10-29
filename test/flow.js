@@ -22,10 +22,8 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   await tv.fill('#username', 'dj'); await tv.fill('#password', 'dj'); await tv.click('#btnLogin');
   await tv.waitForSelector('#viewVenue:not(.hidden)');
   await tv.selectOption('#venueSelect', { label: 'The Reveler' }); await tv.fill('#prize', 'a free round'); await tv.click('#btnVenue');
-  await tv.waitForSelector('#stage.on .ready'); await tv.waitForTimeout(800);
-  await tv.screenshot({ path: out + '/02-ready.png' });
-  await tv.keyboard.press('Enter');
-  await tv.waitForSelector('#stage.on .qr-wrap svg');
+  await tv.waitForSelector('#stage.on .qr-wrap svg'); await tv.waitForTimeout(800);
+  await tv.screenshot({ path: out + '/02-landing.png' });
   const code = (await tv.textContent('.signup .code')).replace('CODE', '').trim();
   console.log('round code', code);
   await tv.screenshot({ path: out + '/03-lobby.png' });
@@ -52,7 +50,7 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   console.log('count shown:', await tv.textContent('#stCount'));
   await tv.screenshot({ path: out + '/06-lobby-filled.png' });
 
-  await tv.keyboard.press('Enter');
+  await tv.keyboard.press('Enter'); await tv.waitForTimeout(1200); await tv.screenshot({ path: out + '/06b-clock.png' }); await tv.keyboard.press('Enter');
   await tv.waitForTimeout(9000);
   await tv.screenshot({ path: out + '/07-race.png' });
   await tv.waitForSelector('.results', { timeout: 45000 });
@@ -63,7 +61,7 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   await tv.waitForSelector('.board'); await tv.waitForTimeout(500);
   await tv.screenshot({ path: out + '/09-board.png' });
   console.log('board rows:', await tv.$$eval('.board tr', r => r.length));
-  await tv.keyboard.press('Enter'); await tv.waitForSelector('.ready');
+  await tv.keyboard.press('Enter'); await tv.waitForSelector('.signup');
 
   // admin
   const ad = await ctx.newPage(); ad.on('pageerror', (e) => errors.push('Admin: ' + e.message));

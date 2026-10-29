@@ -27,37 +27,37 @@
   .stage-head .prize { text-align: right; font-size: 2.6vh; }
   .stage-head .lctg { font-family: var(--display); font-size: 3.2vh; letter-spacing: .12em; opacity: .75; } .stage-head .lctg span { color: var(--accent); }
   .stage-head .prize b { display: block; font-family: var(--display); font-size: 4.5vh; color: var(--accent); }
-  .stage-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 3vw; position: relative; }
+  .stage-body { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 3vw; position: relative; }
   .stage-foot { padding: 1.2vh 3vw; display: flex; justify-content: space-between; align-items: center; font-size: 2.4vh; opacity: .9; }
-  .stage-foot .hint { opacity: .35; font-size: 1.6vh; } .stage-foot .hint .kbd { border-color: rgba(255,255,255,.5); font-size: 1.4vh; }
+  .stage-foot .hint { flex: 1; }
 
-  /* ready */
-  .ready { text-align: center; width: 100%; }
-  .ready .brand { font-family: var(--display); font-size: 14vh; line-height: .95; letter-spacing: .04em; } .ready .brand span { color: var(--accent); }
-  .ready .line { font-size: 3.6vh; opacity: .9; margin-top: 1vh; }
-  .ready .runners { display: flex; justify-content: center; gap: 2vw; margin: 3vh 0; } .ready .runners svg { height: 20vh; overflow: visible; }
-  .ready .top3 { display: flex; justify-content: center; gap: 1.5vw; margin-top: 2vh; }
-  .ready .top3 div { background: rgba(0,0,0,.3); border-radius: 1.5vh; padding: 1.2vh 2.4vh; font-size: 2.8vh; } .ready .top3 b { color: var(--accent); font-family: var(--display); font-size: 3.6vh; margin-right: .6vw; }
+  /* key bar */
+  .keys { display: flex; gap: 2.2vw; align-items: center; justify-content: flex-end; }
+  .keys span { display: inline-flex; align-items: center; gap: .8vh; font-size: 2vh; opacity: .55; letter-spacing: .02em; }
+  .keys b { display: inline-flex; align-items: center; justify-content: center; min-width: 4.2vh; height: 4.2vh; padding: 0 1vh; border: 2px solid rgba(255,255,255,.7); border-bottom-width: .6vh; border-radius: .9vh; font-family: var(--display); font-size: 2.6vh; letter-spacing: .05em; }
+  .gamesel { display: inline-flex; align-items: center; gap: 1.2vh; font-family: var(--display); font-size: 3.2vh; letter-spacing: .06em; background: rgba(255,255,255,.08); padding: .5vh 1.8vh; border-radius: 1.5vh; margin-bottom: 1.2vh; }
+  .gamesel .arrows { font-size: 2.2vh; opacity: .55; font-family: var(--font); letter-spacing: 0; }
+  .timer.idle .fg { stroke-dashoffset: 0; stroke: rgba(255,255,255,.25); } .timer.idle .num { font-size: 3.4vh; opacity: .8; }
 
   /* sign-up (wanna play a game?) */
   .signup { display: grid; grid-template-columns: 1fr 1fr; gap: 4vw; align-items: center; width: 100%; max-width: 92vw; }
-  .qr-wrap { background: #fff; padding: 2.5vh; border-radius: 3vh; width: min(58vh, 38vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 0 0 1vh #1a0a0a, 0 30px 60px rgba(0,0,0,.6); }
+  .qr-wrap { background: #fff; padding: 2.2vh; border-radius: 3vh; width: min(52vh, 36vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 0 0 1vh #1a0a0a, 0 30px 60px rgba(0,0,0,.6); }
   .qr-wrap svg { width: 100%; height: 100%; }
-  .signup .cta h1 { font-family: "Special Elite", "Courier New", monospace; font-size: 8.5vh; line-height: 1; margin-bottom: 1.5vh; color: #f2e9e4; text-shadow: 0 0 2vh rgba(255,0,0,.35); animation: flicker 6s infinite; }
+  .signup .cta h1 { font-family: "Special Elite", "Courier New", monospace; font-size: 7.2vh; line-height: 1; margin-bottom: 1.5vh; color: #f2e9e4; text-shadow: 0 0 2vh rgba(255,0,0,.35); animation: flicker 6s infinite; }
   .signup .cta h1 span { color: #e01e26; }
-  .signup .cta p { font-size: 3vh; opacity: .9; margin: 0 0 2vh; font-family: "Special Elite", monospace; }
+  .signup .cta p { font-size: 2.6vh; opacity: .9; margin: 0 0 1.6vh; font-family: "Special Elite", monospace; }
   .signup .code { font-family: var(--display); font-size: 4.4vh; letter-spacing: .15em; background: rgba(255,255,255,.08); display: inline-block; padding: .5vh 2vh; border-radius: 1.5vh; }
-  .picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2vh; margin-top: 2.4vh; }
-  .pick { display: flex; align-items: center; gap: 1.2vh; background: rgba(255,255,255,.06); border-radius: 1.8vh; padding: 1vh 1.8vh; font-size: 2.8vh; }
-  .pick .e { height: 6.5vh; display: flex; align-items: flex-end; } .pick .e svg, .pick .e img { height: 100%; width: auto; }
-  .pick .n { margin-left: auto; font-family: var(--display); font-size: 4.2vh; color: var(--accent); min-width: 2ch; text-align: right; }
-  .timer { position: relative; width: 22vh; height: 22vh; margin: 0 auto 2vh; }
+  .picks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vh; margin-top: 1.8vh; }
+  .pick { display: flex; align-items: center; gap: 1vh; background: rgba(255,255,255,.06); border-radius: 1.6vh; padding: .8vh 1.4vh; font-size: 2.3vh; white-space: nowrap; }
+  .pick .e { height: 5.5vh; display: flex; align-items: flex-end; } .pick .e svg, .pick .e img { height: 100%; width: auto; }
+  .pick .n { margin-left: auto; font-family: var(--display); font-size: 3.6vh; color: var(--accent); min-width: 2ch; text-align: right; }
+  .timer { position: relative; width: 17vh; height: 17vh; margin: 0 auto 1vh; }
   .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
   .timer circle { fill: none; stroke-width: 1.6vh; }
   .timer .bg { stroke: rgba(255,255,255,.12); } .timer .fg { stroke: #e01e26; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-  .timer .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Special Elite", monospace; font-size: 8vh; color: #fff; }
+  .timer .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Special Elite", monospace; font-size: 6vh; color: #fff; }
   .timer.urgent .fg { stroke: #ff4b4b; } .timer.urgent .num { color: #ff4b4b; animation: pulse 1s infinite; }
-  .count { font-size: 3vh; opacity: .9; } .count b { font-family: var(--display); font-size: 6vh; color: var(--accent); vertical-align: -.1em; }
+  .count { font-size: 2.6vh; opacity: .9; } .count b { font-family: var(--display); font-size: 5vh; color: var(--accent); vertical-align: -.1em; }
   @keyframes flicker { 0%, 97%, 100% { opacity: 1; } 97.5% { opacity: .55; } 98% { opacity: 1; } 98.6% { opacity: .4; } 99% { opacity: 1; } }
   @keyframes pulse { 50% { transform: scale(1.08); } }
 
@@ -102,7 +102,7 @@
     <select id="venueSelect"></select>
     <div><label>Tonight's prize</label><input id="prize" placeholder="e.g. a free round, $10 gift card, a shot"></div>
     <button id="btnVenue" class="btn primary big" style="width:100%">Go to the TV screen</button>
-    <p class="muted" style="font-size:.85rem">From here on everything is TV-safe. <span class="kbd">Enter</span> moves to the next screen, <span class="kbd">S</span> opens settings, <span class="kbd">F</span> fullscreen, <span class="kbd">M</span> mute, <span class="kbd">Esc</span> back to the ready screen.</p>
+    <p class="muted" style="font-size:.85rem">From here on everything is TV-safe. The key bar at the bottom of the screen shows what each key does.</p>
   </section>
 </div>
 
@@ -183,13 +183,19 @@
     setVenue($("#venueSelect").value); try { AUDIO.unlock(); } catch {}
     $("#console").classList.add("hidden"); stage.classList.add("on");
     if (!document.fullscreenElement) { try { document.documentElement.requestFullscreen().catch(() => {}); } catch {} }
-    renderReady();
+    renderLanding({ fresh: true });
   };
 
   // ---------- settings panel ----------
   const settings = $("#settings");
   function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
-  function closeSettings() { state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings(); if ($("#sVenue").value !== state.venue.id) { setVenue($("#sVenue").value); if (state.phase === "ready") renderReady(); } $("#stPrize").textContent = state.settings.prize || state.venue.default_prize || ""; settings.classList.remove("on"); }
+  async function closeSettings() {
+    const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
+    state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings();
+    if (venueChanged) setVenue($("#sVenue").value);
+    $("#stPrize").textContent = prizeText(); settings.classList.remove("on");
+    if ((venueChanged || gameChanged || prizeChanged) && state.phase === "landing") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} renderLanding({ fresh: true }); }
+  }
   $("#sClose").onclick = closeSettings; $("#sMute").onclick = () => { AUDIO.setMuted(!AUDIO.isMuted()); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; }; $("#sFull").onclick = toggleFullscreen; $("#sLogout").onclick = async () => { await api.signOut(); location.reload(); };
 
   // ---------- stage screens ----------
@@ -197,69 +203,72 @@
   const prizeText = () => state.settings.prize || state.venue.default_prize || "";
   function qrSvg(text) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
 
-  // READY: TV-safe idle screen
-  async function renderReady() {
-    clearTimers(); state.phase = "ready"; state.round = null; stage.classList.remove("dark");
+  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["S", "Settings"], ["M", "Mute"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [] };
+  const keybar = (phase) => { $("#stHint").innerHTML = `<div class="keys">${(KEYS[phase] || []).map(([k, l]) => `<span><b>${k}</b>${l}</span>`).join("")}</div>`; };
+
+  // LANDING: "Wanna play a game?" with the QR live; the clock starts on Enter
+  async function renderLanding(opts = {}) {
+    clearTimers(); state.phase = "landing"; stage.classList.add("dark");
     try { AUDIO.event("end"); } catch {}
     $("#stPrize").textContent = prizeText();
-    $("#stageBody").innerHTML = `<div class="ready">
-      <div class="brand">LAST CALL <span>TAVERN GAMES</span></div>
-      <div class="line">Next game coming up. Have your phone ready.</div>
-      <div class="runners" id="readyRunners"></div>
-      <div class="top3" id="readyTop3"></div></div>`;
-    $("#stFootLeft").innerHTML = ""; $("#stHint").innerHTML = `<span class="kbd">Enter</span> start sign-up · <span class="kbd">S</span> settings`;
-    // idle mascots
-    const g = state.games.find((x) => x.key === state.settings.gameKey) || state.games[0];
-    const host = $("#readyRunners"); const actors = [];
-    for (const o of (g?.options || []).slice(0, 4)) {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.setAttribute("viewBox", "0 0 200 250"); svg.innerHTML = MASCOTS.DEFS; host.appendChild(svg);
-      let a = null; if (o.sprite_url) { try { a = await SPRITES.actor(o.sprite_url, o.extra_url); } catch {} }
-      if (!a) { const gg = document.createElementNS("http://www.w3.org/2000/svg", "g"); gg.innerHTML = MASCOTS.markup(o.id, { emoji: o.emoji }); a = SPRITES.vectorActor(gg.querySelector(".mascot")); }
-      svg.appendChild(a.el); a.set("idle"); actors.push(a);
-    }
-    let last = performance.now(); (function loop(now) { if (state.phase !== "ready") return; actors.forEach((a) => a.tick((now - last) / 1000, 1)); last = now; requestAnimationFrame(loop); })(last);
-    try { const top = await api.leaderboard(state.venue.id, "night", 3); $("#readyTop3").innerHTML = top.length ? `<div style="background:none;font-size:2.4vh;opacity:.7;align-self:center">Tonight's leaders</div>` + top.map((t) => `<div><b>${t.rank}</b>${esc(t.display_name)} <span style="opacity:.7">${t.points} pts</span></div>`).join("") : ""; } catch {}
-  }
-
-  // SIGN-UP: "Wanna play a game?" with countdown
-  async function startSignup() {
-    if (state.phase !== "ready") return;
     state.game = state.games.find((x) => x.key === state.settings.gameKey) || state.games[0];
-    try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: state.game.key, prize: state.settings.prize }); } catch (e) { toast(e.message); return; }
-    state.phase = "signup"; stage.classList.add("dark");
-    const g = state.game, url = window.BG.entryUrl(state.round.code), secs = state.settings.countdown;
-    const C = 2 * Math.PI * 45;
+    if (!state.round || opts.fresh) {
+      try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: state.game.key, prize: state.settings.prize }); } catch (e) { toast(e.message); return; }
+    }
+    const g = state.game, url = window.BG.entryUrl(state.round.code), secs = state.settings.countdown, C = 2 * Math.PI * 45;
     $("#stageBody").innerHTML = `<div class="signup">
       <div><div class="qr-wrap">${qrSvg(url)}</div></div>
       <div class="cta">
+        <div class="gamesel"><span class="arrows">▲▼</span>${esc(g.name.toUpperCase())}</div>
         <h1>WANNA PLAY <span>A GAME?</span></h1>
-        <p>Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.<br>The race starts when the clock runs out.</p>
+        <p>Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.</p>
         <div class="row" style="gap:3vw;align-items:center">
-          <div class="timer" id="timer"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="45"/><circle class="fg" cx="50" cy="50" r="45" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><div class="num" id="timerNum">${secs}</div></div>
+          <div class="timer idle" id="timer"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="45"/><circle class="fg" cx="50" cy="50" r="45" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><div class="num" id="timerNum">${secs}s</div></div>
           <div><div class="code">CODE ${esc(state.round.code)}</div><div class="count" style="margin-top:1.5vh"><b id="stCount">0</b> players in</div></div>
         </div>
         <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
       </div></div>`;
-    $("#stFootLeft").innerHTML = ""; $("#stHint").innerHTML = `<span class="kbd">Enter</span> start now · <span class="kbd">Esc</span> cancel`;
+    $("#stFootLeft").innerHTML = ""; keybar("landing");
     try { AUDIO.event("lobby"); } catch {}
-    const tick = async () => { try { const s = await api.roundStats(state.round.id); $("#stCount").textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0)); } catch {} };
+    const tick = async () => { try { const s = await api.roundStats(state.round.id); const c = $("#stCount"); if (c) c.textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0)); } catch {} };
     tick(); state.poll = setInterval(tick, 2500);
-    let left = secs; const t0 = Date.now();
+  }
+
+  // SIGN-UP: same screen, clock running; race starts at zero
+  function startSignup() {
+    if (state.phase !== "landing") return;
+    state.phase = "signup"; keybar("signup");
+    const secs = state.settings.countdown, C = 2 * Math.PI * 45, t0 = Date.now();
+    $("#timer").classList.remove("idle"); $("#timerNum").textContent = secs;
+    $(".signup .cta p").innerHTML = `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.<br>The race starts when the clock runs out.`;
     state.timer = setInterval(() => {
-      left = Math.max(0, secs - Math.round((Date.now() - t0) / 1000));
+      const left = Math.max(0, secs - Math.round((Date.now() - t0) / 1000));
       const el = $("#timerNum"), fg = $("#timer .fg"); if (!el) return;
       el.textContent = left; fg.style.strokeDashoffset = (C * (1 - left / secs)).toFixed(1);
       if (left <= 10) { $("#timer").classList.add("urgent"); if (left > 0) { try { AUDIO.event("countbeep"); } catch {} } }
       if (left <= 0) { clearInterval(state.timer); state.timer = null; startRace(); }
     }, 250);
   }
+  function stopClock() {
+    if (state.phase !== "signup") return;
+    clearInterval(state.timer); state.timer = null; state.phase = "landing"; keybar("landing");
+    const t = $("#timer"); if (t) { t.classList.add("idle"); t.classList.remove("urgent"); $("#timerNum").textContent = state.settings.countdown + "s"; $("#timer .fg").style.strokeDashoffset = 0; }
+    const p = $(".signup .cta p"); if (p) p.innerHTML = `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`;
+  }
+  async function cycleGame(dir) {
+    if (state.phase !== "landing" || state.games.length < 2) return;
+    const i = state.games.findIndex((g) => g.key === state.settings.gameKey);
+    state.settings.gameKey = state.games[(i + dir + state.games.length) % state.games.length].key; saveSettings();
+    try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {}
+    renderLanding({ fresh: true });
+  }
 
   async function startRace() {
-    if (state.phase !== "signup") return;
-    state.phase = "running"; clearTimers(); stage.classList.remove("dark");
+    if (state.phase !== "signup" && state.phase !== "landing") return;
+    state.phase = "running"; clearTimers(); stage.classList.remove("dark"); keybar("running");
     try { await api.setRoundStatus(state.round.id, "running"); } catch (e) { toast(e.message); }
     const opts = state.game.options, winner = opts[Math.floor(Math.random() * opts.length)];
-    $("#stHint").innerHTML = ""; $("#stFootLeft").innerHTML = "";
+    $("#stFootLeft").innerHTML = "";
     $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     state.raceCtl = RACE.run($("#raceHost"), { racers: opts, winnerId: winner.id, venue: state.venue,
       onDone: async () => { try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); } renderResults(winner); } });
@@ -275,7 +284,7 @@
         <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize. Valid from tomorrow for 14 days at any LCTG bar.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
         <div class="names">${names.slice(0, 40).map((x) => `<span>${esc(x)}</span>`).join("")}${names.length > 40 ? `<span>+${names.length - 40} more</span>` : ""}</div>
       </div><canvas class="confetti" id="confetti"></canvas>`;
-    $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`; $("#stHint").innerHTML = `<span class="kbd">Enter</span> leaderboard`;
+    $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`; keybar("results");
     (async () => {
       let a; if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url, winner.extra_url); } catch {} }
       if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = winner.image_url ? `<image href="${esc(winner.image_url)}" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>` : MASCOTS.markup(winner.id, { emoji: winner.emoji }); a = winner.image_url ? { el: g, set() {}, tick() {} } : SPRITES.vectorActor(g.querySelector(".mascot")); }
@@ -287,15 +296,15 @@
   }
 
   async function renderBoard() {
-    if (!["results", "ready"].includes(state.phase)) return;
+    if (state.phase !== "results") return;
     clearTimers(); state.phase = "board";
     let night = [], season = []; try { [night, season] = await Promise.all([api.leaderboard(state.venue.id, "night", 10), api.leaderboard(state.venue.id, "season", 10)]); } catch (e) { toast(e.message); }
     const table = (rows, empty) => rows.length ? `<table>${rows.map((t) => `<tr><td class="r">${t.rank}</td><td>${esc(t.display_name)}</td><td class="w">${t.wins ? t.wins + "W" : ""}</td><td class="p">${t.points}</td></tr>`).join("")}</table>` : `<div class="empty">${empty}</div>`;
     $("#stageBody").innerHTML = `<div class="board">
       <div><h2>TONIGHT AT <span>${esc(state.venue.name.toUpperCase())}</span></h2>${table(night, "Be the first on tonight's board.")}</div>
       <div><h2><span>${esc((state.season?.name || "SEASON").toUpperCase())}</span> STANDINGS</h2>${table(season, "Season standings start with the first race.")}</div></div>`;
-    $("#stFootLeft").innerHTML = `<span style="opacity:.7;font-size:2.2vh">1 point per play, 10 for backing the winner</span>`; $("#stHint").innerHTML = `<span class="kbd">Enter</span> next`;
-    state.auto = setTimeout(renderReady, 15000);
+    $("#stFootLeft").innerHTML = `<span style="opacity:.7;font-size:2.2vh">1 point per play, 10 for backing the winner</span>`; keybar("board");
+    state.round = null; state.auto = setTimeout(() => renderLanding({ fresh: true }), 15000);
   }
 
   function confetti(canvas) {
@@ -312,10 +321,10 @@
   // ---------- keys: Enter advances, Esc returns to ready, S settings ----------
   async function advance() {
     try { AUDIO.unlock(); } catch {}
-    if (state.phase === "ready") startSignup();
+    if (state.phase === "landing") startSignup();
     else if (state.phase === "signup") startRace();
     else if (state.phase === "results") renderBoard();
-    else if (state.phase === "board") renderReady();
+    else if (state.phase === "board") renderLanding({ fresh: true });
   }
   document.addEventListener("keydown", async (e) => {
     const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
@@ -324,7 +333,8 @@
     if (e.key.toLowerCase() === "f") { toggleFullscreen(); return; }
     if (e.key.toLowerCase() === "s") { e.preventDefault(); openSettings(); return; }
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advance(); }
-    if (e.key === "Escape") { if (state.phase === "signup") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} } if (state.phase !== "running") renderReady(); }
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); cycleGame(e.key === "ArrowUp" ? -1 : 1); }
+    if (e.key === "Escape") { if (state.phase === "signup") stopClock(); else if (state.phase === "results" || state.phase === "board") renderLanding({ fresh: true }); }
   });
   stage.addEventListener("click", () => { if (!settings.classList.contains("on") && state.phase !== "running") advance(); });
 
