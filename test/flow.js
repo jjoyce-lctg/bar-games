@@ -54,9 +54,9 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   await tv.screenshot({ path: out + '/06-lobby-filled.png' });
 
   await tv.keyboard.press('Enter');
-  await tv.waitForTimeout(5500);
+  await tv.waitForTimeout(9000);
   await tv.screenshot({ path: out + '/07-race.png' });
-  await tv.waitForSelector('.results', { timeout: 30000 });
+  await tv.waitForSelector('.results', { timeout: 45000 });
   await tv.waitForTimeout(800);
   await tv.screenshot({ path: out + '/08-results.png' });
   console.log('result:', (await tv.textContent('.results h1')).trim(), '|', (await tv.textContent('.results p')).trim());
@@ -80,6 +80,8 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   await ad.screenshot({ path: out + '/11-admin-contacts.png' });
   await ad.click('.tabs button[data-tab="venues"]'); await ad.waitForTimeout(300);
   await ad.screenshot({ path: out + '/12-admin-venues.png' });
+  await ad.click('.tabs button[data-tab="racers"]'); await ad.waitForTimeout(300);
+  await ad.screenshot({ path: out + '/12b-admin-racers.png' });
   await ad.click('.tabs button[data-tab="users"]'); await ad.waitForTimeout(300);
   await ad.fill('#nuUser', 'dj.marcus'); await ad.fill('#nuPass', 'password123'); await ad.click('#btnAddUser'); await ad.waitForTimeout(300);
   console.log('user msg:', (await ad.textContent('#userMsg')).trim());

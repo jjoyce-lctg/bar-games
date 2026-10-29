@@ -1,0 +1,6 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#1b5e20;margin:0;padding:30px;display:flex;gap:40px;align-items:flex-end;height:400px}</style></head><body>
+<script src="../site/mascots.js"></script>
+<script>
+["hotdog","beer","pretzel","pizza"].forEach((id,i)=>{const d=document.createElement("div");d.innerHTML=MASCOTS.standalone(id,300);document.body.appendChild(d);
+ const g=d.querySelector(".mascot"); MASCOTS.pose(g,{phase:i*1.1,mode:i===3?"win":"run"});});
+</script></body></html>

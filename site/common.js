@@ -116,6 +116,8 @@
       async updateUser(id, patch) { requireAdmin(); Object.assign(state.profiles.find((p) => p.id === id), patch); persist(); },
       async updateVenue(id, patch) { requireAdmin(); Object.assign(state.venues.find((v) => v.id === id), patch); persist(); },
       async uploadLogo(venue, file) { requireAdmin(); const url = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(file); }); await this.updateVenue(venue.id, { logo_url: url }); return url; },
+      async updateGameOptions(key, options) { requireAdmin(); state.games.find((g) => g.key === key).options = options; persist(); },
+      async uploadRacerImage(optionId, file) { requireAdmin(); return new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(file); }); },
     };
     // Re-sync from storage before every call so multiple preview tabs see each other's writes.
     Object.keys(api).forEach((k) => { if (typeof api[k] === "function") { const fn = api[k]; api[k] = function (...a) { sync(); return fn.apply(api, a); }; } });
@@ -195,6 +197,13 @@
         throwIf(await sb.storage.from("logos").upload(path, file, { upsert: true, contentType: file.type }));
         const url = sb.storage.from("logos").getPublicUrl(path).data.publicUrl + "?v=" + Date.now();
         await this.updateVenue(venue.id, { logo_url: url }); return url;
+      },
+      async updateGameOptions(key, options) { throwIf(await sb.from("games").update({ options }).eq("key", key)); },
+      async uploadRacerImage(optionId, file) {
+        const ext = (file.name.split(".").pop() || "png").toLowerCase();
+        const path = `racers/${optionId}.${ext}`;
+        throwIf(await sb.storage.from("logos").upload(path, file, { upsert: true, contentType: file.type }));
+        return sb.storage.from("logos").getPublicUrl(path).data.publicUrl + "?v=" + Date.now();
       },
     };
   }

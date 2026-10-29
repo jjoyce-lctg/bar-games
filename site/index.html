@@ -34,7 +34,7 @@
   .stage-head .venue .tag { font-size: 2.2vh; opacity: .8; }
   .stage-head .prize { text-align: right; font-size: 2.6vh; }
   .stage-head .prize b { display: block; font-family: var(--display); font-size: 4.5vh; color: var(--accent); }
-  .stage-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 3vw; }
+  .stage-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 3vw; position: relative; }
   .stage-foot { padding: 2vh 3vw; display: flex; justify-content: space-between; align-items: center; font-size: 2.4vh; opacity: .9; }
   .stage-foot .hint { opacity: .75; }
   .stage-foot .hint .kbd { border-color: rgba(255,255,255,.6); }
@@ -49,7 +49,7 @@
   .lobby .code { font-family: var(--display); font-size: 5vh; letter-spacing: .15em; background: rgba(0,0,0,.3); display: inline-block; padding: .5vh 2vh; border-radius: 1.5vh; }
   .picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4vh; margin-top: 3vh; }
   .pick { display: flex; align-items: center; gap: 1.2vh; background: rgba(0,0,0,.28); border-radius: 1.8vh; padding: 1.4vh 2vh; font-size: 3vh; }
-  .pick .e { font-size: 5vh; }
+  .pick .e { height: 7vh; display: flex; align-items: flex-end; } .pick .e svg, .pick .e img { height: 100%; width: auto; }
   .pick .n { margin-left: auto; font-family: var(--display); font-size: 4.5vh; color: var(--accent); min-width: 2ch; text-align: right; }
   .count { font-size: 3vh; opacity: .9; }
   .count b { font-family: var(--display); font-size: 6vh; color: var(--accent); vertical-align: -.1em; }
@@ -61,7 +61,7 @@
 
   /* results */
   .results { text-align: center; }
-  .results .big { font-size: 22vh; line-height: 1; filter: drop-shadow(0 20px 30px rgba(0,0,0,.5)); animation: pop .6s cubic-bezier(.2,1.4,.4,1) both; }
+  .results .big { height: 34vh; display: flex; justify-content: center; filter: drop-shadow(0 20px 30px rgba(0,0,0,.5)); animation: pop .6s cubic-bezier(.2,1.4,.4,1) both; } .results .big svg { height: 100%; width: auto; }
   .results h1 { font-size: 11vh; line-height: 1; margin: 1vh 0; }
   .results h1 span { color: var(--accent); }
   .results p { font-size: 3.4vh; opacity: .95; margin: 1vh 0; }
@@ -133,6 +133,8 @@
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="mascots.js"></script>
+<script src="race.js"></script>
 <script src="common.js"></script>
 <script>
 (async function () {
@@ -192,7 +194,7 @@
   ];
   async function renderGames() {
     $("#gameGrid").innerHTML =
-      state.games.map((g) => `<div class="game-card" data-key="${esc(g.key)}"><div class="emojis">${(g.options || []).map((o) => o.emoji).join(" ")}</div><h2>${esc(g.name)}</h2><p class="muted">${esc(g.description || "")}</p><button class="btn primary">Start on TV</button></div>`).join("") +
+      state.games.map((g) => `<div class="game-card" data-key="${esc(g.key)}"><div class="emojis">${(g.options || []).map((o) => o.image_url ? `<img src="${esc(o.image_url)}" style="height:2.6rem">` : MASCOTS.standalone(o.id, 44, { emoji: o.emoji })).join(" ")}</div><h2>${esc(g.name)}</h2><p class="muted">${esc(g.description || "")}</p><button class="btn primary">Start on TV</button></div>`).join("") +
       SOON.map((g) => `<div class="game-card soon"><div class="emojis">${g.emojis}</div><h2>${g.name}</h2><p class="muted">${g.description}</p><span class="tag no">Coming soon</span></div>`).join("");
     $$(".game-card[data-key]").forEach((el) => (el.onclick = () => startRound(el.dataset.key)));
     try {
@@ -237,7 +239,7 @@
           <h1>SCAN TO <span>PLAY</span></h1>
           <p>${esc(g.name)}. Pick your racer. If it wins, you win <b>${esc(state.round.prize || state.venue.default_prize || "")}</b>.</p>
           <div class="code">CODE ${esc(state.round.code)}</div>
-          <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${o.emoji}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
+          <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${o.image_url ? `<img src="${esc(o.image_url)}" alt="">` : MASCOTS.standalone(o.id, 60, { emoji: o.emoji })}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
         </div>
       </div>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b id="stCount">0</b> players in</span>`;
@@ -253,64 +255,15 @@
     const opts = state.game.options;
     const winner = opts[Math.floor(Math.random() * opts.length)];
     $("#stHint").innerHTML = "";
-    $("#stFootLeft").innerHTML = `<span class="count">And they're off!</span>`;
-    $("#stageBody").innerHTML = `<div class="race"><canvas id="track"></canvas></div><div class="countdown" id="countdown"></div>`;
-    for (const n of ["3", "2", "1", "GO!"]) { $("#countdown").textContent = n; await sleep(800); }
-    $("#countdown").textContent = "";
-    state.raceCtl = runRace($("#track"), opts, winner.id, async () => {
-      try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); }
-      await sleep(900); renderResults(winner);
+    $("#stFootLeft").innerHTML = "";
+    $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
+    state.raceCtl = RACE.run($("#raceHost"), {
+      racers: opts, winnerId: winner.id, venue: state.venue,
+      onDone: async () => {
+        try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); }
+        renderResults(winner);
+      },
     });
-  }
-
-  function runRace(canvas, racers, winnerId, onDone) {
-    const ctx = canvas.getContext("2d");
-    const DPR = window.devicePixelRatio || 1;
-    const fit = () => { canvas.width = canvas.clientWidth * DPR; canvas.height = canvas.clientHeight * DPR; };
-    fit(); window.addEventListener("resize", fit);
-    const n = racers.length, DURATION = 11000 + Math.random() * 2000;
-    const r = racers.map((o, i) => ({ ...o, p: 0, v: 0.9 + Math.random() * 0.2, wob: Math.random() * 10, burstUntil: 0, burst: 1 }));
-    const wIdx = racers.findIndex((o) => o.id === winnerId);
-    let last = performance.now(), start = last, done = false, raf;
-    function frame(now) {
-      const dt = Math.min(50, now - last) / 1000; last = now;
-      const t = (now - start) / DURATION; // 0..1 nominal
-      r.forEach((x, i) => {
-        if (now > x.burstUntil) { x.burst = 0.75 + Math.random() * 0.6; x.burstUntil = now + 500 + Math.random() * 900; }
-        let speed = x.v * x.burst / (DURATION / 1000);
-        if (i === wIdx && t > 0.7) speed *= 1.25 + (t - 0.7) * 1.5;   // winner surges late
-        x.p += speed * dt;
-      });
-      const wp = r[wIdx].p;
-      r.forEach((x, i) => { if (i !== wIdx && x.p > wp - 0.03 && t > 0.5) x.p = wp - 0.03 - Math.random() * 0.02; if (i !== wIdx && x.p > 0.985) x.p = 0.985; });
-      draw(now);
-      if (r[wIdx].p >= 1 && !done) { done = true; r[wIdx].p = 1; draw(now); window.removeEventListener("resize", fit); onDone(); return; }
-      raf = requestAnimationFrame(frame);
-    }
-    function draw(now) {
-      const W = canvas.width, H = canvas.height, laneH = H / n, pad = 90 * DPR, finishX = W - pad;
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < n; i++) {
-        const y = i * laneH;
-        ctx.fillStyle = i % 2 ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.09)"; ctx.fillRect(0, y, W, laneH);
-        ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.setLineDash([18 * DPR, 14 * DPR]); ctx.lineWidth = 3 * DPR; ctx.beginPath(); ctx.moveTo(0, y + laneH); ctx.lineTo(W, y + laneH); ctx.stroke(); ctx.setLineDash([]);
-      }
-      // finish line (checkered)
-      const sq = 14 * DPR; for (let yy = 0; yy < H; yy += sq) for (let k = 0; k < 2; k++) { ctx.fillStyle = ((yy / sq + k) % 2) ? "#fff" : "#111"; ctx.fillRect(finishX + k * sq, yy, sq, sq); }
-      r.forEach((x, i) => {
-        const y = i * laneH + laneH / 2, xpos = pad / 2 + x.p * (finishX - pad / 2 - 60 * DPR);
-        const bob = Math.sin(now / 90 + x.wob) * (x.p < 1 ? 7 * DPR : 0);
-        ctx.font = `${Math.min(laneH * 0.62, 150 * DPR)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-        ctx.textBaseline = "middle"; ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(xpos, y + laneH * 0.32, laneH * 0.3, laneH * 0.08, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.fillText(x.emoji, xpos, y + bob);
-        ctx.font = `700 ${Math.min(laneH * 0.22, 34 * DPR)}px Inter, sans-serif`; ctx.textAlign = "left"; ctx.fillStyle = "rgba(255,255,255,.85)";
-        ctx.fillText(x.label.toUpperCase(), 14 * DPR, y - laneH * 0.3);
-      });
-    }
-    raf = requestAnimationFrame(frame);
-    return { stop() { cancelAnimationFrame(raf); window.removeEventListener("resize", fit); } };
   }
 
   async function renderResults(winner) {
@@ -319,13 +272,14 @@
     const names = s.winners.map(firstLast);
     $("#stageBody").innerHTML = `
       <div class="results">
-        <div class="big">${winner.emoji}</div>
+        <div class="big">${winner.image_url ? `<img src="${esc(winner.image_url)}" style="height:32vh">` : MASCOTS.standalone(winner.id, 300, { emoji: winner.emoji })}</div>
         <h1><span>${esc(winner.label.toUpperCase())}</span> WINS!</h1>
         <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
         <div class="names">${names.slice(0, 40).map((x) => `<span>${esc(x)}</span>`).join("")}${names.length > 40 ? `<span>+${names.length - 40} more</span>` : ""}</div>
       </div><canvas class="confetti" id="confetti"></canvas>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`;
     $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> for the next game`;
+    const wm = $(".results .mascot"); if (wm) { let ph = 0; const tick = () => { if (state.phase !== "results") return; ph += 0.06; MASCOTS.pose(wm, { phase: ph, mode: "win" }); requestAnimationFrame(tick); }; tick(); }
     confetti($("#confetti"));
   }
 

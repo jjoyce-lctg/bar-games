@@ -20,7 +20,7 @@
   .card { background: rgba(0,0,0,.35); border-color: rgba(255,255,255,.12); backdrop-filter: blur(6px); }
   .options { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
   .opt { border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); border-radius: 14px; padding: .9rem .6rem; text-align: center; cursor: pointer; color: #fff; font: inherit; font-weight: 600; }
-  .opt .e { display: block; font-size: 2.6rem; line-height: 1.1; margin-bottom: .3rem; }
+  .opt .e { display: flex; justify-content: center; align-items: flex-end; height: 5.6rem; margin-bottom: .4rem; } .opt .e svg, .opt .e img { height: 100%; width: auto; }
   .opt.sel { border-color: var(--accent); background: rgba(255,205,0,.15); box-shadow: 0 0 0 3px rgba(255,205,0,.25); }
   input { background: rgba(255,255,255,.95); color: #111; border-color: transparent; font-size: 1.1rem; }
   label { color: rgba(255,255,255,.8); }
@@ -42,6 +42,7 @@
 
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
+<script src="mascots.js"></script>
 <script src="common.js"></script>
 <script>
 (async function () {
@@ -71,7 +72,7 @@
 
   content.innerHTML = `
     <div class="hero"><h1>PICK YOUR <span>RACER</span></h1><p>If your racer wins, you win <b>${esc(round.prize || "")}</b>.</p></div>
-    <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${o.emoji}</span>${esc(o.label)}</button>`).join("")}</div>
+    <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${o.image_url ? `<img src="${esc(o.image_url)}" alt="">` : MASCOTS.standalone(o.id, 86, { emoji: o.emoji })}</span>${esc(o.label)}</button>`).join("")}</div>
     <div id="err" class="error hidden"></div>
     <div><label>Your name</label><input id="name" autocomplete="name" placeholder="First and last name" maxlength="60" value="${esc(savedName || "")}"></div>
     <div><label>Mobile number</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(312) 555-0123" value="${esc(savedPhone || "")}"></div>
@@ -95,7 +96,7 @@
       if (!res || !res.ok) { show((res && res.error) || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; return; }
       try { localStorage.setItem("bg.guest", JSON.stringify({ name, phone: normPhone(phone) })); } catch {}
       const o = g.options.find((x) => x.id === pick);
-      content.innerHTML = `<div class="done"><div class="e">${o.emoji}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
+      content.innerHTML = `<div class="done"><div class="e">${o.image_url ? `<img src="${esc(o.image_url)}" style="height:9rem">` : MASCOTS.standalone(o.id, 150, { emoji: o.emoji })}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
     } catch (e) { show(e.message || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; }
   };
 })();
