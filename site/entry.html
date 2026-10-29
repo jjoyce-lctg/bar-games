@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Play to Win</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { background: var(--primary); min-height: 100vh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+         background-image: radial-gradient(800px 400px at 50% -10%, rgba(255,255,255,.18), transparent 60%); }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 1.5rem 1.1rem 3rem; }
+  .brand { text-align: center; margin-bottom: 1.2rem; }
+  .brand img { max-height: 90px; max-width: 70%; object-fit: contain; }
+  .brand .name { font-family: var(--display); font-size: 2.4rem; line-height: 1; }
+  .brand .tag { opacity: .8; font-size: .9rem; }
+  .hero { text-align: center; margin-bottom: 1.2rem; }
+  .hero h1 { font-size: 2.6rem; line-height: 1; } .hero h1 span { color: var(--accent); }
+  .hero p { margin: .3rem 0 0; opacity: .9; }
+  .card { background: rgba(0,0,0,.35); border-color: rgba(255,255,255,.12); backdrop-filter: blur(6px); }
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+  .opt { border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); border-radius: 14px; padding: .9rem .6rem; text-align: center; cursor: pointer; color: #fff; font: inherit; font-weight: 600; }
+  .opt .e { display: block; font-size: 2.6rem; line-height: 1.1; margin-bottom: .3rem; }
+  .opt.sel { border-color: var(--accent); background: rgba(255,205,0,.15); box-shadow: 0 0 0 3px rgba(255,205,0,.25); }
+  input { background: rgba(255,255,255,.95); color: #111; border-color: transparent; font-size: 1.1rem; }
+  label { color: rgba(255,255,255,.8); }
+  .consent { display: flex; gap: .7rem; align-items: flex-start; font-size: .78rem; line-height: 1.4; color: rgba(255,255,255,.85); }
+  .consent input { width: 1.4rem; height: 1.4rem; flex: none; margin-top: .1rem; }
+  .btn.primary { background: var(--accent); color: #111; }
+  .done { text-align: center; padding: 1rem 0; }
+  .done .e { font-size: 5rem; line-height: 1; }
+  .done h2 { font-size: 2.4rem; }
+  .fine { font-size: .75rem; opacity: .7; text-align: center; margin-top: 1.5rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img id="logo" alt="" class="hidden"><div class="name" id="venueName">Last Call Games</div><div class="tag" id="venueTag"></div></div>
+  <div id="content" class="card stack"><p class="muted" style="text-align:center">Loading...</p></div>
+  <p class="fine" id="fine"></p>
+</div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+(async function () {
+  const { api, CFG, $, $$, esc, normPhone } = window.BG;
+  const code = (new URLSearchParams(location.search).get("c") || "").toUpperCase();
+  const content = $("#content");
+  const disclaimer = CFG.SMS_DISCLAIMER;
+
+  const fail = (msg) => { content.innerHTML = `<div class="hero"><h1>Hmm.</h1><p>${esc(msg)}</p></div>`; };
+  if (!code) return fail("This link is missing a game code. Scan the QR code on the TV to play.");
+
+  let round;
+  try { round = await api.getRoundPublic(code); } catch (e) { return fail("Couldn't reach the game. Check your signal and try again."); }
+  if (!round) return fail("That game code wasn't found. Scan the QR code on the TV again.");
+
+  const v = round.venue, g = round.game;
+  document.body.style.setProperty("--primary", v.color_primary || "#004c54");
+  document.body.style.setProperty("--accent", v.color_accent || "#ffcd00");
+  $("#venueName").textContent = v.name; $("#venueTag").textContent = v.tagline || "";
+  if (v.logo_url) { $("#logo").src = v.logo_url; $("#logo").classList.remove("hidden"); }
+  $("#fine").textContent = "Last Call Tavern Group. One entry per phone number per game. Must be 21+ to claim a prize. Prize details shown on the TV at the bar.";
+
+  if (round.status !== "open") return fail("Entries are closed for this game. Watch the TV for the next one!");
+
+  let pick = null;
+  try { const saved = JSON.parse(localStorage.getItem("bg.guest") || "null"); if (saved) { var savedName = saved.name, savedPhone = saved.phone; } } catch {}
+
+  content.innerHTML = `
+    <div class="hero"><h1>PICK YOUR <span>RACER</span></h1><p>If your racer wins, you win <b>${esc(round.prize || "")}</b>.</p></div>
+    <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${o.emoji}</span>${esc(o.label)}</button>`).join("")}</div>
+    <div id="err" class="error hidden"></div>
+    <div><label>Your name</label><input id="name" autocomplete="name" placeholder="First and last name" maxlength="60" value="${esc(savedName || "")}"></div>
+    <div><label>Mobile number</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(312) 555-0123" value="${esc(savedPhone || "")}"></div>
+    <label class="consent"><input id="optin" type="checkbox"><span>${esc(disclaimer)}</span></label>
+    <button id="submit" class="btn primary big" style="width:100%">I'm in!</button>`;
+
+  $$(".opt").forEach((b) => (b.onclick = () => { pick = b.dataset.id; $$(".opt").forEach((x) => x.classList.toggle("sel", x === b)); }));
+  $("#phone").addEventListener("input", (e) => { const d = normPhone(e.target.value); if (d.length === 10) e.target.value = `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`; });
+
+  $("#submit").onclick = async () => {
+    const err = $("#err"); err.classList.add("hidden");
+    const name = $("#name").value.trim(), phone = $("#phone").value, opt_in = $("#optin").checked;
+    const show = (m) => { err.textContent = m; err.classList.remove("hidden"); err.scrollIntoView({ block: "center", behavior: "smooth" }); };
+    if (!pick) return show("Pick a racer first.");
+    if (name.length < 2) return show("Please enter your name.");
+    if (normPhone(phone).length !== 10) return show("Please enter a valid 10-digit mobile number.");
+    if (!opt_in) return show("Please check the box so we can text you if you win.");
+    $("#submit").disabled = true; $("#submit").textContent = "Entering...";
+    try {
+      const res = await api.submitEntry({ code, name, phone, pick, opt_in, opt_in_text: disclaimer });
+      if (!res || !res.ok) { show((res && res.error) || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; return; }
+      try { localStorage.setItem("bg.guest", JSON.stringify({ name, phone: normPhone(phone) })); } catch {}
+      const o = g.options.find((x) => x.id === pick);
+      content.innerHTML = `<div class="done"><div class="e">${o.emoji}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
+    } catch (e) { show(e.message || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; }
+  };
+})();
+</script>
+</body>
+</html>

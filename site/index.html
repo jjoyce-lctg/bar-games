@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last Call Games - DJ Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { min-height: 100vh; }
+  /* ---- console chrome ---- */
+  #console { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem; }
+  .topbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .topbar .brand { font-family: var(--display); font-size: 1.6rem; letter-spacing: .04em; }
+  .topbar .brand span { color: var(--accent); }
+  .venue-pill { background: var(--panel2); border: 1px solid var(--line); padding: .4rem .8rem; border-radius: 999px; font-weight: 600; }
+  .login-box { max-width: 420px; margin: 10vh auto 0; }
+  .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+  .game-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.25rem; cursor: pointer; transition: transform .1s, border-color .1s; }
+  .game-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .game-card .emojis { font-size: 2rem; margin-bottom: .5rem; }
+  .game-card.soon { opacity: .45; cursor: default; }
+  .game-card.soon:hover { transform: none; border-color: var(--line); }
+
+  /* ---- TV stage ---- */
+  #stage { position: fixed; inset: 0; background: var(--primary); color: #fff; display: none; overflow: hidden;
+           background-image: radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,.18), transparent 60%); }
+  #stage.on { display: flex; flex-direction: column; }
+  .stage-head { display: flex; align-items: center; justify-content: space-between; padding: 2.2vh 3vw; }
+  .stage-head .venue { display: flex; align-items: center; gap: 1.2vw; }
+  .stage-head .venue img { height: 9vh; max-width: 30vw; object-fit: contain; }
+  .stage-head .venue .name { font-family: var(--display); font-size: 6vh; line-height: 1; }
+  .stage-head .venue .tag { font-size: 2.2vh; opacity: .8; }
+  .stage-head .prize { text-align: right; font-size: 2.6vh; }
+  .stage-head .prize b { display: block; font-family: var(--display); font-size: 4.5vh; color: var(--accent); }
+  .stage-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 3vw; }
+  .stage-foot { padding: 2vh 3vw; display: flex; justify-content: space-between; align-items: center; font-size: 2.4vh; opacity: .9; }
+  .stage-foot .hint { opacity: .75; }
+  .stage-foot .hint .kbd { border-color: rgba(255,255,255,.6); }
+
+  /* lobby */
+  .lobby { display: grid; grid-template-columns: 1fr 1fr; gap: 4vw; align-items: center; width: 100%; max-width: 92vw; }
+  .qr-wrap { background: #fff; padding: 2.5vh; border-radius: 3vh; width: min(62vh, 40vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 30px 60px rgba(0,0,0,.4); }
+  .qr-wrap svg, .qr-wrap img { width: 100%; height: 100%; }
+  .lobby .cta h1 { font-size: 9vh; line-height: .95; margin-bottom: 1.5vh; }
+  .lobby .cta h1 span { color: var(--accent); }
+  .lobby .cta p { font-size: 3.2vh; opacity: .9; margin: 0 0 2vh; }
+  .lobby .code { font-family: var(--display); font-size: 5vh; letter-spacing: .15em; background: rgba(0,0,0,.3); display: inline-block; padding: .5vh 2vh; border-radius: 1.5vh; }
+  .picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4vh; margin-top: 3vh; }
+  .pick { display: flex; align-items: center; gap: 1.2vh; background: rgba(0,0,0,.28); border-radius: 1.8vh; padding: 1.4vh 2vh; font-size: 3vh; }
+  .pick .e { font-size: 5vh; }
+  .pick .n { margin-left: auto; font-family: var(--display); font-size: 4.5vh; color: var(--accent); min-width: 2ch; text-align: right; }
+  .count { font-size: 3vh; opacity: .9; }
+  .count b { font-family: var(--display); font-size: 6vh; color: var(--accent); vertical-align: -.1em; }
+
+  /* race */
+  .race { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  canvas#track { width: 100%; height: 70vh; display: block; border-radius: 2vh; }
+  .countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 40vh; color: var(--accent); text-shadow: 0 10px 40px rgba(0,0,0,.6); pointer-events: none; }
+
+  /* results */
+  .results { text-align: center; }
+  .results .big { font-size: 22vh; line-height: 1; filter: drop-shadow(0 20px 30px rgba(0,0,0,.5)); animation: pop .6s cubic-bezier(.2,1.4,.4,1) both; }
+  .results h1 { font-size: 11vh; line-height: 1; margin: 1vh 0; }
+  .results h1 span { color: var(--accent); }
+  .results p { font-size: 3.4vh; opacity: .95; margin: 1vh 0; }
+  .results .names { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2vh; margin-top: 2.5vh; max-width: 90vw; }
+  .results .names span { background: rgba(0,0,0,.3); padding: 1vh 2vh; border-radius: 999px; font-size: 2.8vh; }
+  @keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .confetti { position: absolute; inset: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="console">
+  <div class="topbar">
+    <div class="brand">LAST CALL <span>GAMES</span></div>
+    <div class="grow"></div>
+    <div id="who" class="row hidden">
+      <span id="venuePill" class="venue-pill hidden"></span>
+      <a id="adminLink" href="admin.html" class="btn small hidden">Admin</a>
+      <button id="btnChangeVenue" class="btn small hidden">Change bar</button>
+      <button id="btnLogout" class="btn small">Log out</button>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <section id="viewLogin" class="card login-box stack">
+    <h1>DJ Login</h1>
+    <div id="loginError" class="error hidden"></div>
+    <div><label>Username</label><input id="username" autocomplete="username" autocapitalize="none"></div>
+    <div><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    <button id="btnLogin" class="btn primary big" style="width:100%">Log in</button>
+    <p id="mockNote" class="muted hidden" style="font-size:.85rem">Preview mode (no database). Try <b>dj</b> / <b>dj</b> or <b>admin</b> / <b>admin</b>.</p>
+  </section>
+
+  <!-- VENUE -->
+  <section id="viewVenue" class="card login-box stack hidden">
+    <h1>Which bar are you at?</h1>
+    <select id="venueSelect"></select>
+    <button id="btnVenue" class="btn primary big" style="width:100%">Continue</button>
+  </section>
+
+  <!-- GAMES -->
+  <section id="viewGames" class="stack hidden">
+    <div class="row">
+      <h1 class="grow">Pick a game</h1>
+      <button id="btnFullscreen" class="btn small">Fullscreen <span class="kbd">F</span></button>
+    </div>
+    <div class="card row">
+      <div class="grow"><label>Prize for this round (shown on the TV and texted to winners later)</label><input id="prize" placeholder="e.g. a free round, $10 gift card, a shot"></div>
+    </div>
+    <div id="gameGrid" class="game-grid"></div>
+    <p class="muted">How it runs: pick a game, the TV shows the QR code, guests scan and pick, then you press <span class="kbd">Enter</span> to start. Press <span class="kbd">Enter</span> again after the result to come back here. <span class="kbd">Esc</span> cancels a round.</p>
+    <div class="card">
+      <h3>Recent rounds</h3>
+      <table><thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Entries</th><th>Winner</th><th>Status</th></tr></thead><tbody id="recentRounds"></tbody></table>
+    </div>
+  </section>
+</div>
+
+<!-- TV STAGE -->
+<div id="stage">
+  <div class="stage-head">
+    <div class="venue"><img id="stLogo" alt="" class="hidden"><div><div class="name" id="stVenue"></div><div class="tag" id="stTag"></div></div></div>
+    <div class="prize">Tonight's prize<b id="stPrize"></b></div>
+  </div>
+  <div class="stage-body" id="stageBody"></div>
+  <div class="stage-foot"><div id="stFootLeft"></div><div class="hint" id="stHint"></div></div>
+</div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="common.js"></script>
+<script>
+(async function () {
+  const { api, MOCK, $, $$, esc, sleep } = window.BG;
+  const state = { me: null, venue: null, venues: [], games: [], round: null, game: null, phase: "console", poll: null, raceCtl: null };
+
+  // ---------- helpers ----------
+  const show = (id) => { ["viewLogin", "viewVenue", "viewGames"].forEach((v) => $("#" + v).classList.toggle("hidden", v !== id)); };
+  const toast = (msg) => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); };
+  const firstLast = (n) => { const p = String(n).trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : p[0]; };
+  function toggleFullscreen() { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch {} }
+
+  if (MOCK) $("#mockNote").classList.remove("hidden");
+
+  // ---------- login ----------
+  async function doLogin() {
+    const err = $("#loginError"); err.classList.add("hidden");
+    $("#btnLogin").disabled = true;
+    try { state.me = await api.signIn($("#username").value, $("#password").value); await afterLogin(); }
+    catch (e) { err.textContent = e.message || "Login failed."; err.classList.remove("hidden"); }
+    finally { $("#btnLogin").disabled = false; }
+  }
+  $("#btnLogin").onclick = doLogin;
+  $("#password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  $("#username").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#password").focus(); });
+  $("#btnLogout").onclick = async () => { await api.signOut(); location.reload(); };
+
+  async function afterLogin() {
+    $("#who").classList.remove("hidden");
+    if (state.me.role === "admin") $("#adminLink").classList.remove("hidden");
+    state.venues = await api.listVenues();
+    state.games = await api.listGames();
+    const sel = $("#venueSelect");
+    sel.innerHTML = state.venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    let last = null; try { last = localStorage.getItem("bg.venue"); } catch {}
+    if (last && state.venues.some((v) => v.id === last)) sel.value = last;
+    show("viewVenue");
+  }
+
+  // ---------- venue ----------
+  $("#btnVenue").onclick = () => {
+    state.venue = state.venues.find((v) => v.id === $("#venueSelect").value);
+    try { localStorage.setItem("bg.venue", state.venue.id); } catch {}
+    $("#venuePill").textContent = state.venue.name; $("#venuePill").classList.remove("hidden");
+    $("#btnChangeVenue").classList.remove("hidden");
+    $("#prize").value = state.venue.default_prize || "";
+    renderGames(); show("viewGames");
+  };
+  $("#btnChangeVenue").onclick = () => show("viewVenue");
+  $("#btnFullscreen").onclick = toggleFullscreen;
+
+  // ---------- games ----------
+  const SOON = [
+    { name: "Prize Wheel", emojis: "🎡", description: "Everyone enters, the wheel spins, one name wins." },
+    { name: "Score Prediction", emojis: "🏈", description: "Guess the final score. Closest wins." },
+    { name: "Trivia", emojis: "🧠", description: "One question, 30 seconds, random winner from correct answers." },
+  ];
+  async function renderGames() {
+    $("#gameGrid").innerHTML =
+      state.games.map((g) => `<div class="game-card" data-key="${esc(g.key)}"><div class="emojis">${(g.options || []).map((o) => o.emoji).join(" ")}</div><h2>${esc(g.name)}</h2><p class="muted">${esc(g.description || "")}</p><button class="btn primary">Start on TV</button></div>`).join("") +
+      SOON.map((g) => `<div class="game-card soon"><div class="emojis">${g.emojis}</div><h2>${g.name}</h2><p class="muted">${g.description}</p><span class="tag no">Coming soon</span></div>`).join("");
+    $$(".game-card[data-key]").forEach((el) => (el.onclick = () => startRound(el.dataset.key)));
+    try {
+      const rounds = await api.listRounds(12);
+      $("#recentRounds").innerHTML = rounds.map((r) => `<tr><td>${new Date(r.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</td><td>${esc(r.venue)}</td><td>${esc(r.game)}</td><td>${r.entries}</td><td>${esc(r.winning_pick || "")}</td><td>${esc(r.status)}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No rounds yet.</td></tr>`;
+    } catch (e) { $("#recentRounds").innerHTML = `<tr><td colspan="6" class="muted">${esc(e.message)}</td></tr>`; }
+  }
+
+  // ---------- stage ----------
+  const stage = $("#stage");
+  function openStage() {
+    const v = state.venue;
+    stage.style.setProperty("--primary", v.color_primary || "#004c54");
+    stage.style.setProperty("--accent", v.color_accent || "#ffcd00");
+    $("#stVenue").textContent = v.name; $("#stTag").textContent = v.tagline || "";
+    const img = $("#stLogo"); if (v.logo_url) { img.src = v.logo_url; img.classList.remove("hidden"); } else img.classList.add("hidden");
+    $("#stPrize").textContent = state.round.prize || v.default_prize || "";
+    stage.classList.add("on");
+    if (!document.fullscreenElement) { try { document.documentElement.requestFullscreen().catch(() => {}); } catch {} }
+  }
+  function closeStage() { stage.classList.remove("on"); clearInterval(state.poll); state.poll = null; if (state.raceCtl) { state.raceCtl.stop(); state.raceCtl = null; } state.phase = "console"; state.round = null; renderGames(); }
+
+  async function startRound(gameKey) {
+    state.game = state.games.find((g) => g.key === gameKey);
+    try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: gameKey, prize: $("#prize").value.trim() }); }
+    catch (e) { toast(e.message); return; }
+    openStage(); renderLobby();
+  }
+
+  function qrSvg(text) {
+    const q = qrcode(0, "M"); q.addData(text); q.make();
+    return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  }
+
+  function renderLobby() {
+    state.phase = "lobby";
+    const g = state.game, url = window.BG.entryUrl(state.round.code);
+    $("#stageBody").innerHTML = `
+      <div class="lobby">
+        <div class="qr-wrap">${qrSvg(url)}</div>
+        <div class="cta">
+          <h1>SCAN TO <span>PLAY</span></h1>
+          <p>${esc(g.name)}. Pick your racer. If it wins, you win <b>${esc(state.round.prize || state.venue.default_prize || "")}</b>.</p>
+          <div class="code">CODE ${esc(state.round.code)}</div>
+          <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${o.emoji}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
+        </div>
+      </div>`;
+    $("#stFootLeft").innerHTML = `<span class="count"><b id="stCount">0</b> players in</span>`;
+    $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> to start the race &nbsp;·&nbsp; <span class="kbd">Esc</span> cancel`;
+    const tick = async () => { try { const s = await api.roundStats(state.round.id); $("#stCount").textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0)); } catch {} };
+    tick(); state.poll = setInterval(tick, 2500);
+  }
+
+  async function startRace() {
+    if (state.phase !== "lobby") return;
+    state.phase = "running"; clearInterval(state.poll); state.poll = null;
+    try { await api.setRoundStatus(state.round.id, "running"); } catch (e) { toast(e.message); }
+    const opts = state.game.options;
+    const winner = opts[Math.floor(Math.random() * opts.length)];
+    $("#stHint").innerHTML = "";
+    $("#stFootLeft").innerHTML = `<span class="count">And they're off!</span>`;
+    $("#stageBody").innerHTML = `<div class="race"><canvas id="track"></canvas></div><div class="countdown" id="countdown"></div>`;
+    for (const n of ["3", "2", "1", "GO!"]) { $("#countdown").textContent = n; await sleep(800); }
+    $("#countdown").textContent = "";
+    state.raceCtl = runRace($("#track"), opts, winner.id, async () => {
+      try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); }
+      await sleep(900); renderResults(winner);
+    });
+  }
+
+  function runRace(canvas, racers, winnerId, onDone) {
+    const ctx = canvas.getContext("2d");
+    const DPR = window.devicePixelRatio || 1;
+    const fit = () => { canvas.width = canvas.clientWidth * DPR; canvas.height = canvas.clientHeight * DPR; };
+    fit(); window.addEventListener("resize", fit);
+    const n = racers.length, DURATION = 11000 + Math.random() * 2000;
+    const r = racers.map((o, i) => ({ ...o, p: 0, v: 0.9 + Math.random() * 0.2, wob: Math.random() * 10, burstUntil: 0, burst: 1 }));
+    const wIdx = racers.findIndex((o) => o.id === winnerId);
+    let last = performance.now(), start = last, done = false, raf;
+    function frame(now) {
+      const dt = Math.min(50, now - last) / 1000; last = now;
+      const t = (now - start) / DURATION; // 0..1 nominal
+      r.forEach((x, i) => {
+        if (now > x.burstUntil) { x.burst = 0.75 + Math.random() * 0.6; x.burstUntil = now + 500 + Math.random() * 900; }
+        let speed = x.v * x.burst / (DURATION / 1000);
+        if (i === wIdx && t > 0.7) speed *= 1.25 + (t - 0.7) * 1.5;   // winner surges late
+        x.p += speed * dt;
+      });
+      const wp = r[wIdx].p;
+      r.forEach((x, i) => { if (i !== wIdx && x.p > wp - 0.03 && t > 0.5) x.p = wp - 0.03 - Math.random() * 0.02; if (i !== wIdx && x.p > 0.985) x.p = 0.985; });
+      draw(now);
+      if (r[wIdx].p >= 1 && !done) { done = true; r[wIdx].p = 1; draw(now); window.removeEventListener("resize", fit); onDone(); return; }
+      raf = requestAnimationFrame(frame);
+    }
+    function draw(now) {
+      const W = canvas.width, H = canvas.height, laneH = H / n, pad = 90 * DPR, finishX = W - pad;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < n; i++) {
+        const y = i * laneH;
+        ctx.fillStyle = i % 2 ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.09)"; ctx.fillRect(0, y, W, laneH);
+        ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.setLineDash([18 * DPR, 14 * DPR]); ctx.lineWidth = 3 * DPR; ctx.beginPath(); ctx.moveTo(0, y + laneH); ctx.lineTo(W, y + laneH); ctx.stroke(); ctx.setLineDash([]);
+      }
+      // finish line (checkered)
+      const sq = 14 * DPR; for (let yy = 0; yy < H; yy += sq) for (let k = 0; k < 2; k++) { ctx.fillStyle = ((yy / sq + k) % 2) ? "#fff" : "#111"; ctx.fillRect(finishX + k * sq, yy, sq, sq); }
+      r.forEach((x, i) => {
+        const y = i * laneH + laneH / 2, xpos = pad / 2 + x.p * (finishX - pad / 2 - 60 * DPR);
+        const bob = Math.sin(now / 90 + x.wob) * (x.p < 1 ? 7 * DPR : 0);
+        ctx.font = `${Math.min(laneH * 0.62, 150 * DPR)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+        ctx.textBaseline = "middle"; ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(xpos, y + laneH * 0.32, laneH * 0.3, laneH * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.fillText(x.emoji, xpos, y + bob);
+        ctx.font = `700 ${Math.min(laneH * 0.22, 34 * DPR)}px Inter, sans-serif`; ctx.textAlign = "left"; ctx.fillStyle = "rgba(255,255,255,.85)";
+        ctx.fillText(x.label.toUpperCase(), 14 * DPR, y - laneH * 0.3);
+      });
+    }
+    raf = requestAnimationFrame(frame);
+    return { stop() { cancelAnimationFrame(raf); window.removeEventListener("resize", fit); } };
+  }
+
+  async function renderResults(winner) {
+    state.phase = "results";
+    let s = { winners: [], count: 0 }; try { s = await api.roundStats(state.round.id); } catch {}
+    const names = s.winners.map(firstLast);
+    $("#stageBody").innerHTML = `
+      <div class="results">
+        <div class="big">${winner.emoji}</div>
+        <h1><span>${esc(winner.label.toUpperCase())}</span> WINS!</h1>
+        <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
+        <div class="names">${names.slice(0, 40).map((x) => `<span>${esc(x)}</span>`).join("")}${names.length > 40 ? `<span>+${names.length - 40} more</span>` : ""}</div>
+      </div><canvas class="confetti" id="confetti"></canvas>`;
+    $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`;
+    $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> for the next game`;
+    confetti($("#confetti"));
+  }
+
+  function confetti(canvas) {
+    const ctx = canvas.getContext("2d"); canvas.width = innerWidth; canvas.height = innerHeight;
+    const accent = getComputedStyle(stage).getPropertyValue("--accent").trim() || "#ffcd00";
+    const cols = [accent, "#fff", "#ff5c5c", "#5cc8ff", "#7ee2a8"];
+    const ps = Array.from({ length: 220 }, () => ({ x: Math.random() * canvas.width, y: -Math.random() * canvas.height, w: 6 + Math.random() * 8, h: 10 + Math.random() * 10, c: cols[Math.floor(Math.random() * cols.length)], vy: 2 + Math.random() * 4, vx: -1 + Math.random() * 2, a: Math.random() * 6, va: -0.1 + Math.random() * 0.2 }));
+    const t0 = performance.now();
+    (function f(now) {
+      if (state.phase !== "results" || now - t0 > 9000) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ps.forEach((p) => { p.y += p.vy; p.x += p.vx; p.a += p.va; if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; } ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); });
+      requestAnimationFrame(f);
+    })(t0);
+  }
+
+  // ---------- keyboard ----------
+  document.addEventListener("keydown", async (e) => {
+    const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
+    if (e.key === "f" || e.key === "F") { if (!typing) toggleFullscreen(); return; }
+    if (state.phase === "console") return;
+    if (e.key === "Enter") { e.preventDefault(); if (state.phase === "lobby") startRace(); else if (state.phase === "results") closeStage(); }
+    if (e.key === "Escape") { if (state.phase === "lobby") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} closeStage(); } else if (state.phase === "results") closeStage(); }
+  });
+  // Click/tap also advances, for TVs without a keyboard handy.
+  stage.addEventListener("click", () => { if (state.phase === "lobby") startRace(); else if (state.phase === "results") closeStage(); });
+
+  // ---------- boot ----------
+  try { state.me = await api.me(); } catch {}
+  if (state.me) await afterLogin(); else show("viewLogin");
+})();
+</script>
+</body>
+</html>

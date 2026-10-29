@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last Call Games - Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .topbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+  .brand { font-family: var(--display); font-size: 1.6rem; letter-spacing: .04em; } .brand span { color: var(--accent); }
+  .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
+  .tabs button { background: none; border: none; color: var(--muted); font: inherit; font-weight: 600; padding: .7rem 1rem; cursor: pointer; border-bottom: 3px solid transparent; }
+  .tabs button.on { color: var(--text); border-color: var(--accent); }
+  .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .7rem; align-items: end; }
+  .filters .checks { display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap; grid-column: 1 / -1; }
+  .filters .row { grid-column: 1 / -1; }
+  .filters .checks label { display: flex; gap: .4rem; align-items: center; margin: 0; color: var(--text); font-size: .9rem; }
+  .tablewrap { max-height: 65vh; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .stats { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .stat { background: var(--panel2); border-radius: 10px; padding: .7rem 1rem; } .stat b { display: block; font-family: var(--display); font-size: 1.8rem; color: var(--accent); }
+  .venue-row { display: grid; grid-template-columns: 56px 1.6fr 1fr 1fr 1.4fr 1.4fr auto; gap: .6rem; align-items: center; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+  .venue-row .logo { width: 56px; height: 56px; border-radius: 8px; background: var(--panel2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .venue-row .logo img { max-width: 100%; max-height: 100%; }
+  .swatch { display: flex; gap: .4rem; align-items: center; } .swatch input[type=color] { width: 2.6rem; height: 2.4rem; padding: 0; border: none; background: none; }
+  .notes { width: 100%; min-width: 120px; padding: .35rem .5rem; font-size: .85rem; }
+  .login-box { max-width: 420px; margin: 10vh auto 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">LAST CALL <span>GAMES</span> · ADMIN</div>
+    <div class="grow"></div>
+    <a href="index.html" class="btn small">DJ console</a>
+    <button id="btnLogout" class="btn small hidden">Log out</button>
+  </div>
+
+  <section id="viewLogin" class="card login-box stack">
+    <h1>Admin login</h1>
+    <div id="loginError" class="error hidden"></div>
+    <div><label>Username</label><input id="username" autocapitalize="none"></div>
+    <div><label>Password</label><input id="password" type="password"></div>
+    <button id="btnLogin" class="btn primary big" style="width:100%">Log in</button>
+  </section>
+
+  <section id="viewAdmin" class="hidden">
+    <div class="tabs">
+      <button data-tab="entries" class="on">Entries</button>
+      <button data-tab="contacts">SMS list</button>
+      <button data-tab="rounds">Rounds</button>
+      <button data-tab="venues">Bars</button>
+      <button data-tab="users">Logins</button>
+    </div>
+
+    <!-- ENTRIES -->
+    <div id="tab-entries" class="stack">
+      <div class="card filters">
+        <div><label>Bar</label><select id="fVenue"><option value="">All bars</option></select></div>
+        <div><label>Game</label><select id="fGame"><option value="">All games</option></select></div>
+        <div><label>From</label><input id="fFrom" type="date"></div>
+        <div><label>To</label><input id="fTo" type="date"></div>
+        <div class="checks">
+          <label><input id="fWinners" type="checkbox"> Winners only</label>
+          <label><input id="fOptIn" type="checkbox"> Opted in</label>
+          <label><input id="fUntexted" type="checkbox"> Not yet texted</label>
+        </div>
+        <div class="row"><button id="btnFilter" class="btn primary">Apply</button><button id="btnExportEntries" class="btn">Export CSV</button></div>
+      </div>
+      <div class="stats" id="entryStats"></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Code</th><th>Name</th><th>Phone</th><th>Pick</th><th>Opt-in</th><th>Winner</th><th>Prize</th><th>Texted</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="entriesBody"></tbody></table></div>
+      <p class="muted" style="font-size:.85rem">Tip: filter to <b>Winners only</b> + <b>Not yet texted</b>, export, send the prize texts from your SMS tool, then come back and tick <b>Texted</b>.</p>
+    </div>
+
+    <!-- CONTACTS -->
+    <div id="tab-contacts" class="stack hidden">
+      <div class="card row">
+        <label style="display:flex;gap:.4rem;align-items:center;margin:0;color:var(--text)"><input id="cOptIn" type="checkbox" checked> Opted-in numbers only</label>
+        <div class="grow"></div>
+        <button id="btnLoadContacts" class="btn primary">Refresh</button>
+        <button id="btnExportContacts" class="btn">Export CSV</button>
+      </div>
+      <div class="stats" id="contactStats"></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Phone</th><th>Name</th><th>Opt-in</th><th>Entries</th><th>Wins</th><th>Bars</th><th>First seen</th><th>Last seen</th></tr></thead>
+        <tbody id="contactsBody"></tbody></table></div>
+      <p class="muted" style="font-size:.85rem">One row per phone number, de-duplicated across every game and bar. This is the clean list to load into your SMS platform.</p>
+    </div>
+
+    <!-- ROUNDS -->
+    <div id="tab-rounds" class="stack hidden">
+      <div class="tablewrap"><table>
+        <thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Code</th><th>Prize</th><th>Entries</th><th>Winning pick</th><th>Status</th></tr></thead>
+        <tbody id="roundsBody"></tbody></table></div>
+    </div>
+
+    <!-- VENUES -->
+    <div id="tab-venues" class="stack hidden">
+      <div class="card">
+        <div class="venue-row" style="border-bottom:2px solid var(--line);color:var(--muted);font-size:.8rem;text-transform:uppercase"><div>Logo</div><div>Name</div><div>Main color</div><div>Accent</div><div>Tagline</div><div>Default prize</div><div></div></div>
+        <div id="venuesBody"></div>
+        <p class="muted" style="font-size:.85rem;margin-top:1rem">Logos: PNG or SVG with a transparent background looks best on the TV. Colors apply to the TV screen and the guest's phone.</p>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="tab-users" class="stack hidden">
+      <div class="card stack">
+        <h3>Add a login</h3>
+        <div class="row">
+          <div class="grow"><label>Username</label><input id="nuUser" autocapitalize="none" placeholder="e.g. dj.marcus"></div>
+          <div class="grow"><label>Password</label><input id="nuPass" placeholder="at least 8 characters"></div>
+          <div><label>Role</label><select id="nuRole"><option value="dj">DJ</option><option value="admin">Admin</option></select></div>
+          <button id="btnAddUser" class="btn primary" style="align-self:flex-end">Add</button>
+        </div>
+        <div id="userMsg"></div>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead>
+        <tbody id="usersBody"></tbody></table></div>
+      <p class="muted" style="font-size:.85rem">DJs see the console only. Admins also see this page. Disable a login instead of deleting it so past rounds keep their history. Passwords can be reset in Supabase > Authentication.</p>
+    </div>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+(async function () {
+  const { api, $, $$, esc, fmtPhone } = window.BG;
+  let me = null, venues = [], games = [], entries = [], contacts = [];
+  const fmt = (d) => d ? new Date(d).toLocaleString([], { month: "short", day: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit" }) : "";
+  const toast = (msg) => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); };
+
+  // ---- CSV ----
+  function downloadCsv(filename, rows, cols) {
+    const q = (v) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const csv = [cols.map((c) => q(c.label)).join(",")].concat(rows.map((r) => cols.map((c) => q(c.get(r))).join(","))).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" })); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  }
+  const stamp = () => new Date().toISOString().slice(0, 10);
+
+  // ---- login ----
+  async function doLogin() {
+    const err = $("#loginError"); err.classList.add("hidden");
+    try { me = await api.signIn($("#username").value, $("#password").value); await boot(); }
+    catch (e) { err.textContent = e.message; err.classList.remove("hidden"); }
+  }
+  $("#btnLogin").onclick = doLogin; $("#password").addEventListener("keydown", (e) => e.key === "Enter" && doLogin());
+  $("#btnLogout").onclick = async () => { await api.signOut(); location.reload(); };
+
+  async function boot() {
+    if (!me || me.role !== "admin") { const err = $("#loginError"); err.textContent = "This login is not an admin."; err.classList.remove("hidden"); await api.signOut(); return; }
+    $("#viewLogin").classList.add("hidden"); $("#viewAdmin").classList.remove("hidden"); $("#btnLogout").classList.remove("hidden");
+    [venues, games] = await Promise.all([api.listAllVenues(), api.listGames()]);
+    $("#fVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    $("#fGame").innerHTML += games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
+    await loadEntries();
+  }
+
+  // ---- tabs ----
+  $$(".tabs button").forEach((b) => (b.onclick = () => {
+    $$(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
+    ["entries", "contacts", "rounds", "venues", "users"].forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+    ({ contacts: loadContacts, rounds: loadRounds, venues: renderVenues, users: loadUsers, entries: loadEntries })[b.dataset.tab]();
+  }));
+
+  // ---- entries ----
+  function filters() {
+    const f = { venue_id: $("#fVenue").value || null, game_key: $("#fGame").value || null, winners: $("#fWinners").checked, opt_in: $("#fOptIn").checked, untexted: $("#fUntexted").checked };
+    if ($("#fFrom").value) f.from = new Date($("#fFrom").value + "T00:00:00").toISOString();
+    if ($("#fTo").value) f.to = new Date($("#fTo").value + "T23:59:59").toISOString();
+    return f;
+  }
+  async function loadEntries() {
+    try { entries = await api.listEntries(filters()); } catch (e) { toast(e.message); entries = []; }
+    const optIn = entries.filter((e) => e.sms_opt_in).length, win = entries.filter((e) => e.is_winner).length, untexted = entries.filter((e) => e.is_winner && !e.texted).length;
+    $("#entryStats").innerHTML = `<div class="stat"><b>${entries.length}</b>entries</div><div class="stat"><b>${new Set(entries.map((e) => e.phone)).size}</b>unique phones</div><div class="stat"><b>${optIn}</b>opted in</div><div class="stat"><b>${win}</b>winners</div><div class="stat"><b>${untexted}</b>winners not texted</div>`;
+    $("#entriesBody").innerHTML = entries.map((e) => `<tr data-id="${e.id}">
+      <td>${fmt(e.created_at)}</td><td>${esc(e.venue)}</td><td>${esc(e.game)}</td><td>${esc(e.round_code)}</td><td>${esc(e.name)}</td><td>${fmtPhone(e.phone)}</td><td>${esc(e.pick)}</td>
+      <td>${e.sms_opt_in ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>'}</td>
+      <td>${e.is_winner ? '<span class="tag win">Winner</span>' : ""}</td><td>${esc(e.prize || "")}</td>
+      <td><input type="checkbox" class="texted" ${e.texted ? "checked" : ""}></td>
+      <td><input class="notes" value="${esc(e.notes || "")}" placeholder="notes"></td>
+      <td><button class="btn small danger del" title="Delete entry">✕</button></td></tr>`).join("") || `<tr><td colspan="13" class="muted">No entries match.</td></tr>`;
+    $$("#entriesBody tr[data-id]").forEach((tr) => {
+      const id = tr.dataset.id;
+      tr.querySelector(".texted").onchange = async (ev) => { try { await api.updateEntry(id, { texted: ev.target.checked }); } catch (e) { toast(e.message); } };
+      tr.querySelector(".notes").onblur = async (ev) => { try { await api.updateEntry(id, { notes: ev.target.value || null }); } catch (e) { toast(e.message); } };
+      tr.querySelector(".del").onclick = async () => { if (!tr.classList.contains("confirm")) { tr.classList.add("confirm"); tr.querySelector(".del").textContent = "Sure?"; setTimeout(() => { tr.classList.remove("confirm"); tr.querySelector(".del").textContent = "✕"; }, 3000); return; } try { await api.deleteEntry(id); loadEntries(); } catch (e) { toast(e.message); } };
+    });
+  }
+  $("#btnFilter").onclick = loadEntries;
+  $("#btnExportEntries").onclick = () => downloadCsv(`entries-${stamp()}.csv`, entries, [
+    { label: "Date", get: (e) => fmt(e.created_at) }, { label: "Bar", get: (e) => e.venue }, { label: "Game", get: (e) => e.game }, { label: "Round code", get: (e) => e.round_code },
+    { label: "Name", get: (e) => e.name }, { label: "Phone", get: (e) => e.phone }, { label: "Pick", get: (e) => e.pick }, { label: "SMS opt-in", get: (e) => e.sms_opt_in ? "Yes" : "No" },
+    { label: "Winner", get: (e) => e.is_winner ? "Yes" : "No" }, { label: "Prize", get: (e) => e.prize }, { label: "Texted", get: (e) => e.texted ? "Yes" : "No" }, { label: "Notes", get: (e) => e.notes }]);
+
+  // ---- contacts ----
+  async function loadContacts() {
+    try { contacts = await api.listContacts({ opt_in: $("#cOptIn").checked }); } catch (e) { toast(e.message); contacts = []; }
+    $("#contactStats").innerHTML = `<div class="stat"><b>${contacts.length}</b>numbers</div><div class="stat"><b>${contacts.filter((c) => c.sms_opt_in).length}</b>opted in</div>`;
+    $("#contactsBody").innerHTML = contacts.map((c) => `<tr><td>${fmtPhone(c.phone)}</td><td>${esc(c.name)}</td><td>${c.sms_opt_in ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>'}</td><td>${c.entries}</td><td>${c.wins}</td><td>${esc(c.venues)}</td><td>${fmt(c.first_seen)}</td><td>${fmt(c.last_seen)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">No contacts yet.</td></tr>`;
+  }
+  $("#btnLoadContacts").onclick = loadContacts; $("#cOptIn").onchange = loadContacts;
+  $("#btnExportContacts").onclick = () => downloadCsv(`sms-list-${stamp()}.csv`, contacts, [
+    { label: "Phone", get: (c) => c.phone }, { label: "First name", get: (c) => String(c.name).trim().split(/\s+/)[0] }, { label: "Last name", get: (c) => String(c.name).trim().split(/\s+/).slice(1).join(" ") },
+    { label: "Full name", get: (c) => c.name }, { label: "SMS opt-in", get: (c) => c.sms_opt_in ? "Yes" : "No" }, { label: "Bars", get: (c) => c.venues }, { label: "Entries", get: (c) => c.entries }, { label: "Wins", get: (c) => c.wins },
+    { label: "First seen", get: (c) => fmt(c.first_seen) }, { label: "Last seen", get: (c) => fmt(c.last_seen) }]);
+
+  // ---- rounds ----
+  async function loadRounds() {
+    let rounds = []; try { rounds = await api.listRounds(200); } catch (e) { toast(e.message); }
+    $("#roundsBody").innerHTML = rounds.map((r) => `<tr><td>${fmt(r.created_at)}</td><td>${esc(r.venue)}</td><td>${esc(r.game)}</td><td>${esc(r.code)}</td><td>${esc(r.prize || "")}</td><td>${r.entries}</td><td>${esc(r.winning_pick || "")}</td><td>${esc(r.status)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">No rounds yet.</td></tr>`;
+  }
+
+  // ---- venues ----
+  function renderVenues() {
+    $("#venuesBody").innerHTML = venues.map((v) => `<div class="venue-row" data-id="${v.id}">
+      <label class="logo" title="Upload logo" style="cursor:pointer;margin:0">${v.logo_url ? `<img src="${esc(v.logo_url)}" alt="">` : '<span class="muted" style="font-size:.7rem">+ logo</span>'}<input type="file" accept="image/*" class="hidden logoFile"></label>
+      <input class="vName" value="${esc(v.name)}">
+      <div class="swatch"><input type="color" class="vPrimary" value="${esc(v.color_primary)}"><span class="muted" style="font-size:.75rem">${esc(v.color_primary)}</span></div>
+      <div class="swatch"><input type="color" class="vAccent" value="${esc(v.color_accent)}"><span class="muted" style="font-size:.75rem">${esc(v.color_accent)}</span></div>
+      <input class="vTag" value="${esc(v.tagline || "")}" placeholder="tagline">
+      <input class="vPrize" value="${esc(v.default_prize || "")}" placeholder="default prize">
+      <button class="btn small primary save">Save</button></div>`).join("");
+    $$("#venuesBody .venue-row").forEach((row) => {
+      const v = venues.find((x) => x.id === row.dataset.id);
+      row.querySelector(".save").onclick = async () => {
+        const patch = { name: row.querySelector(".vName").value.trim(), color_primary: row.querySelector(".vPrimary").value, color_accent: row.querySelector(".vAccent").value, tagline: row.querySelector(".vTag").value.trim() || null, default_prize: row.querySelector(".vPrize").value.trim() || null };
+        try { await api.updateVenue(v.id, patch); Object.assign(v, patch); toast("Saved " + v.name); renderVenues(); } catch (e) { toast(e.message); }
+      };
+      row.querySelector(".logoFile").onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; try { v.logo_url = await api.uploadLogo(v, f); toast("Logo updated"); renderVenues(); } catch (e) { toast(e.message); } };
+    });
+  }
+
+  // ---- users ----
+  async function loadUsers() {
+    let users = []; try { users = await api.listUsers(); } catch (e) { toast(e.message); }
+    $("#usersBody").innerHTML = users.map((u) => `<tr data-id="${u.id}"><td>${esc(u.username)}</td><td><span class="tag ${u.role === "admin" ? "admin" : "no"}">${esc(u.role)}</span></td><td>${u.active ? '<span class="tag ok">Active</span>' : '<span class="tag no">Disabled</span>'}</td>
+      <td class="row">${u.id !== me.id ? `<button class="btn small role">Make ${u.role === "admin" ? "DJ" : "admin"}</button><button class="btn small toggle">${u.active ? "Disable" : "Enable"}</button>` : '<span class="muted">you</span>'}</td></tr>`).join("");
+    $$("#usersBody tr").forEach((tr) => {
+      const u = users.find((x) => x.id === tr.dataset.id);
+      const role = tr.querySelector(".role"), tog = tr.querySelector(".toggle");
+      if (role) role.onclick = async () => { try { await api.updateUser(u.id, { role: u.role === "admin" ? "dj" : "admin" }); loadUsers(); } catch (e) { toast(e.message); } };
+      if (tog) tog.onclick = async () => { try { await api.updateUser(u.id, { active: !u.active }); loadUsers(); } catch (e) { toast(e.message); } };
+    });
+  }
+  $("#btnAddUser").onclick = async () => {
+    const msg = $("#userMsg"); msg.innerHTML = "";
+    const u = $("#nuUser").value.trim(), p = $("#nuPass").value, r = $("#nuRole").value;
+    if (!/^[a-z0-9._-]{3,30}$/i.test(u)) return (msg.innerHTML = `<div class="error">Username: 3 to 30 letters, numbers, dots, dashes or underscores.</div>`);
+    if (p.length < 8) return (msg.innerHTML = `<div class="error">Password must be at least 8 characters.</div>`);
+    try { await api.createUser(u, p, r); msg.innerHTML = `<div class="success">Added <b>${esc(u)}</b>. Give them the username and password.</div>`; $("#nuUser").value = ""; $("#nuPass").value = ""; loadUsers(); }
+    catch (e) { msg.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+  };
+
+  // ---- boot ----
+  try { me = await api.me(); } catch {}
+  if (me) await boot();
+})();
+</script>
+</body>
+</html>
