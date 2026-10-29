@@ -138,6 +138,7 @@
 <script src="mascots.js"></script>
 <script src="sprites.js"></script>
 <script src="race.js"></script>
+<script src="audio.js"></script>
 <script src="common.js"></script>
 <script>
 (async function () {
@@ -219,9 +220,10 @@
     stage.classList.add("on");
     if (!document.fullscreenElement) { try { document.documentElement.requestFullscreen().catch(() => {}); } catch {} }
   }
-  function closeStage() { stage.classList.remove("on"); clearInterval(state.poll); state.poll = null; if (state.raceCtl) { state.raceCtl.stop(); state.raceCtl = null; } state.phase = "console"; state.round = null; renderGames(); }
+  function closeStage() { try { AUDIO.event("end"); } catch {} stage.classList.remove("on"); clearInterval(state.poll); state.poll = null; if (state.raceCtl) { state.raceCtl.stop(); state.raceCtl = null; } state.phase = "console"; state.round = null; renderGames(); }
 
   async function startRound(gameKey) {
+    try { AUDIO.unlock(); } catch {}
     state.game = state.games.find((g) => g.key === gameKey);
     try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: gameKey, prize: $("#prize").value.trim() }); }
     catch (e) { toast(e.message); return; }
@@ -247,7 +249,8 @@
         </div>
       </div>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b id="stCount">0</b> players in</span>`;
-    $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> to start the race &nbsp;·&nbsp; <span class="kbd">Esc</span> cancel`;
+    $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> to start the race &nbsp;·&nbsp; <span class="kbd">Esc</span> cancel &nbsp;·&nbsp; <span class="kbd">M</span> mute`;
+    try { AUDIO.event("lobby"); } catch {}
     const tick = async () => { try { const s = await api.roundStats(state.round.id); $("#stCount").textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0)); } catch {} };
     tick(); state.poll = setInterval(tick, 2500);
   }
@@ -271,7 +274,7 @@
   }
 
   async function renderResults(winner) {
-    state.phase = "results";
+    state.phase = "results"; try { AUDIO.event("results"); } catch {}
     let s = { winners: [], count: 0 }; try { s = await api.roundStats(state.round.id); } catch {}
     const names = s.winners.map(firstLast);
     $("#stageBody").innerHTML = `
@@ -313,7 +316,7 @@
     const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
     if (e.key === "f" || e.key === "F") { if (!typing) toggleFullscreen(); return; }
     if (state.phase === "console") return;
-    if (e.key === "Enter") { e.preventDefault(); if (state.phase === "lobby") startRace(); else if (state.phase === "results") closeStage(); }
+    if (e.key === "Enter") { e.preventDefault(); try { AUDIO.unlock(); } catch {} if (state.phase === "lobby") startRace(); else if (state.phase === "results") closeStage(); }
     if (e.key === "Escape") { if (state.phase === "lobby") { try { await api.setRoundStatus(state.round.id, "cancelled"); } catch {} closeStage(); } else if (state.phase === "results") closeStage(); }
   });
   // Click/tap also advances, for TVs without a keyboard handy.

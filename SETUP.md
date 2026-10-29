@@ -32,3 +32,26 @@ The first account created becomes the admin. Open `admin.html` on the hosted sit
 ## Sending prizes
 
 Admin page > **Entries** > tick "Winners only" + "Not yet texted" > **Export CSV**. Send the texts from your SMS platform, then tick **Texted** on each row. The **SMS list** tab is the de-duplicated opt-in list for general marketing.
+
+## Announcer clips
+
+Recorded MP3s go in `site/announcer/` named by key (send them to Claude as a zip and they get added with the manifest). Keys:
+
+| Key | Line |
+|---|---|
+| welcome | Ladies and gentlemen, welcome to the Last Call Tavern Games mascot race! Scan the code, pick your racer, and let's go! |
+| marks | Racers, to your marks! |
+| set | Get set! |
+| go | And they're off! |
+| lead | We've got a new leader! |
+| lead-hotdog / lead-beer / lead-pretzel / lead-pizza | Hot Dog takes the lead! (etc.) |
+| down | Oh! Down goes a racer! |
+| down-hotdog / down-beer / down-pretzel / down-pizza | Oh no, Hot Dog goes down! (etc.) |
+| stretch | Here they come down the stretch! |
+| close | It's going to be close! Photo finish! |
+| runaway | And they're running away with it! |
+| comeback | What a comeback! Look at them go! |
+| wins | We have a winner! |
+| wins-hotdog / wins-beer / wins-pretzel / wins-pizza | Hot Dog wins it! Hot Dog takes the race! (etc.) |
+
+Keys: M on the console mutes everything. The crowd is generated live and needs no files.

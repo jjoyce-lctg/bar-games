@@ -137,6 +137,7 @@
     const boardRows = Object.fromEntries(Array.from(board.children).map((el) => [el.dataset.id, el]));
     const dots = Object.fromEntries(Array.from(strip.querySelectorAll(".dot")).map((el) => [el.dataset.id, el]));
 
+    const audio = (n, d) => { try { if (window.AUDIO) window.AUDIO.event(n, d); } catch (e) {} };
     let commTimer = null;
     const say = (text, ms = 2200) => { comm.textContent = text; comm.classList.add("on"); clearTimeout(commTimer); commTimer = setTimeout(() => comm.classList.remove("on"), ms); };
 
@@ -153,7 +154,7 @@
       // ---- countdown ----
       if (phaseT === "count") {
         if (now >= countNext) {
-          if (countIdx < countdown.length) { big.innerHTML = `<div class="t" style="font-size:${countIdx === 2 ? 34 : 16}vh">${countdown[countIdx]}</div>`; countNext = now + (countIdx === 2 ? 700 : 1300); countIdx++; }
+          if (countIdx < countdown.length) { big.innerHTML = `<div class="t" style="font-size:${countIdx === 2 ? 34 : 16}vh">${countdown[countIdx]}</div>`; audio(["marks", "set", "go"][countIdx]); countNext = now + (countIdx === 2 ? 700 : 1300); countIdx++; }
           else { big.innerHTML = ""; phaseT = "race"; raceStart = now; R.forEach((r) => (r.mode = "run")); say("And they're off!"); }
         }
         R.forEach((r) => { r.actor.set("idle"); r.actor.tick(dt, 1); place(r); });
@@ -173,7 +174,7 @@
           if (rivals.includes(r)) f *= 1 + Math.max(0, Math.min(0.45, (winner.p - r.p - 0.006) * 25));
           if (r === winner) { const ahead = Math.max(...rivals.map((rv) => rv.p)); f *= 1 + Math.max(0, Math.min(0.45, (ahead - r.p - 0.006) * 25)); }
         }
-        if (r === stumbler && !stumbled && T >= stumbleAt) { stumbled = true; r.stumbleUntil = now + r.actor.stumbleMs; say(`${r.label} goes down!`); }
+        if (r === stumbler && !stumbled && T >= stumbleAt) { stumbled = true; r.stumbleUntil = now + r.actor.stumbleMs; say(`${r.label} goes down!`); audio("stumble", { racerId: r.id }); }
         if (now < r.stumbleUntil) { f *= 0.1; r.mode = "stumble"; } else if (r.mode === "stumble") r.mode = "run";
         r.v = f;
         r.p += (f / (duration / 1000)) * dt;
@@ -192,14 +193,15 @@
         slow = true;
         const second = Math.max(...R.filter((r) => r !== winner).map((r) => r.p));
         const gap = winner.p - second;
-        if (gap < photoGap && !photoShown) { photoShown = true; const el = document.createElement("div"); el.className = "race-photo"; el.textContent = "PHOTO FINISH"; container.querySelector(".race-hud").appendChild(el); setTimeout(() => el.remove(), 2600); say("It's going to be close!"); }
+        audio("stretch", { style: gap < photoGap ? "photo" : style });
+        if (gap < photoGap && !photoShown) { photoShown = true; audio("photo"); const el = document.createElement("div"); el.className = "race-photo"; el.textContent = "PHOTO FINISH"; container.querySelector(".race-hud").appendChild(el); setTimeout(() => el.remove(), 2600); say("It's going to be close!"); }
         else if (style === "comeback") say(`${winner.label} is flying!`);
         else if (style === "runaway") say(`${winner.label} is running away with it!`);
         else say("Down the stretch they come!");
       }
       // lead changes
       const leader = [...R].sort((a, b) => b.p - a.p)[0];
-      if (lastLeader && leader !== lastLeader && now - lastLeadSay > 1600 && T > 0.08 && T < 0.9) { say(pick([`${leader.label} takes the lead!`, `${leader.label} out in front!`, `Here comes ${leader.label}!`])); lastLeadSay = now; }
+      if (lastLeader && leader !== lastLeader && now - lastLeadSay > 1600 && T > 0.08 && T < 0.9) { say(pick([`${leader.label} takes the lead!`, `${leader.label} out in front!`, `Here comes ${leader.label}!`])); audio("lead", { racerId: leader.id }); lastLeadSay = now; }
       lastLeader = leader;
       // finish
       if (!finished && winner.p >= 1) {
@@ -207,7 +209,7 @@
         finalOrder = [winner, ...R.filter((r) => r !== winner).sort((a, b) => b.p - a.p)];
         R.forEach((r) => { r.finalGap = Math.max(0, winner.p - r.p); r.stopAt = r === winner ? 1 : Math.min(0.999, Math.max(r.p + 0.006, Math.min(0.975, r.p + 0.045))); });
         big.innerHTML = `<div class="t">${esc(winner.label.toUpperCase())} WINS!</div>`;
-        say(`${winner.label} wins it!`, 4000);
+        say(`${winner.label} wins it!`, 4000); audio("finish", { racerId: winner.id });
         setTimeout(() => { if (!stopped) onDone(); }, 3400);
       }
       // draw
