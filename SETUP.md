@@ -58,4 +58,4 @@ Keys: M on the console mutes everything. The crowd is generated live and needs n
 
 ## Crowd and effects (optional recordings)
 
-MP3s in `site/sfx/` replace the generated sounds when present. Keys: `crowd-loop` (20 to 40 s ambient stadium crowd that loops cleanly), `crowd-cheer` (2 to 3 s burst), `crowd-roar` (4 to 6 s big roar), `crowd-ooh` (1 to 2 s groan), `horn` (starting horn), `sting` (victory sting), `beep` (countdown beep).
+MP3s in `site/sfx/` replace the generated sounds when present. Keys: `crowd-loop` (20 to 40 s ambient stadium crowd that loops cleanly), `crowd-cheer` (2 to 3 s burst), `crowd-roar` (4 to 6 s big roar), `crowd-ooh` (1 to 2 s groan), `gunshot` or `horn` (starting gun), `sting` (victory sting), `beep` (countdown beep).

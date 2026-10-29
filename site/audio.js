@@ -43,11 +43,22 @@
     const low = mk("lowpass", 320, 0.7, 0.9), mid = mk("bandpass", 900, 0.6, 0.6), hi = mk("bandpass", 2400, 0.8, 0.25);
     // slow wobble so it breathes
     const lfo = ctx.createOscillator(), lfoG = ctx.createGain(); lfo.frequency.value = 0.17; lfoG.gain.value = 0.18; lfo.connect(lfoG); lfoG.connect(mid.g.gain); lfo.start();
-    crowd = { out, low, mid, hi };
+    crowd = { out, low, mid, hi, bedGain: null };
+    // recorded crowd bed (gapless loop via Web Audio); the synth beds stay as the fallback until it loads
+    const loadBed = () => {
+      if (!sfxAvail.has("crowd-loop")) return;
+      fetch(SFX + "crowd-loop.mp3").then((r) => r.arrayBuffer()).then((ab) => ctx.decodeAudioData(ab)).then((buf) => {
+        const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+        // trim a hair off each end of the loop region to dodge encoder padding clicks
+        src.loopStart = 0.05; src.loopEnd = Math.max(0.1, buf.duration - 0.05);
+        const g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(master); src.start();
+        crowd.bedGain = g; [low, mid, hi].forEach((x) => x.g.gain.setTargetAtTime(0, ctx.currentTime, 0.5));
+      }).catch((e) => console.warn("crowd loop failed", e));
+    };
+    if (sfxAvail.size) loadBed(); else setTimeout(loadBed, 1500);
     setInterval(() => {
       crowdLevel += (crowdTarget - crowdLevel) * 0.08; const duck = current && !current.paused ? 0.45 : 1;
-      const bed = sfxAvail.has("crowd-loop") ? (sfxCache["crowd-loop"] || (crowdLevel > 0.01 ? sfx("crowd-loop", { loop: true, vol: 0 }) : null)) : null;
-      if (bed) { bed.volume = Math.max(0, Math.min(1, crowdLevel * duck * (muted ? 0 : volume))); out.gain.setTargetAtTime(0, ctx.currentTime, 0.1); }
+      if (crowd.bedGain) { crowd.bedGain.gain.setTargetAtTime(Math.max(0, Math.min(1.2, crowdLevel)) * duck, ctx.currentTime, 0.15); out.gain.setTargetAtTime(0, ctx.currentTime, 0.1); }
       else { out.gain.setTargetAtTime(Math.max(0, crowdLevel) * duck, ctx.currentTime, 0.1); mid.f.frequency.setTargetAtTime(700 + crowdLevel * 600, ctx.currentTime, 0.3); }
     }, 50);
   }
@@ -61,7 +72,7 @@
     o.connect(g); g.connect(master); o.start(); o.stop(ctx.currentTime + dur + 0.05);
   }
   const beep = () => { if (!sfx("beep")) tone(880, 0.18, "square", 0.18); };
-  const horn = () => { if (!sfx("horn")) { tone(196, 0.9, "sawtooth", 0.3); tone(247, 0.9, "sawtooth", 0.2); tone(294, 0.9, "sawtooth", 0.15); } };
+  const horn = () => { if (!sfx("gunshot") && !sfx("horn")) { tone(196, 0.9, "sawtooth", 0.3); tone(247, 0.9, "sawtooth", 0.2); tone(294, 0.9, "sawtooth", 0.15); } };
   const sting = () => { if (!sfx("sting")) { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.35, "square", 0.2), i * 110)); setTimeout(() => tone(1047, 0.9, "sawtooth", 0.18), 440); } };
   const ooh = () => { if (!sfx("crowd-ooh")) tone(300, 0.5, "sine", 0.12, -120); crowdBurst(0.5, 700); };
   const cheer = (vol = 0.8) => { sfx("crowd-cheer", { vol }); };
