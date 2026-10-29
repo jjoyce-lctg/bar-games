@@ -15,6 +15,13 @@
   const makeCode = () => { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)]; return s; };
   const entryUrl = (code) => { const u = new URL("entry.html", location.href); u.searchParams.set("c", code); if (MOCK) u.searchParams.set("mock", "1"); return u.toString(); };
   // A plain username becomes username@<USERNAME_DOMAIN>; a full email address is used as-is.
+  // Built-in artwork per racer id. Admin uploads (sprite_url / image_url on the option) take priority over these.
+  const BUILTIN_ART = { hotdog: 1, beer: 1, pretzel: 1, pizza: 1 };
+  const decorateOptions = (options) => (options || []).map((o) => {
+    const out = { ...o };
+    if (!out.sprite_url && !out.image_url && BUILTIN_ART[out.id]) { out.sprite_url = `sprites/${out.id}/atlas.png`; out.icon_url = `sprites/${out.id}/icon.png`; }
+    return out;
+  });
   const usernameToEmail = (u) => { const s = String(u).trim().toLowerCase(); return s.includes("@") ? s : `${s.replace(/[^a-z0-9._-]/g, "")}@${CFG.USERNAME_DOMAIN || "djs.local"}`; };
 
   // ---------------- MOCK BACKEND (no network) ----------------
@@ -209,5 +216,5 @@
   }
 
   const api = MOCK ? mockApi() : supabaseApi();
-  window.BG = { api, MOCK, CFG, $, $$, esc, sleep, fmtPhone, normPhone, entryUrl };
+  window.BG = { api, MOCK, CFG, $, $$, esc, sleep, fmtPhone, normPhone, entryUrl, decorateOptions };
 })();

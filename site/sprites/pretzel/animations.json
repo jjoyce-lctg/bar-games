@@ -1,0 +1,69 @@
+{
+ "image": "atlas.png",
+ "width": 1536,
+ "height": 1536,
+ "frameWidth": 384,
+ "frameHeight": 384,
+ "columns": 4,
+ "rows": 4,
+ "anchor": {
+  "x": 0.5,
+  "y": 0.9375
+ },
+ "animations": {
+  "run": {
+   "frames": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "durationsMs": [
+    90,
+    90,
+    90,
+    90,
+    90,
+    90,
+    90,
+    90
+   ],
+   "loop": true
+  },
+  "fall": {
+   "frames": [
+    8,
+    9,
+    10,
+    11
+   ],
+   "durationsMs": [
+    120,
+    110,
+    110,
+    300
+   ],
+   "loop": false
+  },
+  "recover": {
+   "frames": [
+    12,
+    13,
+    14,
+    15
+   ],
+   "durationsMs": [
+    220,
+    160,
+    140,
+    90
+   ],
+   "loop": false
+  }
+ },
+ "notes": "Prototype animation art. Fixed 512x512 cells. Trigger fall then recover, then return to run. Move sprite along track independently."
+}

@@ -37,8 +37,22 @@
   function injectCss() { if (!document.getElementById("race-css")) { const s = document.createElement("style"); s.id = "race-css"; s.textContent = CSS; document.head.appendChild(s); } }
 
   function racerArt(r, height) {
+    if (r.icon_url) return `<img src="${esc(r.icon_url)}" alt="">`;
     if (r.image_url) return `<img src="${esc(r.image_url)}" alt="">`;
     return window.MASCOTS.standalone(r.id, height, { emoji: r.emoji });
+  }
+
+  // Build an actor (el + set(mode) + tick(dt, speed)) for a racer: sprite sheet, uploaded still, or vector mascot.
+  async function makeActor(r) {
+    if (r.sprite_url) { try { return await window.SPRITES.actor(r.sprite_url); } catch (e) { console.warn(e); } }
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    if (r.image_url) {
+      g.innerHTML = `<image href="${esc(r.image_url)}" x="0" y="0" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>`;
+      let mode = "idle", t = 0;
+      return { el: g, ready: true, stumbleMs: 900, set(m) { mode = m; }, tick(dt, speed = 1) { t += dt; const dy = mode === "run" ? -Math.abs(Math.sin(t * 9 * speed)) * 12 : mode === "win" ? -Math.abs(Math.sin(t * 7)) * 34 : 0; const rot = mode === "run" ? 8 : mode === "stumble" ? 35 : 0; g.setAttribute("transform", `translate(0 ${dy}) rotate(${rot} 100 240)`); } };
+    }
+    g.innerHTML = window.MASCOTS.markup(r.id, { emoji: r.emoji });
+    return window.SPRITES.vectorActor(g.querySelector(".mascot"));
   }
 
   function buildWorld(racers, venue) {
@@ -112,15 +126,14 @@
     const stands = svg.querySelector(".layer-stands"), track = svg.querySelector(".layer-track"), racerLayer = svg.querySelector(".layer-racers");
     const fans = Array.from(svg.querySelectorAll(".fan")).map((el) => ({ el, base: el.getAttribute("transform"), ph: +el.dataset.ph, amp: +el.dataset.amp }));
 
-    // racer elements
+    // racer elements (actors are built asynchronously, the race starts once all are ready)
     const scale = (world.laneH * 0.92) / 240;
     const R = racers.map((r, i) => {
       const laneY = TRACK_Y + i * world.laneH + world.laneH - 14;
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      g.innerHTML = `<ellipse class="shadow" cx="100" cy="238" rx="80" ry="14" fill="#000" opacity=".3"/>` + (r.image_url ? `<image href="${esc(r.image_url)}" x="0" y="0" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>` : window.MASCOTS.markup(r.id, { emoji: r.emoji }));
+      g.innerHTML = `<ellipse class="shadow" cx="100" cy="238" rx="80" ry="14" fill="#000" opacity=".3"/>`;
       racerLayer.appendChild(g);
-      const m = g.querySelector(".mascot") || g.querySelector("image");
-      return { ...r, i, g, m, laneY, p: 0, v: 1, phase: rnd(0, 6), mode: "idle", burstUntil: 0, burst: 1, stumbleUntil: 0, boosts: [] };
+      return { ...r, i, g, actor: null, laneY, p: 0, v: 1, mode: "idle", burstUntil: 0, burst: 1, stumbleUntil: 0, boosts: [] };
     });
     const winner = R.find((r) => r.id === winnerId) || R[0];
 
@@ -158,7 +171,7 @@
           if (countIdx < countdown.length) { big.innerHTML = `<div class="t" style="font-size:${countIdx === 2 ? 34 : 16}vh">${countdown[countIdx]}</div>`; countNext = now + (countIdx === 2 ? 700 : 1300); countIdx++; }
           else { big.innerHTML = ""; phaseT = "race"; raceStart = now; R.forEach((r) => (r.mode = "run")); say("And they're off!"); }
         }
-        R.forEach((r) => { r.phase += dt * 3; window.MASCOTS.pose(r.m, { phase: r.phase, mode: "idle" }); place(r); });
+        R.forEach((r) => { r.actor.set("idle"); r.actor.tick(dt, 1); place(r); });
         raf = requestAnimationFrame(frame); return;
       }
       // ---- race ----
@@ -171,12 +184,11 @@
         let f = r.burst;
         r.boosts.forEach(([a, b, k]) => { if (T >= a && T <= b) f *= k; });
         if (r !== winner && r.p < leaderP - 0.1) f *= 1.15;               // pack stays together
-        if (r === stumbler && !stumbled && T >= stumbleAt) { stumbled = true; r.stumbleUntil = now + 900; say(`${r.label} goes down!`); }
-        if (now < r.stumbleUntil) { f *= 0.12; r.mode = "stumble"; } else if (r.mode === "stumble") r.mode = "run";
+        if (r === stumbler && !stumbled && T >= stumbleAt) { stumbled = true; r.stumbleUntil = now + r.actor.stumbleMs; say(`${r.label} goes down!`); }
+        if (now < r.stumbleUntil) { f *= 0.1; r.mode = "stumble"; } else if (r.mode === "stumble") r.mode = "run";
         r.v = f;
         r.p += (f / (duration / 1000)) * dt;
         if (r !== winner) { if (T > 0.82) r.p = Math.min(r.p, winner.p - 0.012 - 0.006 * r.i); r.p = Math.min(r.p, 0.995); }
-        r.phase += dt * (r.mode === "stumble" ? 2 : 14) * f;
       });
       // photo finish / slow-mo
       if (!slow && winner.p > 0.9) {
@@ -197,7 +209,7 @@
         setTimeout(() => { if (!stopped) onDone(); }, 2600);
       }
       // draw
-      R.forEach((r) => { window.MASCOTS.pose(r.m, { phase: r.phase, mode: r.mode === "win" ? "win" : r.mode, lean: 0 }); place(r); });
+      R.forEach((r) => { r.actor.set(r.mode); r.actor.tick(slow ? dt / 0.32 * 0.6 : dt, r.v); place(r); });
       const targetCam = Math.max(0, Math.min(L - W, xOf(leader) - W * 0.62));
       camX = lerp(camX, targetCam, 1 - Math.pow(0.001, dt));
       track.setAttribute("transform", `translate(${-camX} 0)`); racerLayer.setAttribute("transform", `translate(${-camX} 0)`);
@@ -210,7 +222,11 @@
       raf = requestAnimationFrame(frame);
     }
     board.style.display = "flex"; board.style.flexDirection = "column";
-    raf = requestAnimationFrame(frame);
+    Promise.all(R.map(async (r) => { r.actor = await makeActor(r); r.g.appendChild(r.actor.el); place(r); })).then(() => {
+      if (stopped) return;
+      const now = performance.now(); last = now; countNext = now + 200;
+      raf = requestAnimationFrame(frame);
+    });
     return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); } };
   }
 

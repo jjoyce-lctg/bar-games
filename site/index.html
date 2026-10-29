@@ -134,11 +134,13 @@
 <script src="vendor/supabase.js"></script>
 <script src="vendor/qrcode.js"></script>
 <script src="mascots.js"></script>
+<script src="sprites.js"></script>
 <script src="race.js"></script>
 <script src="common.js"></script>
 <script>
 (async function () {
-  const { api, MOCK, $, $$, esc, sleep } = window.BG;
+  const { api, MOCK, $, $$, esc, sleep, decorateOptions } = window.BG;
+  const art = (o, h) => o.icon_url ? `<img src="${esc(o.icon_url)}" alt="" style="height:${h}px">` : o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="height:${h}px">` : MASCOTS.standalone(o.id, h, { emoji: o.emoji });
   const state = { me: null, venue: null, venues: [], games: [], round: null, game: null, phase: "console", poll: null, raceCtl: null };
 
   // ---------- helpers ----------
@@ -166,7 +168,7 @@
     $("#who").classList.remove("hidden");
     if (state.me.role === "admin") $("#adminLink").classList.remove("hidden");
     state.venues = await api.listVenues();
-    state.games = await api.listGames();
+    state.games = (await api.listGames()).map((g) => ({ ...g, options: decorateOptions(g.options) }));
     const sel = $("#venueSelect");
     sel.innerHTML = state.venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
     let last = null; try { last = localStorage.getItem("bg.venue"); } catch {}
@@ -194,7 +196,7 @@
   ];
   async function renderGames() {
     $("#gameGrid").innerHTML =
-      state.games.map((g) => `<div class="game-card" data-key="${esc(g.key)}"><div class="emojis">${(g.options || []).map((o) => o.image_url ? `<img src="${esc(o.image_url)}" style="height:2.6rem">` : MASCOTS.standalone(o.id, 44, { emoji: o.emoji })).join(" ")}</div><h2>${esc(g.name)}</h2><p class="muted">${esc(g.description || "")}</p><button class="btn primary">Start on TV</button></div>`).join("") +
+      state.games.map((g) => `<div class="game-card" data-key="${esc(g.key)}"><div class="emojis">${(g.options || []).map((o) => art(o, 44)).join(" ")}</div><h2>${esc(g.name)}</h2><p class="muted">${esc(g.description || "")}</p><button class="btn primary">Start on TV</button></div>`).join("") +
       SOON.map((g) => `<div class="game-card soon"><div class="emojis">${g.emojis}</div><h2>${g.name}</h2><p class="muted">${g.description}</p><span class="tag no">Coming soon</span></div>`).join("");
     $$(".game-card[data-key]").forEach((el) => (el.onclick = () => startRound(el.dataset.key)));
     try {
@@ -239,7 +241,7 @@
           <h1>SCAN TO <span>PLAY</span></h1>
           <p>${esc(g.name)}. Pick your racer. If it wins, you win <b>${esc(state.round.prize || state.venue.default_prize || "")}</b>.</p>
           <div class="code">CODE ${esc(state.round.code)}</div>
-          <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${o.image_url ? `<img src="${esc(o.image_url)}" alt="">` : MASCOTS.standalone(o.id, 60, { emoji: o.emoji })}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
+          <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
         </div>
       </div>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b id="stCount">0</b> players in</span>`;
@@ -272,14 +274,21 @@
     const names = s.winners.map(firstLast);
     $("#stageBody").innerHTML = `
       <div class="results">
-        <div class="big">${winner.image_url ? `<img src="${esc(winner.image_url)}" style="height:32vh">` : MASCOTS.standalone(winner.id, 300, { emoji: winner.emoji })}</div>
+        <div class="big"><svg viewBox="0 0 200 260" style="height:100%;overflow:visible" id="winArt"></svg></div>
         <h1><span>${esc(winner.label.toUpperCase())}</span> WINS!</h1>
         <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
         <div class="names">${names.slice(0, 40).map((x) => `<span>${esc(x)}</span>`).join("")}${names.length > 40 ? `<span>+${names.length - 40} more</span>` : ""}</div>
       </div><canvas class="confetti" id="confetti"></canvas>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`;
     $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> for the next game`;
-    const wm = $(".results .mascot"); if (wm) { let ph = 0; const tick = () => { if (state.phase !== "results") return; ph += 0.06; MASCOTS.pose(wm, { phase: ph, mode: "win" }); requestAnimationFrame(tick); }; tick(); }
+    (async () => {
+      let a;
+      if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url); } catch {} }
+      if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = winner.image_url ? `<image href="${esc(winner.image_url)}" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>` : MASCOTS.markup(winner.id, { emoji: winner.emoji }); a = winner.image_url ? { el: g, set() {}, tick() {} } : SPRITES.vectorActor(g.querySelector(".mascot")); }
+      const host = $("#winArt"); if (!host) return; host.innerHTML = MASCOTS.DEFS; host.appendChild(a.el);
+      a.set("win"); let lastT = performance.now();
+      const tick = (now) => { if (state.phase !== "results") return; a.tick((now - lastT) / 1000, 1); lastT = now; requestAnimationFrame(tick); }; requestAnimationFrame(tick);
+    })();
     confetti($("#confetti"));
   }
 

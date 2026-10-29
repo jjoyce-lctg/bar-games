@@ -1,7 +1,7 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000}#c{width:100vw;height:100vh}</style></head><body>
 <div id="c"></div>
-<script src="../site/mascots.js"></script><script src="../site/race.js"></script>
+<script src="../site/mascots.js"></script><script src="../site/sprites.js"></script><script src="../site/race.js"></script>
 <script>
 window.done=false;
-RACE.run(document.getElementById("c"),{racers:[{id:"hotdog",label:"Hot Dog",emoji:"🌭"},{id:"beer",label:"Beer",emoji:"🍺"},{id:"pretzel",label:"Pretzel",emoji:"🥨"},{id:"pizza",label:"Pizza",emoji:"🍕"}],winnerId:"pretzel",venue:{name:"The Reveler",color_primary:"#004c54",color_accent:"#a5acaf"},onDone:()=>{window.done=true;}});
+RACE.run(document.getElementById("c"),{racers:[{id:"hotdog",label:"Hot Dog",emoji:"🌭",sprite_url:"../site/sprites/hotdog/atlas.png",icon_url:"../site/sprites/hotdog/icon.png"},{id:"beer",label:"Beer",emoji:"🍺",sprite_url:"../site/sprites/beer/atlas.png",icon_url:"../site/sprites/beer/icon.png"},{id:"pretzel",label:"Pretzel",emoji:"🥨",sprite_url:"../site/sprites/pretzel/atlas.png",icon_url:"../site/sprites/pretzel/icon.png"},{id:"pizza",label:"Pizza",emoji:"🍕"}],winnerId:"pretzel",venue:{name:"The Reveler",color_primary:"#004c54",color_accent:"#a5acaf"},onDone:()=>{window.done=true;}});
 </script></body></html>

@@ -43,10 +43,12 @@
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="mascots.js"></script>
+<script src="sprites.js"></script>
 <script src="common.js"></script>
 <script>
 (async function () {
-  const { api, CFG, $, $$, esc, normPhone } = window.BG;
+  const { api, CFG, $, $$, esc, normPhone, decorateOptions } = window.BG;
+  const art = (o, h) => o.icon_url ? `<img src="${esc(o.icon_url)}" alt="" style="height:${h}px">` : o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="height:${h}px">` : MASCOTS.standalone(o.id, h, { emoji: o.emoji });
   const code = (new URLSearchParams(location.search).get("c") || "").toUpperCase();
   const content = $("#content");
   const disclaimer = CFG.SMS_DISCLAIMER;
@@ -58,7 +60,7 @@
   try { round = await api.getRoundPublic(code); } catch (e) { return fail("Couldn't reach the game. Check your signal and try again."); }
   if (!round) return fail("That game code wasn't found. Scan the QR code on the TV again.");
 
-  const v = round.venue, g = round.game;
+  const v = round.venue, g = round.game; g.options = decorateOptions(g.options);
   document.body.style.setProperty("--primary", v.color_primary || "#004c54");
   document.body.style.setProperty("--accent", v.color_accent || "#ffcd00");
   $("#venueName").textContent = v.name; $("#venueTag").textContent = v.tagline || "";
@@ -72,7 +74,7 @@
 
   content.innerHTML = `
     <div class="hero"><h1>PICK YOUR <span>RACER</span></h1><p>If your racer wins, you win <b>${esc(round.prize || "")}</b>.</p></div>
-    <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${o.image_url ? `<img src="${esc(o.image_url)}" alt="">` : MASCOTS.standalone(o.id, 86, { emoji: o.emoji })}</span>${esc(o.label)}</button>`).join("")}</div>
+    <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${art(o, 86)}</span>${esc(o.label)}</button>`).join("")}</div>
     <div id="err" class="error hidden"></div>
     <div><label>Your name</label><input id="name" autocomplete="name" placeholder="First and last name" maxlength="60" value="${esc(savedName || "")}"></div>
     <div><label>Mobile number</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(312) 555-0123" value="${esc(savedPhone || "")}"></div>
@@ -96,7 +98,7 @@
       if (!res || !res.ok) { show((res && res.error) || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; return; }
       try { localStorage.setItem("bg.guest", JSON.stringify({ name, phone: normPhone(phone) })); } catch {}
       const o = g.options.find((x) => x.id === pick);
-      content.innerHTML = `<div class="done"><div class="e">${o.image_url ? `<img src="${esc(o.image_url)}" style="height:9rem">` : MASCOTS.standalone(o.id, 150, { emoji: o.emoji })}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
+      content.innerHTML = `<div class="done"><div class="e">${art(o, 150)}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
     } catch (e) { show(e.message || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; }
   };
 })();
