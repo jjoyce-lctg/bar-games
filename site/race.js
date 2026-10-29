@@ -3,7 +3,6 @@
    racers: [{ id, label, emoji, image_url? }]  (image_url = optional uploaded artwork used instead of the vector mascot) */
 (function () {
   const W = 1920, H = 1080, L = 7600, START = 420, FINISH = L - 520;
-  const STANDS_H = 390, TRACK_Y = 410;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -15,17 +14,18 @@
     .race-hud{position:absolute;inset:0;pointer-events:none}
     .race-comm{position:absolute;left:3vw;top:3vh;max-width:46vw;background:rgba(0,0,0,.72);color:#fff;border-left:1.2vh solid var(--accent,#ffcd00);padding:1.6vh 2.4vh;font-size:4.2vh;font-weight:800;letter-spacing:.01em;border-radius:1.2vh;opacity:0;transform:translateY(-1vh);transition:opacity .25s,transform .25s;text-transform:uppercase}
     .race-comm.on{opacity:1;transform:none}
-    .race-board{position:absolute;right:3vw;top:3vh;background:rgba(0,0,0,.72);border-radius:1.2vh;padding:1.2vh 1.6vh;color:#fff;min-width:22vw}
+    .race-board{position:absolute;right:3vw;top:3vh;background:rgba(0,0,0,.72);border-radius:1.2vh;padding:1.2vh 1.6vh;color:#fff;min-width:24vw}
+    .race-board .rows{display:flex;flex-direction:column}
     .race-board .row{display:flex;align-items:center;gap:1.2vh;font-size:2.8vh;font-weight:700;padding:.5vh 0;transition:transform .3s}
     .race-board .row .pos{width:3.2vh;height:3.2vh;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:2vh;font-weight:900}
     .race-board .row:first-child .pos{background:var(--accent,#ffcd00)}
     .race-board .row .ico{width:4vh;height:4.6vh;display:flex;align-items:flex-end}
     .race-board .row .ico svg,.race-board .row .ico img{height:100%;width:auto}
     .race-board .row .gap{margin-left:auto;font-weight:500;opacity:.7;font-size:2.2vh;font-variant-numeric:tabular-nums}
-    .race-strip{position:absolute;left:3vw;right:3vw;bottom:2.2vh;height:5.5vh;background:rgba(0,0,0,.6);border-radius:3vh;border:2px solid rgba(255,255,255,.25)}
-    .race-strip .dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:4.8vh;height:4.8vh;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 .4vh 1vh rgba(0,0,0,.4);transition:left .12s linear}
+    .race-strip{position:relative;margin-top:1vh;height:4.2vh;background:rgba(255,255,255,.12);border-radius:3vh;border:2px solid rgba(255,255,255,.25)}
+    .race-strip .dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:3.8vh;height:3.8vh;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 .4vh 1vh rgba(0,0,0,.4);transition:left .12s linear}
     .race-strip .dot svg,.race-strip .dot img{height:88%;width:auto;margin-top:.6vh}
-    .race-strip .flag{position:absolute;right:1.2vh;top:50%;transform:translateY(-50%);font-size:3.4vh}
+    .race-strip .flag{position:absolute;right:.8vh;top:50%;transform:translateY(-50%);font-size:2.6vh}
     .race-big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1vh;pointer-events:none}
     .race-big .t{font-family:"Bebas Neue","Oswald",Impact,sans-serif;font-size:20vh;line-height:1;text-align:center;max-width:90vw;color:var(--accent,#ffcd00);text-shadow:0 1vh 4vh rgba(0,0,0,.7);animation:racepop .5s cubic-bezier(.2,1.4,.4,1) both}
     .race-big .s{font-size:5vh;font-weight:800;color:#fff;text-shadow:0 .5vh 2vh rgba(0,0,0,.7);text-transform:uppercase;letter-spacing:.05em}
@@ -55,61 +55,37 @@
     return window.SPRITES.vectorActor(g.querySelector(".mascot"));
   }
 
+  // ---------- stadium artwork (site/stadium/*), 1080-high reference scene, 4096-wide tiles ----------
+  const TILE = 4096, ART = (() => { try { return new URL("stadium/", document.currentScript.src).href; } catch { return "stadium/"; } })();
+  const LANE_FEET = [784, 865, 947, 1032];           // feet-anchor Y per lane (top to bottom)
+  const PARALLAX = { far: 0.2, wall: 0.55, track: 1 };
+  const WALL_Y = 540, TRACK_TOP = 720, BANNER = { y0: 610, y1: 705 };
+  function tiles(href, y, h, count, startX = 0) {
+    let out = "";
+    for (let i = 0; i < count; i++) out += `<image href="${href}" x="${startX + i * TILE - i}" y="${y}" width="${TILE}" height="${h}" preserveAspectRatio="none"/>`;
+    return out;
+  }
   function buildWorld(racers, venue) {
-    const n = racers.length, laneH = (H - TRACK_Y - 30) / n;
-    const accent = venue.color_accent || "#ffcd00", primary = venue.color_primary || "#1a3a4a";
-    // ----- crowd -----
-    const fanColors = [accent, "#ffffff", "#f3f3f3", primary, "#e63946", "#2a9d8f", "#f4a261", "#8ecae6", "#222"];
-    let crowd = "", fans = [];
-    const rows = 4;
-    for (let row = 0; row < rows; row++) {
-      const y = 120 + row * 62, scale = 0.8 + row * 0.08;
-      for (let x = -200; x < L + 400; x += 44 + rnd(0, 10)) {
-        const c = pick(fanColors), skin = pick(["#f1c27d", "#e0ac69", "#c68642", "#8d5524", "#ffdbac"]), jump = Math.random() < 0.18;
-        const id = jump ? ` class="fan" data-ph="${rnd(0, 6.28).toFixed(2)}" data-amp="${rnd(8, 18).toFixed(0)}"` : "";
-        crowd += `<g${id} transform="translate(${x.toFixed(0)} ${y}) scale(${scale})"><rect x="-13" y="14" width="26" height="30" rx="8" fill="${c}"/><circle cx="0" cy="4" r="12" fill="${skin}"/>${Math.random() < 0.3 ? `<path d="M-12 2 a12 12 0 0 1 24 0z" fill="${pick(fanColors)}"/>` : ""}</g>`;
-      }
-    }
-    // ----- track -----
-    let lanes = "";
-    for (let i = 0; i < n; i++) {
-      const y = TRACK_Y + i * laneH;
-      lanes += `<rect x="-200" y="${y}" width="${L + 400}" height="${laneH}" fill="${i % 2 ? "#b4523a" : "#bf5a40"}"/>`;
-      lanes += `<line x1="-200" y1="${y + laneH}" x2="${L + 400}" y2="${y + laneH}" stroke="#fff" stroke-width="5" opacity=".85"/>`;
-      lanes += `<text x="${START - 60}" y="${y + laneH * 0.62}" font-size="${laneH * 0.45}" font-weight="900" fill="#fff" opacity=".5" text-anchor="end" font-family="Inter,sans-serif">${i + 1}</text>`;
-    }
-    // distance ticks
-    let ticks = "";
-    for (let x = START + 500; x < FINISH; x += 500) ticks += `<line x1="${x}" y1="${TRACK_Y}" x2="${x}" y2="${H}" stroke="#fff" stroke-width="3" opacity=".18" stroke-dasharray="20 18"/>`;
-    // finish line
-    let checks = "";
-    const sq = 22;
-    for (let yy = TRACK_Y - 10; yy < H; yy += sq) for (let k = 0; k < 3; k++) checks += `<rect x="${FINISH + k * sq}" y="${yy}" width="${sq}" height="${sq}" fill="${((yy / sq | 0) + k) % 2 ? "#fff" : "#111"}"/>`;
-    const gantry = `<g><rect x="${FINISH - 80}" y="${TRACK_Y - 250}" width="40" height="260" fill="#333"/><rect x="${FINISH + 110}" y="${TRACK_Y - 250}" width="40" height="260" fill="#333"/>
-      <rect x="${FINISH - 120}" y="${TRACK_Y - 300}" width="310" height="90" rx="8" fill="#111" stroke="${accent}" stroke-width="6"/>
-      <text x="${FINISH + 35}" y="${TRACK_Y - 232}" font-size="64" font-weight="900" fill="${accent}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" letter-spacing="4">FINISH</text></g>`;
-    // start blocks + line
-    const startLine = `<rect x="${START - 6}" y="${TRACK_Y}" width="12" height="${H - TRACK_Y}" fill="#fff" opacity=".9"/>`;
-    // banner text along the stands
-    let banner = "";
-    for (let x = 0; x < L; x += 900) banner += `<text x="${x + 60}" y="${STANDS_H - 22}" font-size="40" font-weight="900" fill="${accent}" font-family="Bebas Neue,Impact,sans-serif" letter-spacing="6" opacity=".9">${esc((venue.name || "LAST CALL GAMES").toUpperCase())}</text>`;
-
-    return { laneH, svg: `
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${primary}"/><stop offset="1" stop-color="#0b0f14"/></linearGradient>
-        <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2f38"/><stop offset="1" stop-color="#14181f"/></linearGradient>
-        ${window.MASCOTS.DEFS.replace(/<\/?defs>/g, "")}
-      </defs>
-      <rect x="0" y="0" width="${W}" height="${H}" fill="url(#sky)"/>
-      <g class="layer-stands">
-        <rect x="-400" y="40" width="${L + 800}" height="${STANDS_H - 40}" fill="#1d222b"/>
-        <rect x="-400" y="40" width="${L + 800}" height="30" fill="url(#roof)"/>
-        <g class="crowd">${crowd}</g>
-        <rect x="-400" y="${STANDS_H - 70}" width="${L + 800}" height="70" fill="#262c36"/>
-        ${banner}
-        <rect x="-400" y="${STANDS_H}" width="${L + 800}" height="${TRACK_Y - STANDS_H}" fill="#3f7d3a"/>
-      </g>
-      <g class="layer-track">${lanes}${ticks}${startLine}${checks}${gantry}</g>
+    const n = racers.length;
+    const name = esc((venue.name || "").toUpperCase());
+    const primary = venue.color_primary || "#1c2a4a";
+    // how many tiles each layer needs to cover the camera range (camera moves up to L - W)
+    const need = (f) => Math.ceil(((L - W) * f + W) / TILE) + 1;
+    // bar name on the wall banner and on the far scoreboard, repeated per tile
+    let banners = "";
+    for (let i = 0; i < need(PARALLAX.wall); i++) banners += `<text x="${i * TILE + 2048}" y="${(BANNER.y0 + BANNER.y1) / 2 + 22}" font-size="64" font-weight="900" fill="${primary}" text-anchor="middle" font-family="Bebas Neue,Impact,sans-serif" letter-spacing="6">${name}</text>`;
+    const trackTiles = tiles(ART + "track-start.jpg", TRACK_TOP, 360, 1) + tiles(ART + "track.jpg", TRACK_TOP, 360, need(1) - 1, TILE - 1);
+    // finish props: strip spans the lanes at FINISH; gantry stands on the track edge behind the racers
+    const stripW = 64, stripH = 384;
+    const gantryH = 430, gantryW = gantryH * 800 / 900;
+    const props = `<image href="${ART}gantry.png" x="${FINISH - gantryW / 2 + 2}" y="${TRACK_TOP - gantryH + 12}" width="${gantryW}" height="${gantryH}"/>
+      <image href="${ART}finish-strip.png" x="${FINISH - stripW / 2}" y="${TRACK_TOP - 14}" width="${stripW}" height="${stripH}"/>`;
+    return { laneFeet: LANE_FEET.slice(0, n), svg: `
+      <defs>${window.MASCOTS.DEFS.replace(/<\/?defs>/g, "")}</defs>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#1b7fd6"/>
+      <g class="layer-far">${tiles(ART + "far.jpg", 0, 1080, need(PARALLAX.far))}</g>
+      <g class="layer-wall">${tiles(ART + "wall.png", WALL_Y, 540, need(PARALLAX.wall))}${banners}</g>
+      <g class="layer-track">${trackTiles}${props}</g>
       <g class="layer-racers"></g>` };
   }
 
@@ -118,20 +94,19 @@
     const { racers, winnerId, venue = {}, onDone = () => {}, duration = 15000 } = opts;
     const n = racers.length;
     container.innerHTML = `<div class="race-wrap" style="--accent:${venue.color_accent || "#ffcd00"}">
-      <svg class="world" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"></svg>
-      <div class="race-hud"><div class="race-comm"></div><div class="race-board"></div><div class="race-strip"><span class="flag">🏁</span></div><div class="race-big"></div></div></div>`;
-    const svg = container.querySelector("svg.world"), comm = container.querySelector(".race-comm"), board = container.querySelector(".race-board"), strip = container.querySelector(".race-strip"), big = container.querySelector(".race-big");
+      <svg class="world" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice"></svg>
+      <div class="race-hud"><div class="race-comm"></div><div class="race-board"><div class="rows"></div><div class="race-strip"><span class="flag">🏁</span></div></div><div class="race-big"></div></div></div>`;
+    const svg = container.querySelector("svg.world"), comm = container.querySelector(".race-comm"), board = container.querySelector(".race-board .rows"), strip = container.querySelector(".race-strip"), big = container.querySelector(".race-big");
     const world = buildWorld(racers, venue);
     svg.innerHTML = world.svg;
-    const stands = svg.querySelector(".layer-stands"), track = svg.querySelector(".layer-track"), racerLayer = svg.querySelector(".layer-racers");
-    const fans = Array.from(svg.querySelectorAll(".fan")).map((el) => ({ el, base: el.getAttribute("transform"), ph: +el.dataset.ph, amp: +el.dataset.amp }));
+    const far = svg.querySelector(".layer-far"), wall = svg.querySelector(".layer-wall"), track = svg.querySelector(".layer-track"), racerLayer = svg.querySelector(".layer-racers");
 
     // racer elements (actors are built asynchronously, the race starts once all are ready)
-    const scale = (world.laneH * 0.92) / 240;
+    const scale = 0.64;   // 300px sprite frame -> ~190px on the 1080 scene
     const R = racers.map((r, i) => {
-      const laneY = TRACK_Y + i * world.laneH + world.laneH - 14;
+      const laneY = world.laneFeet[i] ?? (1032 - (racers.length - 1 - i) * 82);
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      g.innerHTML = `<ellipse class="shadow" cx="100" cy="238" rx="80" ry="14" fill="#000" opacity=".3"/>`;
+      g.innerHTML = `<ellipse class="shadow" cx="100" cy="240" rx="70" ry="10" fill="#000" opacity=".28"/>`;
       racerLayer.appendChild(g);
       return { ...r, i, g, actor: null, laneY, p: 0, v: 1, mode: "idle", burstUntil: 0, burst: 1, stumbleUntil: 0, boosts: [] };
     });
@@ -216,16 +191,17 @@
       R.forEach((r) => { r.actor.set(r.mode); r.actor.tick(slow ? dt / 0.32 * 0.6 : dt, r.v); place(r); });
       const targetCam = Math.max(0, Math.min(L - W, xOf(finished ? winner : leader) - W * 0.62));
       camX = lerp(camX, targetCam, 1 - Math.pow(0.001, dt));
-      track.setAttribute("transform", `translate(${-camX} 0)`); racerLayer.setAttribute("transform", `translate(${-camX} 0)`);
-      stands.setAttribute("transform", `translate(${-camX * 0.55} 0)`);
-      fans.forEach((f) => { f.el.setAttribute("transform", `${f.base} translate(0 ${-Math.max(0, Math.sin(now / 260 + f.ph)) * f.amp})`); });
+      const cx = Math.round(camX);
+      track.setAttribute("transform", `translate(${-cx} 0)`); racerLayer.setAttribute("transform", `translate(${-cx} 0)`);
+      wall.setAttribute("transform", `translate(${-Math.round(cx * PARALLAX.wall)} 0)`);
+      far.setAttribute("transform", `translate(${-Math.round(cx * PARALLAX.far)} 0)`);
       // HUD
       const order = finalOrder || [...R].sort((a, b) => b.p - a.p);
       order.forEach((r, i) => { const row = boardRows[r.id]; row.style.order = i; row.querySelector(".pos").textContent = i + 1; row.querySelector(".gap").textContent = i === 0 ? "" : `-${((order[0].p - r.p) * 100).toFixed(1)}m`; });
-      R.forEach((r) => { dots[r.id].style.left = `${(3 + Math.min(1, r.p) * 91).toFixed(2)}%`; });
+      R.forEach((r) => { dots[r.id].style.left = `${(4 + Math.min(1, r.p) * 84).toFixed(2)}%`; });
       raf = requestAnimationFrame(frame);
     }
-    board.style.display = "flex"; board.style.flexDirection = "column";
+
     Promise.all(R.map(async (r) => { r.actor = await makeActor(r); r.g.appendChild(r.actor.el); place(r); })).then(() => {
       if (stopped) return;
       const now = performance.now(); last = now; countNext = now + 200;
