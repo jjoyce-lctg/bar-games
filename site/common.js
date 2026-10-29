@@ -16,10 +16,14 @@
   const entryUrl = (code) => { const u = new URL("entry.html", location.href); u.searchParams.set("c", code); if (MOCK) u.searchParams.set("mock", "1"); return u.toString(); };
   // A plain username becomes username@<USERNAME_DOMAIN>; a full email address is used as-is.
   // Built-in artwork per racer id. Admin uploads (sprite_url / image_url on the option) take priority over these.
-  const BUILTIN_ART = { hotdog: 1, beer: 1, pretzel: 1, pizza: 1 };
+  // scale: drawn size relative to the pack's standard characters; fix: per-state horizontal centring (512px frame units); extra: has idle/win/tired sheet
+  const BUILTIN_ART = {
+    hotdog: { extra: true }, beer: { extra: true }, pretzel: { extra: true }, pizza: { extra: true },
+    dino: { extra: false, scale: 1.45, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
+  };
   const decorateOptions = (options) => (options || []).map((o) => {
-    const out = { ...o };
-    if (!out.sprite_url && !out.image_url && BUILTIN_ART[out.id]) { out.sprite_url = `sprites/${out.id}/atlas.png`; out.extra_url = `sprites/${out.id}/extra.png`; out.icon_url = `sprites/${out.id}/icon.png`; }
+    const out = { ...o }, art = BUILTIN_ART[out.id];
+    if (!out.sprite_url && !out.image_url && art) { out.sprite_url = `sprites/${out.id}/atlas.png`; if (art.extra) out.extra_url = `sprites/${out.id}/extra.png`; out.icon_url = `sprites/${out.id}/icon.png`; if (art.scale) out.sprite_scale = art.scale; if (art.fix) out.sprite_fix = art.fix; }
     return out;
   });
   const usernameToEmail = (u) => { const s = String(u).trim().toLowerCase(); return s.includes("@") ? s : `${s.replace(/[^a-z0-9._-]/g, "")}@${CFG.USERNAME_DOMAIN || "djs.local"}`; };
@@ -46,7 +50,7 @@
         { id: "v6", name: "Blue Bayou", slug: "blue-bayou", color_primary: "#0b4f6c", color_accent: "#c9a227", tagline: "Laissez les bons temps rouler", default_prize: "a round on us", sort_order: 6, active: true, logo_url: null },
       ],
       games: [{ key: "race", name: "Mascot Race", description: "Guests pick a racer. The racers run. Everyone who picked the winner gets the prize.", sort_order: 1, active: true,
-        options: [{ id: "hotdog", label: "Hot Dog", emoji: "🌭" }, { id: "beer", label: "Beer", emoji: "🍺" }, { id: "pretzel", label: "Pretzel", emoji: "🥨" }, { id: "pizza", label: "Pizza", emoji: "🍕" }] }],
+        options: [{ id: "hotdog", label: "Hot Dog", emoji: "🌭" }, { id: "beer", label: "Beer", emoji: "🍺" }, { id: "pretzel", label: "Pretzel", emoji: "🥨" }, { id: "pizza", label: "Pizza", emoji: "🍕" }, { id: "dino", label: "Dino", emoji: "🦖" }] }],
       rounds: [], entries: [],
     };
     const persist = () => save(state);

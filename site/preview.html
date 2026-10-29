@@ -14,7 +14,7 @@
     const card = document.createElement("div"); card.className = "card";
     card.innerHTML = `<h3>${esc(o.label)}</h3><div class="stage"><svg viewBox="-20 -40 240 290">${MASCOTS.DEFS}</svg></div><div class="btns">${STATES.map((s) => `<button class="btn small" data-s="${s}">${s}</button>`).join("")}</div>`;
     $("#grid").appendChild(card);
-    let a; if (o.sprite_url) { try { a = await SPRITES.actor(o.sprite_url, o.extra_url); } catch {} }
+    let a; if (o.sprite_url) { try { a = await SPRITES.actor(o.sprite_url, o.extra_url, { scale: o.sprite_scale, fix: o.sprite_fix }); } catch {} }
     if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = MASCOTS.markup(o.id, { emoji: o.emoji }); a = SPRITES.vectorActor(g.querySelector(".mascot")); }
     card.querySelector("svg").appendChild(a.el); actors.push(a);
     card.querySelectorAll("button").forEach((b) => (b.onclick = () => { a.set(b.dataset.s); if (b.dataset.s === "stumble") setTimeout(() => a.set("run"), a.stumbleMs); }));

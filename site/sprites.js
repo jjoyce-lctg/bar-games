@@ -24,17 +24,20 @@
   }
 
   // Markup for one frame, usable anywhere (lobby, results): a nested svg showing frame `idx` of the atlas.
-  function frameMarkup(url, size, idx, box = { x: -50, y: -41.25, w: 300, h: 300 }) {
+  // Frame box: 300px tall at scale 1, feet anchor (0.5, 0.9375) landing on (100, 240)
+  const boxFor = (scale = 1) => ({ x: 100 - 150 * scale, y: 240 - 281.25 * scale, w: 300 * scale, h: 300 * scale });
+  function frameMarkup(url, size, idx, box = boxFor(1)) {
     const fw = size.w / 4, fh = size.h / 4, fx = (idx % 4) * fw, fy = Math.floor(idx / 4) * fh;
     return `<svg x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" viewBox="${fx} ${fy} ${fw} ${fh}" preserveAspectRatio="xMidYMid meet" class="sprite-frame"><image href="${url}" width="${size.w}" height="${size.h}"/></svg>`;
   }
 
-  async function actor(url, extraUrl) {
+  async function actor(url, extraUrl, opts = {}) {
+    const scale = opts.scale || 1, fixes = Object.assign({}, XFIX, opts.fix || {});
     const size = await imageSize(url);
     let extraSize = null; if (extraUrl) { try { extraSize = await imageSize(extraUrl); } catch (e) { console.warn(e); } }
     const g = document.createElementNS(NS, "g");
     g.setAttribute("class", "mascot sprite");
-    g.innerHTML = frameMarkup(url, size, 0);
+    g.innerHTML = frameMarkup(url, size, 0, boxFor(scale));
     const inner = g.firstElementChild, img = inner.querySelector("image");
     let mode = "idle", seq = null, acc = 0, i = 0, cur = "", t = 0, onSeqEnd = null;
     const show = (idx, extra) => {
@@ -45,8 +48,8 @@
     };
     const start = (sq, end) => {
       seq = sq; acc = 0; i = 0; onSeqEnd = end || null; show(seq.frames[0], !!seq.extra);
-      const fix = sq === RUN ? XFIX.run : sq === FALL ? XFIX.fall : sq === RECOVER ? XFIX.recover : sq === IDLE ? XFIX.idle : sq === WIN ? XFIX.win : XFIX.tired;
-      inner.setAttribute("x", (-50 + fix * (300 / 512)).toFixed(1));
+      const fix = sq === RUN ? fixes.run : sq === FALL ? fixes.fall : sq === RECOVER ? fixes.recover : sq === IDLE ? fixes.idle : sq === WIN ? fixes.win : fixes.tired;
+      inner.setAttribute("x", (boxFor(scale).x + fix * (300 * scale / 512)).toFixed(1));
     };
     const hasExtra = () => !!extraSize;
     const a = {

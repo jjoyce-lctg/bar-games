@@ -44,7 +44,7 @@
 
   // Build an actor (el + set(mode) + tick(dt, speed)) for a racer: sprite sheet, uploaded still, or vector mascot.
   async function makeActor(r) {
-    if (r.sprite_url) { try { return await window.SPRITES.actor(r.sprite_url, r.extra_url); } catch (e) { console.warn(e); } }
+    if (r.sprite_url) { try { return await window.SPRITES.actor(r.sprite_url, r.extra_url, { scale: r.sprite_scale, fix: r.sprite_fix }); } catch (e) { console.warn(e); } }
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     if (r.image_url) {
       g.innerHTML = `<image href="${esc(r.image_url)}" x="0" y="0" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>`;
@@ -80,7 +80,8 @@
     const gantryH = 430, gantryW = gantryH * 800 / 900;
     const props = `<image href="${ART}gantry.png" x="${FINISH - gantryW / 2 + 2}" y="${TRACK_TOP - gantryH + 12}" width="${gantryW}" height="${gantryH}"/>
       <image href="${ART}finish-strip.png" x="${FINISH - stripW / 2}" y="${TRACK_TOP - 14}" width="${stripW}" height="${stripH}"/>`;
-    return { laneFeet: LANE_FEET.slice(0, n), svg: `
+    const laneFeet = n <= 4 ? LANE_FEET.slice(0, n) : Array.from({ length: n }, (_, i) => Math.round(LANE_FEET[0] - 20 + i * ((LANE_FEET[3] - LANE_FEET[0] + 20) / (n - 1))));
+    return { laneFeet, svg: `
       <defs>${window.MASCOTS.DEFS.replace(/<\/?defs>/g, "")}</defs>
       <rect x="0" y="0" width="${W}" height="${H}" fill="#1b7fd6"/>
       <g class="layer-far">${tiles(ART + "far.jpg", 0, 1080, need(PARALLAX.far))}</g>
@@ -102,7 +103,7 @@
     const far = svg.querySelector(".layer-far"), wall = svg.querySelector(".layer-wall"), track = svg.querySelector(".layer-track"), racerLayer = svg.querySelector(".layer-racers");
 
     // racer elements (actors are built asynchronously, the race starts once all are ready)
-    const scale = 0.64;   // 300px sprite frame -> ~190px on the 1080 scene
+    const scale = racers.length > 4 ? 0.56 : 0.64;   // 300px sprite frame -> ~190px on the 1080 scene (a bit smaller with 5+ lanes)
     const R = racers.map((r, i) => {
       const laneY = world.laneFeet[i] ?? (1032 - (racers.length - 1 - i) * 82);
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");

@@ -47,7 +47,7 @@
   .signup .cta h1 span { color: #e01e26; }
   .signup .cta p { font-size: 2.6vh; opacity: .9; margin: 0 0 1.6vh; font-family: "Special Elite", monospace; }
   .signup .code { font-family: var(--display); font-size: 4.4vh; letter-spacing: .15em; background: rgba(255,255,255,.08); display: inline-block; padding: .5vh 2vh; border-radius: 1.5vh; }
-  .picks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vh; margin-top: 1.8vh; }
+  .picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(14vw, 1fr)); gap: 1vh; margin-top: 1.8vh; }
   .pick { display: flex; align-items: center; gap: 1vh; background: rgba(255,255,255,.06); border-radius: 1.6vh; padding: .8vh 1.4vh; font-size: 2.3vh; white-space: nowrap; }
   .pick .e { height: 5.5vh; display: flex; align-items: flex-end; } .pick .e svg, .pick .e img { height: 100%; width: auto; }
   .pick .n { margin-left: auto; font-family: var(--display); font-size: 3.6vh; color: var(--accent); min-width: 2ch; text-align: right; }
@@ -286,7 +286,7 @@
       </div><canvas class="confetti" id="confetti"></canvas>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`; keybar("results");
     (async () => {
-      let a; if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url, winner.extra_url); } catch {} }
+      let a; if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url, winner.extra_url, { scale: winner.sprite_scale, fix: winner.sprite_fix }); } catch {} }
       if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = winner.image_url ? `<image href="${esc(winner.image_url)}" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>` : MASCOTS.markup(winner.id, { emoji: winner.emoji }); a = winner.image_url ? { el: g, set() {}, tick() {} } : SPRITES.vectorActor(g.querySelector(".mascot")); }
       const host = $("#winArt"); if (!host) return; host.innerHTML = MASCOTS.DEFS; host.appendChild(a.el); a.set("win"); let lastT = performance.now();
       const tick = (now) => { if (state.phase !== "results") return; a.tick((now - lastT) / 1000, 1); lastT = now; requestAnimationFrame(tick); }; requestAnimationFrame(tick);
