@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Last Call Games - DJ Console</title>
+<title>Last Call Tavern Games - DJ Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -33,6 +33,7 @@
   .stage-head .venue .name { font-family: var(--display); font-size: 6vh; line-height: 1; }
   .stage-head .venue .tag { font-size: 2.2vh; opacity: .8; }
   .stage-head .prize { text-align: right; font-size: 2.6vh; }
+  .stage-head .lctg { font-family: var(--display); font-size: 3.2vh; letter-spacing: .12em; opacity: .75; } .stage-head .lctg span { color: var(--accent); }
   .stage-head .prize b { display: block; font-family: var(--display); font-size: 4.5vh; color: var(--accent); }
   .stage-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 3vw; position: relative; }
   .stage-foot { padding: 2vh 3vw; display: flex; justify-content: space-between; align-items: center; font-size: 2.4vh; opacity: .9; }
@@ -75,7 +76,7 @@
 
 <div id="console">
   <div class="topbar">
-    <div class="brand">LAST CALL <span>GAMES</span></div>
+    <div class="brand">LAST CALL <span>TAVERN GAMES</span></div>
     <div class="grow"></div>
     <div id="who" class="row hidden">
       <span id="venuePill" class="venue-pill hidden"></span>
@@ -124,6 +125,7 @@
 <div id="stage">
   <div class="stage-head">
     <div class="venue"><img id="stLogo" alt="" class="hidden"><div><div class="name" id="stVenue"></div><div class="tag" id="stTag"></div></div></div>
+    <div class="lctg">LAST CALL <span>TAVERN GAMES</span></div>
     <div class="prize">Tonight's prize<b id="stPrize"></b></div>
   </div>
   <div class="stage-body" id="stageBody"></div>

@@ -1,4 +1,4 @@
-# Last Call Games: setup (one time, about 15 minutes)
+# Last Call Tavern Games (LCTG): setup (one time, about 15 minutes)
 
 You create two free accounts and paste a script. Claude does the rest.
 

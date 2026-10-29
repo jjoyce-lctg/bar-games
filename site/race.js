@@ -118,15 +118,16 @@
     //  runaway - winner breaks clear with a third to go and wins easily (no slow-mo)
     const others = R.filter((r) => r !== winner).sort(() => Math.random() - 0.5);
     const style = opts.finishStyle || pick(["photo", "photo", "comeback", "comeback", "runaway"]);
+    const rivals = style === "photo" ? others.slice(0, Math.random() < 0.4 ? 3 : 2) : [];
     const rival = others[0];
     if (others[0]) others[0].boosts.push([0.12, 0.38, 1.2]);
     if (others[1]) others[1].boosts.push([0.42, 0.66, 1.22]);
     if (others[2]) others[2].boosts.push([0.2, 0.3, 1.12], [0.58, 0.7, 1.15]);
     let margin, surge, slowFactor, photoGap;
-    if (style === "photo") { winner.boosts.push([0.0, 0.1, 1.08], [0.72, 1.0, 1.12]); if (rival) rival.boosts.push([0.7, 1.0, 1.1]); margin = 0.006; surge = 0; slowFactor = 0.3; photoGap = 0.02; }
+    if (style === "photo") { winner.boosts.push([0.0, 0.1, 1.08], [0.72, 1.0, 1.1]); rivals.forEach((rv) => rv.boosts.push([0.7, 1.0, 1.08])); margin = 0.005; surge = 0; slowFactor = 0.3; photoGap = 0.02; }
     else if (style === "comeback") { winner.boosts.push([0.0, 0.45, 0.9], [0.62, 1.0, 1.5]); margin = 0.03; surge = 1; slowFactor = 0.45; photoGap = 0.012; }
     else { winner.boosts.push([0.0, 0.1, 1.08], [0.55, 1.0, 1.38]); margin = 0.07; surge = 1; slowFactor = 0.75; photoGap = 0; }
-    const stumbler = others.length ? pick(others.filter((o) => style !== "photo" || o !== rival)) || null : null, stumbleAt = rnd(0.28, 0.6);
+    const stumbler = others.length ? pick(others.filter((o) => !rivals.includes(o))) || null : null, stumbleAt = rnd(0.28, 0.6);
     let stumbled = false;
 
     // HUD setup
@@ -167,15 +168,19 @@
         let f = r.burst;
         r.boosts.forEach(([a, b, k]) => { if (T >= a && T <= b) f *= k; });
         if (r !== winner && r.p < leaderP - 0.1) f *= 1.15;               // pack stays together
-        if (style === "photo" && r === rival && T > 0.4 && r.p < winner.p - 0.012) f *= 1.35;   // rival glued to the winner
-        if (style === "photo" && r === winner && T > 0.4 && r.p < rival.p - 0.012) f *= 1.35;
+        if (style === "photo" && T > 0.4) {   // rivals and winner stay glued, with a proportional (smooth) tug
+          if (rivals.includes(r)) f *= 1 + Math.max(0, Math.min(0.45, (winner.p - r.p - 0.006) * 25));
+          if (r === winner) { const ahead = Math.max(...rivals.map((rv) => rv.p)); f *= 1 + Math.max(0, Math.min(0.45, (ahead - r.p - 0.006) * 25)); }
+        }
         if (r === stumbler && !stumbled && T >= stumbleAt) { stumbled = true; r.stumbleUntil = now + r.actor.stumbleMs; say(`${r.label} goes down!`); }
         if (now < r.stumbleUntil) { f *= 0.1; r.mode = "stumble"; } else if (r.mode === "stumble") r.mode = "run";
         r.v = f;
         r.p += (f / (duration / 1000)) * dt;
         if (r !== winner) {
           if (!finished) {
-            if (T > 0.78) { const m = (style === "photo" && r === rival) ? margin : Math.max(margin, 0.02) + 0.012 * r.i; r.p = Math.min(r.p, winner.p - m); }
+            const m = rivals.includes(r) ? margin : Math.max(margin, 0.02) + 0.012 * r.i;
+            if (T > 0.7 && r.p > winner.p - m) { r.p -= (f / (duration / 1000)) * dt * (r.p > winner.p - m + 0.01 ? 0.7 : 0.45); }   // ease off, never snap back
+            if (winner.p > 0.985) r.p = Math.min(r.p, winner.p - 0.003);   // last-metre safety, a hair at most
             r.p = Math.min(r.p, 0.995);
           }
           else if (r.p >= r.stopAt) { r.p = r.stopAt; r.mode = "tired"; }
