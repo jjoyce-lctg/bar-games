@@ -8,6 +8,10 @@
   const RUN = { frames: [0, 1, 2, 3, 4, 5, 6, 7], durations: [90, 90, 90, 90, 90, 90, 90, 90], loop: true };
   const FALL = { frames: [8, 9, 10, 11], durations: [120, 110, 110, 300], loop: false };
   const RECOVER = { frames: [12, 13, 14, 15], durations: [220, 160, 140, 90], loop: false };
+  // Optional second atlas ("extra"): idle 0-3, victory 4-11, exhausted 12-15, all 90 ms loops.
+  const IDLE = { frames: [0, 1, 2, 3], durations: [90, 90, 90, 90], loop: true, extra: true };
+  const WIN = { frames: [4, 5, 6, 7, 8, 9, 10, 11], durations: [90, 90, 90, 90, 90, 90, 90, 90], loop: true, extra: true };
+  const TIRED = { frames: [12, 13, 14, 15], durations: [90, 90, 90, 90], loop: true, extra: true };
   const ANCHOR = { x: 0.5, y: 0.9375 };
   const NS = "http://www.w3.org/2000/svg";
   const sizeCache = {};
@@ -23,45 +27,52 @@
     return `<svg x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" viewBox="${fx} ${fy} ${fw} ${fh}" preserveAspectRatio="xMidYMid meet" class="sprite-frame"><image href="${url}" width="${size.w}" height="${size.h}"/></svg>`;
   }
 
-  async function actor(url) {
+  async function actor(url, extraUrl) {
     const size = await imageSize(url);
+    let extraSize = null; if (extraUrl) { try { extraSize = await imageSize(extraUrl); } catch (e) { console.warn(e); } }
     const g = document.createElementNS(NS, "g");
     g.setAttribute("class", "mascot sprite");
-    // Box: anchor (feet) lands on (100, 240). Frame drawn 300px tall, so anchor y = 0.9375*300 = 281.25 -> offset -41.25; x center 150 -> offset -50.
     g.innerHTML = frameMarkup(url, size, 0);
-    const inner = g.firstElementChild;
-    const fw = size.w / 4, fh = size.h / 4;
-    let mode = "idle", seq = RUN, acc = 0, i = 0, cur = -1, t = 0, onSeqEnd = null;
-    const show = (idx) => { if (idx === cur) return; cur = idx; inner.setAttribute("viewBox", `${(idx % 4) * fw} ${Math.floor(idx / 4) * fh} ${fw} ${fh}`); };
-    const start = (s, end) => { seq = s; acc = 0; i = 0; onSeqEnd = end || null; show(seq.frames[0]); };
+    const inner = g.firstElementChild, img = inner.querySelector("image");
+    let mode = "idle", seq = null, acc = 0, i = 0, cur = "", t = 0, onSeqEnd = null;
+    const show = (idx, extra) => {
+      const key = (extra ? "e" : "m") + idx; if (key === cur) return; cur = key;
+      const sz = extra ? extraSize : size, u = extra ? extraUrl : url, fw = sz.w / 4, fh = sz.h / 4;
+      img.setAttribute("href", u); img.setAttribute("width", sz.w); img.setAttribute("height", sz.h);
+      inner.setAttribute("viewBox", `${(idx % 4) * fw} ${Math.floor(idx / 4) * fh} ${fw} ${fh}`);
+    };
+    const start = (sq, end) => { seq = sq; acc = 0; i = 0; onSeqEnd = end || null; show(seq.frames[0], !!seq.extra); };
+    const hasExtra = () => !!extraSize;
     const a = {
-      el: g, ready: true, stumbleMs: FALL.durations.reduce((x, y) => x + y, 0) + RECOVER.durations.reduce((x, y) => x + y, 0),
+      el: g, ready: true, hasExtra: hasExtra(),
+      stumbleMs: FALL.durations.reduce((x, y) => x + y, 0) + RECOVER.durations.reduce((x, y) => x + y, 0),
       set(m) {
         if (m === mode) return;
         mode = m;
         if (m === "run") start(RUN);
         else if (m === "stumble") start(FALL, () => start(RECOVER, () => { mode = "run"; start(RUN); }));
-        else if (m === "win") { seq = null; show(RUN.frames[3]); }
-        else { seq = null; show(RUN.frames[0]); }
+        else if (m === "win") { if (hasExtra()) start(WIN); else { seq = null; show(RUN.frames[3], false); } }
+        else if (m === "tired") { if (hasExtra()) start(TIRED); else { seq = null; show(RUN.frames[0], false); } }
+        else { if (hasExtra()) start(IDLE); else { seq = null; show(RUN.frames[0], false); } }
       },
       tick(dt, speed = 1) {
         t += dt;
         if (seq) {
           const rate = seq === RUN ? Math.max(0.4, speed) : 1;
           acc += dt * 1000 * rate;
-          while (acc >= seq.durations[i]) {
+          while (seq && acc >= seq.durations[i]) {
             acc -= seq.durations[i]; i++;
             if (i >= seq.frames.length) { if (seq.loop) i = 0; else { i = seq.frames.length - 1; acc = 0; const f = onSeqEnd; onSeqEnd = null; if (f) { f(); } break; } }
           }
-          if (seq) show(seq.frames[i]);
+          if (seq) show(seq.frames[i], !!seq.extra);
         }
-        let dy = 0, rot = 0;
-        if (mode === "win") dy = -Math.abs(Math.sin(t * 7)) * 34;
-        else if (mode === "idle") dy = Math.sin(t * 3) * 2;
-        g.setAttribute("transform", `translate(0 ${dy}) rotate(${rot} 100 240)`);
+        // The artwork carries its own bounce; only add motion where no artwork exists for the state.
+        let dy = 0;
+        if (!hasExtra()) { if (mode === "win") dy = -Math.abs(Math.sin(t * 7)) * 34; else if (mode === "idle") dy = Math.sin(t * 3) * 2; }
+        g.setAttribute("transform", `translate(0 ${dy})`);
       },
     };
-    a.set("idle"); a.tick(0);
+    mode = ""; a.set("idle"); a.tick(0);
     return a;
   }
 
@@ -71,7 +82,7 @@
     return {
       el, ready: true, stumbleMs,
       set(m) { mode = m; },
-      tick(dt, speed = 1) { phase += dt * (mode === "stumble" ? 2 : mode === "run" ? 14 * speed : 3); window.MASCOTS.pose(el, { phase, mode }); },
+      tick(dt, speed = 1) { phase += dt * (mode === "stumble" ? 2 : mode === "run" ? 14 * speed : 3); window.MASCOTS.pose(el, { phase, mode: mode === "tired" ? "idle" : mode }); },
     };
   }
 
@@ -81,5 +92,5 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 250" height="${height}" style="overflow:visible">${frameMarkup(url, size, 0)}</svg>`;
   }
 
-  window.SPRITES = { actor, vectorActor, standalone, frameMarkup, imageSize, RUN, FALL, RECOVER, ANCHOR };
+  window.SPRITES = { actor, vectorActor, standalone, frameMarkup, imageSize, RUN, FALL, RECOVER, IDLE, WIN, TIRED, ANCHOR };
 })();

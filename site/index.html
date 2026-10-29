@@ -283,7 +283,7 @@
     $("#stHint").innerHTML = `Press <span class="kbd">Enter</span> for the next game`;
     (async () => {
       let a;
-      if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url); } catch {} }
+      if (winner.sprite_url) { try { a = await SPRITES.actor(winner.sprite_url, winner.extra_url); } catch {} }
       if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = winner.image_url ? `<image href="${esc(winner.image_url)}" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>` : MASCOTS.markup(winner.id, { emoji: winner.emoji }); a = winner.image_url ? { el: g, set() {}, tick() {} } : SPRITES.vectorActor(g.querySelector(".mascot")); }
       const host = $("#winArt"); if (!host) return; host.innerHTML = MASCOTS.DEFS; host.appendChild(a.el);
       a.set("win"); let lastT = performance.now();

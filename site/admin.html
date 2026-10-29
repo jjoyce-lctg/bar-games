@@ -110,7 +110,7 @@
     <!-- RACERS -->
     <div id="tab-racers" class="stack hidden">
       <div class="card">
-        <p class="muted" style="margin-top:0">Each racer ships with built-in animated artwork. To replace one: <b>Upload sprite sheet</b> takes a square PNG with a 4 x 4 grid of equal frames (frames 0 to 7 running, 8 to 11 falling, 12 to 15 getting up, character facing right, feet at 94% of the frame height). <b>Upload still image</b> takes a single transparent PNG that bobs along the track instead.</p>
+        <p class="muted" style="margin-top:0">Each racer ships with built-in animated artwork. To replace one: <b>Upload sprite sheet</b> takes a square PNG with a 4 x 4 grid of equal frames (frames 0 to 7 running, 8 to 11 falling, 12 to 15 getting up, character facing right, feet at 94% of the frame height). <b>Upload idle/win sheet</b> is the optional second sheet (0 to 3 idle, 4 to 11 victory, 12 to 15 exhausted). <b>Upload still image</b> takes a single transparent PNG that bobs along the track instead. <a href="preview.html" target="_blank">Preview every animation state</a>.</p>
         <div id="racersBody" class="row" style="gap:1rem;align-items:stretch"></div>
       </div>
     </div>
@@ -267,7 +267,8 @@
       <div class="muted" style="font-size:.78rem">${g.options[i].sprite_url ? "Custom sprite sheet" : g.options[i].image_url ? "Custom still image" : "Built-in artwork"}</div>
       <input class="oLabel" value="${esc(o.label)}" style="text-align:center">
       <button class="btn small primary oSave">Save name</button>
-      <label class="btn small" style="margin:0;color:var(--text)">Upload sprite sheet<input type="file" accept="image/png" class="hidden oSheet"></label>
+      <label class="btn small" style="margin:0;color:var(--text)">Upload run/fall sheet<input type="file" accept="image/png" class="hidden oSheet"></label>
+      <label class="btn small" style="margin:0;color:var(--text)">Upload idle/win sheet<input type="file" accept="image/png" class="hidden oExtra"></label>
       <label class="btn small" style="margin:0;color:var(--text)">Upload still image<input type="file" accept="image/*" class="hidden oFile"></label>
       ${g.options[i].sprite_url || g.options[i].image_url ? `<button class="btn small oReset">Use built-in art</button>` : ""}
     </div>`).join("")).join("");
@@ -288,7 +289,16 @@
           delete o.image_url; await save();
         } catch (e) { toast(e.message); }
       };
-      const r = card.querySelector(".oReset"); if (r) r.onclick = () => { delete o.image_url; delete o.sprite_url; delete o.icon_url; save(); };
+      card.querySelector(".oExtra").onchange = async (ev) => {
+        const f = ev.target.files[0]; if (!f) return;
+        try {
+          const sz = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res([im.naturalWidth, im.naturalHeight]); im.onerror = rej; im.src = URL.createObjectURL(f); });
+          if (sz[0] !== sz[1] || sz[0] % 4) return toast("Sheet must be square with a 4 x 4 grid of frames.");
+          if (!o.sprite_url) return toast("Upload the run/fall sheet first.");
+          toast("Uploading..."); o.extra_url = await api.uploadRacerImage(o.id + "-extra", f); await save();
+        } catch (e) { toast(e.message); }
+      };
+      const r = card.querySelector(".oReset"); if (r) r.onclick = () => { delete o.image_url; delete o.sprite_url; delete o.extra_url; delete o.icon_url; save(); };
     });
   }
 

@@ -19,7 +19,7 @@
   const BUILTIN_ART = { hotdog: 1, beer: 1, pretzel: 1, pizza: 1 };
   const decorateOptions = (options) => (options || []).map((o) => {
     const out = { ...o };
-    if (!out.sprite_url && !out.image_url && BUILTIN_ART[out.id]) { out.sprite_url = `sprites/${out.id}/atlas.png`; out.icon_url = `sprites/${out.id}/icon.png`; }
+    if (!out.sprite_url && !out.image_url && BUILTIN_ART[out.id]) { out.sprite_url = `sprites/${out.id}/atlas.png`; out.extra_url = `sprites/${out.id}/extra.png`; out.icon_url = `sprites/${out.id}/icon.png`; }
     return out;
   });
   const usernameToEmail = (u) => { const s = String(u).trim().toLowerCase(); return s.includes("@") ? s : `${s.replace(/[^a-z0-9._-]/g, "")}@${CFG.USERNAME_DOMAIN || "djs.local"}`; };

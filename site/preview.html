@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Racer animation preview</title><link rel="stylesheet" href="style.css">
+<style>body{padding:1.5rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}.card{text-align:center}.stage{height:280px;background:#3f7d3a;border-radius:10px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}.stage svg{height:100%}.btns{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:.6rem}</style></head>
+<body><h1>Racer animation preview</h1><p class="muted">Development page. Click a state to preview it for each character. Speed slider affects the run cycle.</p>
+<div class="row" style="margin-bottom:1rem"><label style="margin:0">Run speed</label><input id="speed" type="range" min="0.3" max="2" step="0.1" value="1" style="width:200px"></div>
+<div id="grid" class="grid"></div>
+<script src="config.js"></script><script src="vendor/supabase.js"></script><script src="mascots.js"></script><script src="sprites.js"></script><script src="common.js"></script>
+<script>
+(async () => {
+  const { api, decorateOptions, esc, $ } = window.BG;
+  const games = await api.listGames(); const opts = decorateOptions(games.flatMap((g) => g.options));
+  const STATES = ["idle", "run", "stumble", "win", "tired"]; const actors = [];
+  for (const o of opts) {
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<h3>${esc(o.label)}</h3><div class="stage"><svg viewBox="-20 -40 240 290">${MASCOTS.DEFS}</svg></div><div class="btns">${STATES.map((s) => `<button class="btn small" data-s="${s}">${s}</button>`).join("")}</div>`;
+    $("#grid").appendChild(card);
+    let a; if (o.sprite_url) { try { a = await SPRITES.actor(o.sprite_url, o.extra_url); } catch {} }
+    if (!a) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.innerHTML = MASCOTS.markup(o.id, { emoji: o.emoji }); a = SPRITES.vectorActor(g.querySelector(".mascot")); }
+    card.querySelector("svg").appendChild(a.el); actors.push(a);
+    card.querySelectorAll("button").forEach((b) => (b.onclick = () => { a.set(b.dataset.s); if (b.dataset.s === "stumble") setTimeout(() => a.set("run"), a.stumbleMs); }));
+    a.set("run");
+  }
+  let last = performance.now();
+  (function loop(now) { const dt = (now - last) / 1000; last = now; actors.forEach((a) => a.tick(dt, +$("#speed").value)); requestAnimationFrame(loop); })(last);
+})();
+</script></body></html>

@@ -44,7 +44,7 @@
 
   // Build an actor (el + set(mode) + tick(dt, speed)) for a racer: sprite sheet, uploaded still, or vector mascot.
   async function makeActor(r) {
-    if (r.sprite_url) { try { return await window.SPRITES.actor(r.sprite_url); } catch (e) { console.warn(e); } }
+    if (r.sprite_url) { try { return await window.SPRITES.actor(r.sprite_url, r.extra_url); } catch (e) { console.warn(e); } }
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     if (r.image_url) {
       g.innerHTML = `<image href="${esc(r.image_url)}" x="0" y="0" width="200" height="240" preserveAspectRatio="xMidYMax meet"/>`;
@@ -157,7 +157,7 @@
 
     const xOf = (r) => START + r.p * (FINISH - START);
     const place = (r) => { r.g.setAttribute("transform", `translate(${xOf(r) - 100 * scale} ${r.laneY - 240 * scale}) scale(${scale})`); };
-    let camX = 0, lastLeader = null, lastLeadSay = 0, slow = false, photoShown = false, finished = false, raf = 0, stopped = false;
+    let camX = 0, lastLeader = null, lastLeadSay = 0, slow = false, photoShown = false, finished = false, raf = 0, stopped = false, finalOrder = null;
     const t0 = performance.now(); let last = t0, raceStart = 0, phaseT = "count";
     const countdown = ["ON YOUR MARKS", "GET SET", "GO!"];
     let countIdx = 0, countNext = t0 + 200;
@@ -179,7 +179,7 @@
       if (slow) dt *= 0.32;
       const leaderP = Math.max(...R.map((r) => r.p));
       R.forEach((r) => {
-        if (r.mode === "win" || r.mode === "done") return;
+        if (r.mode === "win" || r.mode === "tired") return;
         if (now > r.burstUntil) { r.burst = rnd(0.82, 1.18); r.burstUntil = now + rnd(400, 900); }
         let f = r.burst;
         r.boosts.forEach(([a, b, k]) => { if (T >= a && T <= b) f *= k; });
@@ -188,10 +188,13 @@
         if (now < r.stumbleUntil) { f *= 0.1; r.mode = "stumble"; } else if (r.mode === "stumble") r.mode = "run";
         r.v = f;
         r.p += (f / (duration / 1000)) * dt;
-        if (r !== winner) { if (T > 0.82) r.p = Math.min(r.p, winner.p - 0.012 - 0.006 * r.i); r.p = Math.min(r.p, 0.995); }
+        if (r !== winner) {
+          if (!finished) { if (T > 0.82) r.p = Math.min(r.p, winner.p - 0.012 - 0.006 * r.i); r.p = Math.min(r.p, 0.995); }
+          else if (r.p >= 0.975) { r.p = 0.975; r.mode = "tired"; }
+        }
       });
       // photo finish / slow-mo
-      if (!slow && winner.p > 0.9) {
+      if (!slow && !finished && winner.p > 0.9) {
         slow = true;
         const second = Math.max(...R.filter((r) => r !== winner).map((r) => r.p));
         if (winner.p - second < 0.04 && !photoShown) { photoShown = true; const el = document.createElement("div"); el.className = "race-photo"; el.textContent = "PHOTO FINISH"; container.querySelector(".race-hud").appendChild(el); setTimeout(() => el.remove(), 2600); }
@@ -204,19 +207,20 @@
       // finish
       if (!finished && winner.p >= 1) {
         finished = true; winner.p = 1; winner.mode = "win"; slow = false;
+        finalOrder = [winner, ...R.filter((r) => r !== winner).sort((a, b) => b.p - a.p)];
         big.innerHTML = `<div class="t">${esc(winner.label.toUpperCase())} WINS!</div>`;
         say(`${winner.label} wins it!`, 4000);
-        setTimeout(() => { if (!stopped) onDone(); }, 2600);
+        setTimeout(() => { if (!stopped) onDone(); }, 3400);
       }
       // draw
       R.forEach((r) => { r.actor.set(r.mode); r.actor.tick(slow ? dt / 0.32 * 0.6 : dt, r.v); place(r); });
-      const targetCam = Math.max(0, Math.min(L - W, xOf(leader) - W * 0.62));
+      const targetCam = Math.max(0, Math.min(L - W, xOf(finished ? winner : leader) - W * 0.62));
       camX = lerp(camX, targetCam, 1 - Math.pow(0.001, dt));
       track.setAttribute("transform", `translate(${-camX} 0)`); racerLayer.setAttribute("transform", `translate(${-camX} 0)`);
       stands.setAttribute("transform", `translate(${-camX * 0.55} 0)`);
       fans.forEach((f) => { f.el.setAttribute("transform", `${f.base} translate(0 ${-Math.max(0, Math.sin(now / 260 + f.ph)) * f.amp})`); });
       // HUD
-      const order = [...R].sort((a, b) => b.p - a.p);
+      const order = finalOrder || [...R].sort((a, b) => b.p - a.p);
       order.forEach((r, i) => { const row = boardRows[r.id]; row.style.order = i; row.querySelector(".pos").textContent = i + 1; row.querySelector(".gap").textContent = i === 0 ? "" : `-${((order[0].p - r.p) * 100).toFixed(1)}m`; });
       R.forEach((r) => { dots[r.id].style.left = `${(3 + Math.min(1, r.p) * 91).toFixed(2)}%`; });
       raf = requestAnimationFrame(frame);
