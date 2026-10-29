@@ -1,0 +1,13 @@
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const root = path.resolve(__dirname, '../site');
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json' };
+const server = http.createServer((req, res) => { const p = path.join(root, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html')); fs.readFile(p, (e, d) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream' }); res.end(d); }); }).listen(8768);
+(async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1200, height: 800 } }); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+await p.goto('http://localhost:8768/index.html?mock=1'); await p.evaluate(() => localStorage.removeItem('barGamesMock')); await p.reload(); await p.waitForTimeout(300);
+await p.screenshot({ path: 'shots/portal-login.png' });
+await p.fill('#username', 'manager'); await p.fill('#password', 'manager'); await p.click('#btnLogin'); await p.waitForSelector('#viewChoices:not(.hidden)'); await p.waitForTimeout(300);
+await p.screenshot({ path: 'shots/portal-choices.png' });
+console.log('locked admin:', await p.$eval('#cAdmin', e => e.classList.contains('locked')), 'errors', errs);
+await p.click('#cShow'); await p.waitForSelector('#viewVenue:not(.hidden)'); console.log('showrunner carried session:', await p.url());
+await b.close(); server.close(); })();

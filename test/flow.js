@@ -17,7 +17,7 @@ const out = path.resolve(__dirname, 'shots'); fs.mkdirSync(out, { recursive: tru
   tv.on('pageerror', (e) => errors.push('TV: ' + e.message));
   tv.on('console', (m) => { if (m.type() === 'error') errors.push('TV console: ' + m.text()); });
 
-  await tv.goto(B + '/index.html?mock=1');
+  await tv.goto(B + '/showrunner.html?mock=1');
   await tv.screenshot({ path: out + '/01-login.png' });
   await tv.fill('#username', 'dj'); await tv.fill('#password', 'dj'); await tv.click('#btnLogin');
   await tv.waitForSelector('#viewVenue:not(.hidden)');

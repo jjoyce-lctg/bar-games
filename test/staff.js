@@ -8,7 +8,7 @@ const B = 'http://localhost:8767';
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } }); const errs = [];
   // seed: run a race as dj with mock state, prizes valid immediately for the test
   const tv = await ctx.newPage(); tv.on('pageerror', e => errs.push('tv ' + e.message));
-  await tv.goto(B + '/index.html?mock=1'); await tv.evaluate(() => { localStorage.removeItem('barGamesMock'); window.__mockNoWait = true; });
+  await tv.goto(B + '/showrunner.html?mock=1'); await tv.evaluate(() => { localStorage.removeItem('barGamesMock'); window.__mockNoWait = true; });
   await tv.reload(); await tv.evaluate(() => { window.__mockNoWait = true; });
   await tv.fill('#username', 'dj'); await tv.fill('#password', 'dj'); await tv.click('#btnLogin'); await tv.waitForSelector('#viewVenue:not(.hidden)'); await tv.click('#btnVenue'); await tv.waitForSelector('#viewGames:not(.hidden)');
   await tv.fill('#prize', 'a free round'); await tv.click('.game-card[data-key="race"]'); await tv.waitForSelector('#stage.on .qr-wrap svg');

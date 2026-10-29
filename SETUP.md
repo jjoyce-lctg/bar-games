@@ -23,7 +23,7 @@ The first account created becomes the admin. Open `admin.html` on the hosted sit
 
 ## Day to day (DJ)
 
-1. Open the site on the laptop connected to the TV, log in, pick the bar.
+1. Open the site on the laptop connected to the TV, log in, choose Showrunner, pick the bar.
 2. Type tonight's prize, click a game. The TV goes fullscreen with the QR code.
 3. Guests scan, pick, enter name and phone, check the opt-in box.
 4. Press **Enter** to run the race. Press **Enter** again to go back to the game list.
@@ -62,4 +62,4 @@ MP3s in `site/sfx/` replace the generated sounds when present. Keys: `crowd-loop
 
 ## Prize redemption (managers)
 
-Managers log in at `staff.html`, pick their bar, type the guest's phone number, and tap Redeem. Prizes are created automatically for winners when a race ends, valid from midnight the next day for 14 days, at any LCTG bar, once. Admin > Prizes shows issued, redeemed, outstanding and a CSV export; admins can void a prize. Give manager accounts the Manager role under Admin > Logins. Reconcile: redeemed count per bar should match the LCTG Prize comps in Toast.
+Managers log in at the portal and choose Prize Redemption (`staff.html`), pick their bar, type the guest's phone number, and tap Redeem. Prizes are created automatically for winners when a race ends, valid from midnight the next day for 14 days, at any LCTG bar, once. Admin > Prizes shows issued, redeemed, outstanding and a CSV export; admins can void a prize. Give manager accounts the Manager role under Admin > Logins. Reconcile: redeemed count per bar should match the LCTG Prize comps in Toast.
