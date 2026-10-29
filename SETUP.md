@@ -59,3 +59,7 @@ Keys: M on the console mutes everything. The crowd is generated live and needs n
 ## Crowd and effects (optional recordings)
 
 MP3s in `site/sfx/` replace the generated sounds when present. Keys: `crowd-loop` (20 to 40 s ambient stadium crowd that loops cleanly), `crowd-cheer` (2 to 3 s burst), `crowd-roar` (4 to 6 s big roar), `crowd-ooh` (1 to 2 s groan), `gunshot` or `horn` (starting gun), `sting` (victory sting), `beep` (countdown beep).
+
+## Prize redemption (managers)
+
+Managers log in at `staff.html`, pick their bar, type the guest's phone number, and tap Redeem. Prizes are created automatically for winners when a race ends, valid from midnight the next day for 14 days, at any LCTG bar, once. Admin > Prizes shows issued, redeemed, outstanding and a CSV export; admins can void a prize. Give manager accounts the Manager role under Admin > Logins. Reconcile: redeemed count per bar should match the LCTG Prize comps in Toast.

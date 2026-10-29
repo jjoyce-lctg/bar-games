@@ -33,7 +33,9 @@
     let state = load() || {
       session: null,
       profiles: [{ id: "u-admin", username: "admin", role: "admin", active: true, password: "admin" },
-                 { id: "u-dj", username: "dj", role: "dj", active: true, password: "dj" }],
+                 { id: "u-dj", username: "dj", role: "dj", active: true, password: "dj" },
+                 { id: "u-mgr", username: "manager", role: "manager", active: true, password: "manager" }],
+      prizes: [],
       venues: [
         { id: "v1", name: "Willie Lill's", slug: "willie-lills", color_primary: "#0a0a0a", color_accent: "#ffcd00", tagline: "Chicago's Hawkeye bar", default_prize: "a round on us", sort_order: 1, active: true, logo_url: null },
         { id: "v2", name: "Duffy's", slug: "duffys", color_primary: "#0f5c2e", color_accent: "#f2f2f2", tagline: "Lincoln Park", default_prize: "a round on us", sort_order: 2, active: true, logo_url: null },
@@ -72,7 +74,27 @@
         state.rounds.push(r); persist(); return r;
       },
       async setRoundStatus(id, status) { requireAuth(); const r = round(id); r.status = status; if (status === "running") r.started_at = new Date().toISOString(); persist(); return r; },
-      async finishRound(id, winning_pick) { requireAuth(); const r = round(id); r.status = "finished"; r.winning_pick = winning_pick; r.finished_at = new Date().toISOString(); state.entries.filter((e) => e.round_id === id).forEach((e) => (e.is_winner = e.pick === winning_pick)); persist(); },
+      async finishRound(id, winning_pick) {
+        requireAuth(); const r = round(id); r.status = "finished"; r.winning_pick = winning_pick; r.finished_at = new Date().toISOString();
+        state.entries.filter((e) => e.round_id === id).forEach((e) => (e.is_winner = e.pick === winning_pick));
+        state.prizes = state.prizes || [];
+        const v = state.venues.find((x) => x.id === r.venue_id);
+        const d0 = new Date(); d0.setHours(0, 0, 0, 0); const from = new Date(d0.getTime() + 864e5), to = new Date(d0.getTime() + 15 * 864e5);
+        state.entries.filter((e) => e.round_id === id && e.is_winner).forEach((e) => { if (!state.prizes.some((p) => p.entry_id === e.id)) state.prizes.push({ id: uuid(), entry_id: e.id, round_id: r.id, won_venue_id: r.venue_id, phone: e.phone, name: e.name, prize: r.prize || v.default_prize || "a prize", issued_at: new Date().toISOString(), valid_from: (window.__mockNoWait ? new Date(0) : from).toISOString(), expires_at: to.toISOString(), redeemed_at: null, redeemed_by: null, redeemed_venue_id: null, voided_at: null }); });
+        persist();
+      },
+      _prizeStatus(p) { const now = Date.now(); return p.voided_at ? "voided" : p.redeemed_at ? "redeemed" : now < Date.parse(p.valid_from) ? "not_yet" : now > Date.parse(p.expires_at) ? "expired" : "active"; },
+      _prizeRow(p) { const v = state.venues.find((x) => x.id === p.won_venue_id), rv = state.venues.find((x) => x.id === p.redeemed_venue_id), r = round(p.round_id), g = state.games.find((x) => x.key === r.game_key), by = state.profiles.find((x) => x.id === p.redeemed_by);
+        return { ...p, won_at: p.issued_at, won_venue: v?.name, game: g?.name, round_code: r?.code, status: this._prizeStatus(p), redeemed_venue: rv?.name || null, redeemed_by: by?.username || null }; },
+      async lookupPrizes(phone) { requireAuth(); if (!["manager", "admin"].includes(me().role)) throw new Error("Manager login required."); const d = normPhone(phone); return (state.prizes || []).filter((p) => p.phone === d).map((p) => this._prizeRow(p)).sort((a, b) => b.issued_at.localeCompare(a.issued_at)); },
+      async redeemPrize(id, venue_id) {
+        requireAuth(); if (!["manager", "admin"].includes(me().role)) return { ok: false, error: "Manager login required." };
+        const p = (state.prizes || []).find((x) => x.id === id); if (!p) return { ok: false, error: "Prize not found." };
+        const st = this._prizeStatus(p); if (st === "redeemed") return { ok: false, error: "Already redeemed." }; if (st === "not_yet") return { ok: false, error: "Not valid until tomorrow." }; if (st === "expired") return { ok: false, error: "This prize has expired." }; if (st === "voided") return { ok: false, error: "This prize was voided." };
+        p.redeemed_at = new Date().toISOString(); p.redeemed_by = me().id; p.redeemed_venue_id = venue_id; persist(); return { ok: true };
+      },
+      async listPrizes(f = {}) { requireAdmin(); return (state.prizes || []).map((p) => this._prizeRow(p)).filter((p) => (!f.status || p.status === f.status) && (!f.venue_id || p.won_venue_id === f.venue_id)).sort((a, b) => b.issued_at.localeCompare(a.issued_at)); },
+      async voidPrize(id, reason) { requireAdmin(); const p = state.prizes.find((x) => x.id === id); p.voided_at = new Date().toISOString(); p.void_reason = reason || null; persist(); },
       async roundStats(id) {
         requireAuth();
         const es = state.entries.filter((e) => e.round_id === id);
@@ -127,7 +149,7 @@
       async uploadRacerImage(optionId, file) { requireAdmin(); return new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(file); }); },
     };
     // Re-sync from storage before every call so multiple preview tabs see each other's writes.
-    Object.keys(api).forEach((k) => { if (typeof api[k] === "function") { const fn = api[k]; api[k] = function (...a) { sync(); return fn.apply(api, a); }; } });
+    Object.keys(api).forEach((k) => { if (typeof api[k] === "function" && !k.startsWith("_")) { const fn = api[k]; api[k] = function (...a) { sync(); return fn.apply(api, a); }; } });
     return api;
   }
 
@@ -206,6 +228,10 @@
         await this.updateVenue(venue.id, { logo_url: url }); return url;
       },
       async updateGameOptions(key, options) { throwIf(await sb.from("games").update({ options }).eq("key", key)); },
+      async lookupPrizes(phone) { return throwIf(await sb.rpc("lookup_prizes", { p_phone: phone })); },
+      async redeemPrize(id, venue_id) { return throwIf(await sb.rpc("redeem_prize", { p_prize_id: id, p_venue_id: venue_id })); },
+      async listPrizes(f = {}) { let q = sb.from("prizes_report").select("*").order("issued_at", { ascending: false }).limit(5000); if (f.status) q = q.eq("status", f.status); if (f.venue_id) q = q.eq("won_venue_id", f.venue_id); return throwIf(await q); },
+      async voidPrize(id, reason) { throwIf(await sb.from("prizes").update({ voided_at: new Date().toISOString(), void_reason: reason || null }).eq("id", id)); },
       async uploadRacerImage(optionId, file) {
         const ext = (file.name.split(".").pop() || "png").toLowerCase();
         const path = `racers/${optionId}.${ext}`;

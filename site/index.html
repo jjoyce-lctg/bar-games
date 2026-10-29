@@ -281,7 +281,7 @@
       <div class="results">
         <div class="big"><svg viewBox="0 0 200 260" style="height:100%;overflow:visible" id="winArt"></svg></div>
         <h1><span>${esc(winner.label.toUpperCase())}</span> WINS!</h1>
-        <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
+        <p>${names.length ? `${names.length} winner${names.length === 1 ? "" : "s"} picked ${esc(winner.label)}. Watch your phone for your prize. Valid from tomorrow for 14 days at any LCTG bar.` : `Nobody picked ${esc(winner.label)} this time. Better luck next round!`}</p>
         <div class="names">${names.slice(0, 40).map((x) => `<span>${esc(x)}</span>`).join("")}${names.length > 40 ? `<span>+${names.length - 40} more</span>` : ""}</div>
       </div><canvas class="confetti" id="confetti"></canvas>`;
     $("#stFootLeft").innerHTML = `<span class="count"><b>${s.count}</b> played</span>`;

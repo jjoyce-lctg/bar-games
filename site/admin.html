@@ -52,6 +52,7 @@
       <button data-tab="rounds">Rounds</button>
       <button data-tab="venues">Bars</button>
       <button data-tab="racers">Racers</button>
+      <button data-tab="prizes">Prizes</button>
       <button data-tab="users">Logins</button>
     </div>
 
@@ -115,6 +116,20 @@
       </div>
     </div>
 
+    <!-- PRIZES -->
+    <div id="tab-prizes" class="stack hidden">
+      <div class="card filters">
+        <div><label>Won at</label><select id="pVenue"><option value="">All bars</option></select></div>
+        <div><label>Status</label><select id="pStatus"><option value="">All</option><option value="active">Active</option><option value="not_yet">Valid tomorrow</option><option value="redeemed">Redeemed</option><option value="expired">Expired</option><option value="voided">Voided</option></select></div>
+        <div class="row"><button id="btnPrizes" class="btn primary">Apply</button><button id="btnExportPrizes" class="btn">Export CSV</button></div>
+      </div>
+      <div class="stats" id="prizeStats"></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Won</th><th>Bar</th><th>Name</th><th>Phone</th><th>Prize</th><th>Valid</th><th>Status</th><th>Redeemed</th><th></th></tr></thead>
+        <tbody id="prizesBody"></tbody></table></div>
+      <p class="muted" style="font-size:.85rem">Managers redeem at <a href="staff.html">staff.html</a> by looking up the guest's phone number. Compare redeemed counts per bar with the LCTG Prize comps in Toast.</p>
+    </div>
+
     <!-- USERS -->
     <div id="tab-users" class="stack hidden">
       <div class="card stack">
@@ -122,7 +137,7 @@
         <div class="row">
           <div class="grow"><label>Username</label><input id="nuUser" autocapitalize="none" placeholder="e.g. dj.marcus"></div>
           <div class="grow"><label>Password</label><input id="nuPass" placeholder="at least 8 characters"></div>
-          <div><label>Role</label><select id="nuRole"><option value="dj">DJ</option><option value="admin">Admin</option></select></div>
+          <div><label>Role</label><select id="nuRole"><option value="dj">DJ</option><option value="manager">Manager</option><option value="admin">Admin</option></select></div>
           <button id="btnAddUser" class="btn primary" style="align-self:flex-end">Add</button>
         </div>
         <div id="userMsg"></div>
@@ -130,7 +145,7 @@
       <div class="tablewrap"><table>
         <thead><tr><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead>
         <tbody id="usersBody"></tbody></table></div>
-      <p class="muted" style="font-size:.85rem">DJs see the console only. Admins also see this page. Disable a login instead of deleting it so past rounds keep their history. Passwords can be reset in Supabase > Authentication.</p>
+      <p class="muted" style="font-size:.85rem">DJs see the console only. Managers can also redeem prizes at <a href="staff.html">staff.html</a>. Admins see everything. Disable a login instead of deleting it so past rounds keep their history. Passwords can be reset in Supabase > Authentication.</p>
     </div>
   </section>
 </div>
@@ -169,6 +184,7 @@
     $("#viewLogin").classList.add("hidden"); $("#viewAdmin").classList.remove("hidden"); $("#btnLogout").classList.remove("hidden");
     [venues, games] = await Promise.all([api.listAllVenues(), api.listGames()]);
     $("#fVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    $("#pVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
     $("#fGame").innerHTML += games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
     await loadEntries();
   }
@@ -176,8 +192,8 @@
   // ---- tabs ----
   $$(".tabs button").forEach((b) => (b.onclick = () => {
     $$(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
-    ["entries", "contacts", "rounds", "venues", "racers", "users"].forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
-    ({ contacts: loadContacts, rounds: loadRounds, venues: renderVenues, racers: renderRacers, users: loadUsers, entries: loadEntries })[b.dataset.tab]();
+    ["entries", "contacts", "rounds", "venues", "racers", "prizes", "users"].forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+    ({ contacts: loadContacts, rounds: loadRounds, venues: renderVenues, racers: renderRacers, prizes: loadPrizes, users: loadUsers, entries: loadEntries })[b.dataset.tab]();
   }));
 
   // ---- entries ----
@@ -302,15 +318,34 @@
     });
   }
 
+  // ---- prizes ----
+  let prizes = [];
+  const PLABEL = { active: "Active", redeemed: "Redeemed", expired: "Expired", not_yet: "Valid tomorrow", voided: "Voided" };
+  const fmtDay = (d) => d ? new Date(d).toLocaleDateString([], { month: "short", day: "numeric" }) : "";
+  async function loadPrizes() {
+    try { prizes = await api.listPrizes({ venue_id: $("#pVenue").value || null, status: $("#pStatus").value || null }); } catch (e) { toast(e.message); prizes = []; }
+    const c = (st) => prizes.filter((p) => p.status === st).length;
+    $("#prizeStats").innerHTML = `<div class="stat"><b>${prizes.length}</b>issued</div><div class="stat"><b>${c("redeemed")}</b>redeemed</div><div class="stat"><b>${c("active") + c("not_yet")}</b>outstanding</div><div class="stat"><b>${c("expired")}</b>expired</div><div class="stat"><b>${prizes.length ? Math.round(100 * c("redeemed") / prizes.length) : 0}%</b>redemption rate</div>`;
+    $("#prizesBody").innerHTML = prizes.map((p) => `<tr data-id="${p.id}"><td>${fmt(p.issued_at)}</td><td>${esc(p.won_venue)}</td><td>${esc(p.name)}</td><td>${fmtPhone(p.phone)}</td><td>${esc(p.prize)}</td><td>${fmtDay(p.valid_from)} to ${fmtDay(new Date(Date.parse(p.expires_at) - 1))}</td>
+      <td><span class="tag ${p.status === "redeemed" ? "ok" : p.status === "active" ? "win" : "no"}">${PLABEL[p.status] || p.status}</span></td>
+      <td>${p.redeemed_at ? `${fmt(p.redeemed_at)}<br><span class="muted">${esc(p.redeemed_venue || "")}${p.redeemed_by ? ", " + esc(p.redeemed_by) : ""}</span>` : ""}</td>
+      <td>${["active", "not_yet"].includes(p.status) ? `<button class="btn small danger void">Void</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="9" class="muted">No prizes match.</td></tr>`;
+    $$("#prizesBody .void").forEach((b) => (b.onclick = async () => { const tr = b.closest("tr"); if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Sure?"; setTimeout(() => { delete b.dataset.armed; b.textContent = "Void"; }, 3000); return; } try { await api.voidPrize(tr.dataset.id, "voided by admin"); loadPrizes(); } catch (e) { toast(e.message); } }));
+  }
+  $("#btnPrizes").onclick = loadPrizes;
+  $("#btnExportPrizes").onclick = () => downloadCsv(`prizes-${stamp()}.csv`, prizes, [
+    { label: "Won", get: (p) => fmt(p.issued_at) }, { label: "Bar", get: (p) => p.won_venue }, { label: "Game", get: (p) => p.game }, { label: "Name", get: (p) => p.name }, { label: "Phone", get: (p) => p.phone }, { label: "Prize", get: (p) => p.prize },
+    { label: "Valid from", get: (p) => fmtDay(p.valid_from) }, { label: "Expires", get: (p) => fmtDay(p.expires_at) }, { label: "Status", get: (p) => PLABEL[p.status] || p.status }, { label: "Redeemed at", get: (p) => fmt(p.redeemed_at) }, { label: "Redeemed bar", get: (p) => p.redeemed_venue }, { label: "Redeemed by", get: (p) => p.redeemed_by }]);
+
   // ---- users ----
   async function loadUsers() {
     let users = []; try { users = await api.listUsers(); } catch (e) { toast(e.message); }
     $("#usersBody").innerHTML = users.map((u) => `<tr data-id="${u.id}"><td>${esc(u.username)}</td><td><span class="tag ${u.role === "admin" ? "admin" : "no"}">${esc(u.role)}</span></td><td>${u.active ? '<span class="tag ok">Active</span>' : '<span class="tag no">Disabled</span>'}</td>
-      <td class="row">${u.id !== me.id ? `<button class="btn small role">Make ${u.role === "admin" ? "DJ" : "admin"}</button><button class="btn small toggle">${u.active ? "Disable" : "Enable"}</button>` : '<span class="muted">you</span>'}</td></tr>`).join("");
+      <td class="row">${u.id !== me.id ? `<button class="btn small role">Make ${({ dj: "manager", manager: "admin", admin: "DJ" })[u.role]}</button><button class="btn small toggle">${u.active ? "Disable" : "Enable"}</button>` : '<span class="muted">you</span>'}</td></tr>`).join("");
     $$("#usersBody tr").forEach((tr) => {
       const u = users.find((x) => x.id === tr.dataset.id);
       const role = tr.querySelector(".role"), tog = tr.querySelector(".toggle");
-      if (role) role.onclick = async () => { try { await api.updateUser(u.id, { role: u.role === "admin" ? "dj" : "admin" }); loadUsers(); } catch (e) { toast(e.message); } };
+      if (role) role.onclick = async () => { try { await api.updateUser(u.id, { role: ({ dj: "manager", manager: "admin", admin: "dj" })[u.role] }); loadUsers(); } catch (e) { toast(e.message); } };
       if (tog) tog.onclick = async () => { try { await api.updateUser(u.id, { active: !u.active }); loadUsers(); } catch (e) { toast(e.message); } };
     });
   }
