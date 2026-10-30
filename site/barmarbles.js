@@ -30,6 +30,16 @@ const CSS = `
   .bm-big .t{font-family:"Bebas Neue",Impact,sans-serif;font-size:20vh;line-height:1;color:var(--accent,#ffcd00);text-shadow:0 1vh 4vh rgba(0,0,0,.7);animation:bmpop .5s cubic-bezier(.2,1.4,.4,1) both;text-align:center;max-width:90vw}
   .bm-big .s{font-size:4.5vh;font-weight:800;color:#fff;text-shadow:0 .5vh 2vh rgba(0,0,0,.7);margin-top:1vh}
   @keyframes bmpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  .bm-fade{position:absolute;inset:0;background:#0b0f14;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+  .bm-fade.on{opacity:1}
+  .bm-final{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2vh;color:#fff;opacity:0;transition:opacity .8s ease}
+  .bm-final.on{display:flex;opacity:1}
+  .bm-final h2{font-family:"Bebas Neue",Impact,sans-serif;font-size:9vh;letter-spacing:.04em;color:var(--accent,#ffcd00);margin:0}
+  .bm-final .win{font-family:"Bebas Neue",Impact,sans-serif;font-size:16vh;line-height:1;color:#fff;text-shadow:0 1vh 4vh rgba(0,0,0,.7);animation:bmpop .5s cubic-bezier(.2,1.4,.4,1) both}
+  .bm-final .pl{display:flex;flex-direction:column;gap:1.2vh;margin-top:2vh;min-width:40vw}
+  .bm-final .pl div{display:flex;align-items:center;gap:2vh;font-size:4.2vh;font-weight:800;background:rgba(255,255,255,.08);border-radius:1.2vh;padding:1vh 2.4vh;animation:bmpop .4s both}
+  .bm-final .pl .pos{width:5vh;height:5vh;border-radius:50%;background:var(--accent,#ffcd00);color:#111;display:flex;align-items:center;justify-content:center;font-size:3vh;font-weight:900}
+  .bm-final .pl .dot{width:3.2vh;height:3.2vh;border-radius:50%;border:.4vh solid #fff}
 `;
 function injectCss() { if (!document.getElementById("bm-css")) { const s = document.createElement("style"); s.id = "bm-css"; s.textContent = CSS; document.head.appendChild(s); } }
 
@@ -132,8 +142,8 @@ export async function run(container, opts) {
   const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 4, render = true } = opts;
   let simTime = 0;
   const accent = venue.color_accent || "#ffcd00";
-  container.innerHTML = `<div class="bm-wrap" style="--accent:${accent}"><canvas></canvas><div class="bm-hud"><div class="bm-comm"></div><div class="bm-board"><h3>Bar Marbles</h3><div class="rows"></div><div class="prog"><i></i></div></div><div class="bm-count"><b id="bmLeft">0</b> still rolling</div><div class="bm-big"></div></div></div>`;
-  const canvas = container.querySelector("canvas"), comm = container.querySelector(".bm-comm"), rows = container.querySelector(".bm-board .rows"), prog = container.querySelector(".bm-board .prog i"), big = container.querySelector(".bm-big"), left = container.querySelector("#bmLeft");
+  container.innerHTML = `<div class="bm-wrap" style="--accent:${accent}"><canvas></canvas><div class="bm-hud"><div class="bm-comm"></div><div class="bm-board"><h3>Bar Marbles</h3><div class="rows"></div><div class="prog"><i></i></div></div><div class="bm-count"><b id="bmLeft">0</b> still rolling</div><div class="bm-big"></div><div class="bm-fade"></div><div class="bm-final"></div></div></div>`;
+  const canvas = container.querySelector("canvas"), comm = container.querySelector(".bm-comm"), rows = container.querySelector(".bm-board .rows"), prog = container.querySelector(".bm-board .prog i"), big = container.querySelector(".bm-big"), fade = container.querySelector(".bm-fade"), finalEl = container.querySelector(".bm-final"), left = container.querySelector("#bmLeft");
   const audio = (n, d) => { try { if (window.AUDIO) window.AUDIO.event(n, d); } catch {} };
   let commTimer = null; const say = (t, ms = 2200) => { comm.textContent = t; comm.classList.add("on"); clearTimeout(commTimer); commTimer = setTimeout(() => comm.classList.remove("on"), ms); };
 
@@ -224,7 +234,7 @@ export async function run(container, opts) {
   });
 
   // ---- state ----
-  const order = []; let lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
+  const order = []; let firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
   // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
   // overhead (above the spiral), jumpCam (side-on at a jump), finishCam (at the line looking back), wide (leader to median when spread out).
@@ -252,8 +262,13 @@ export async function run(container, opts) {
   let releaseAt = 1.5;
   say("Marbles are set. Gate opens in 3...", 1400);
 
+  function showFinal(results) {
+    finalEl.innerHTML = `<h2>Bar Marbles</h2><div class="win">${esc(first(results[0]).toUpperCase())} WINS!</div><div class="pl">${results.slice(0, placesToShow).map((p, i) => `<div style="animation-delay:${0.15 + i * 0.12}s"><span class="pos">${i + 1}</span><span class="dot" style="background:${p.color}"></span><span>${esc(p.name)}</span></div>`).join("")}</div>`;
+    finalEl.classList.add("on");
+  }
   function step(now) {
     if (stopped) return;
+    if (ending) return; // simulation and rendering stop once the results are up
     const dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
     if (!started && simTime >= releaseAt) release();
     let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { sp.angle += sp.rate / 60; const q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; } if (acc > 0.25) acc = 0;
@@ -284,7 +299,13 @@ export async function run(container, opts) {
         else if (order.length <= 3) say(`${first(m.player)} in ${["", "", "second", "third"][order.length]}!`);
       }
     }
-    if (order.length >= 1 && !finishedFlag) { finishedFlag = true; setTimeout(() => { if (!stopped) onDone(order.map((x) => x.player)); }, 6000); }
+    // race over once the top places are in (or everyone is): fade out, stop simulating, show the results
+    const want = Math.min(placesToShow, marbles.length);
+    if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 45))) {
+      finishedFlag = true; const results = order.map((x) => x.player);
+      setTimeout(() => { if (stopped) return; fade.classList.add("on"); setTimeout(() => { if (stopped) return; ending = true; big.innerHTML = ""; showFinal(results); onDone(results); }, 1300); }, 1800);
+    }
+    if (order.length >= 1 && firstFinishAt < 0) firstFinishAt = simTime;
     // camera: chase the leader (or the finish once someone has won)
     const focus = leader || order[order.length - 1];
     if (focus) {
