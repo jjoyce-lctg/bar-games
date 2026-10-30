@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Bar Marbles preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#000;font-family:Inter,sans-serif;overflow:hidden}#c{position:fixed;inset:0}#bar{position:fixed;left:1rem;bottom:1rem;z-index:5;display:flex;gap:.5rem;align-items:center;color:#fff;font-weight:700;background:rgba(0,0,0,.6);padding:.5rem .8rem;border-radius:8px}#bar input{width:70px;padding:.3rem}#bar button{padding:.4rem .8rem;font-weight:700}</style></head>
+<body><div id="c"></div>
+<div id="bar">Marbles <input id="n" type="number" value="60" min="1" max="300"> <button id="go">Run</button> <span id="res"></span></div>
+<script type="module">
+import { run } from "./barmarbles.js";
+const NAMES=["Marcus Lee","Dana Ortiz","Sam Patel","Kelly Nguyen","Jordan Fox","Alex Kim","Taylor Reed","Chris Bell","Morgan Diaz","Riley Shaw","Jamie Cole","Casey Park","Drew Hart","Avery Lane","Quinn Moss","Reese Ward","Skyler Dean","Parker Lowe","Rowan Gray","Blake Hale"];
+let ctl=null;
+async function go(){ if(ctl) ctl.stop(); const n=+(new URLSearchParams(location.search).get('n')||document.getElementById('n').value)||60; const players=Array.from({length:n},(_,i)=>({id:'p'+i,name:NAMES[i%NAMES.length]+(i>=NAMES.length?' '+(Math.floor(i/NAMES.length)+1):'')}));
+  const t0=performance.now(); document.getElementById('res').textContent=''; window.__done=false;
+  ctl=await run(document.getElementById('c'),{players,maxStepsPerFrame:+(new URLSearchParams(location.search).get('steps')||4),render:new URLSearchParams(location.search).get('render')!=='0',venue:{color_accent:'#ffcd00',color_primary:'#0f2a3a'},onFinish:(o)=>{document.getElementById('res').textContent=`Winner: ${o[0].name} in ${((performance.now()-t0)/1000).toFixed(1)}s`;window.__done=true;}}); }
+document.getElementById('go').onclick=go; go();
+</script></body></html>
