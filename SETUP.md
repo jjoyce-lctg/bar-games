@@ -66,3 +66,7 @@ MP3s in `site/sfx/` replace the generated sounds when present. Keys: `music-1`, 
 ## Prize redemption (managers)
 
 Managers log in at the portal and choose Prize Redemption (`staff.html`), pick their bar, type the guest's phone number, and tap Redeem. Prizes are created automatically for winners when a race ends, valid from midnight the next day for 14 days, at any LCTG bar, once. Admin > Prizes shows issued, redeemed, outstanding and a CSV export; admins can void a prize. Give manager accounts the Manager role under Admin > Logins. Reconcile: redeemed count per bar should match the LCTG Prize comps in Toast.
+
+## Track themes
+
+Settings (S) > Track theme: Stadium, Halloween, Thanksgiving, Christmas. Each theme is a folder under `site/stadium/` with the same six files as the stadium (far.jpg, wall.png, track-start.jpg, track.jpg, gantry.png, finish-strip.png) plus optional prop-1.png, prop-2.png, prop-3.png placed along the top of the barrier wall. A new theme from the same ChatGPT layout drops in with no engine changes; send the zip to Claude.

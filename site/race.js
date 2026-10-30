@@ -56,7 +56,14 @@
   }
 
   // ---------- stadium artwork (site/stadium/*), 1080-high reference scene, 4096-wide tiles ----------
-  const TILE = 4096, ART = (() => { try { return new URL("stadium/", document.currentScript.src).href; } catch { return "stadium/"; } })();
+  const TILE = 4096, ART_BASE = (() => { try { return new URL("stadium/", document.currentScript.src).href; } catch { return "stadium/"; } })();
+  // Track themes: folder under stadium/ with far.jpg, wall.png, track-start.jpg, track.jpg, gantry.png, finish-strip.png and optional prop-N.png
+  const THEMES = {
+    classic: { name: "Stadium", props: 0, sky: "#1b7fd6" },
+    halloween: { name: "Halloween", props: 3, sky: "#2a1240" },
+    thanksgiving: { name: "Thanksgiving", props: 3, sky: "#c9742a" },
+    christmas: { name: "Christmas", props: 3, sky: "#3aa0e6" },
+  };
   const LANE_FEET = [784, 865, 947, 1032];           // feet-anchor Y per lane (top to bottom)
   const PARALLAX = { far: 0.2, wall: 0.55, track: 1 };
   const WALL_Y = 540, TRACK_TOP = 720, BANNER = { y0: 610, y1: 705 };
@@ -65,7 +72,8 @@
     for (let i = 0; i < count; i++) out += `<image href="${href}" x="${startX + i * TILE - i}" y="${y}" width="${TILE}" height="${h}" preserveAspectRatio="none"/>`;
     return out;
   }
-  function buildWorld(racers, venue) {
+  function buildWorld(racers, venue, themeKey) {
+    const theme = THEMES[themeKey] || THEMES.classic, ART = ART_BASE + (THEMES[themeKey] ? themeKey : "classic") + "/";
     const n = racers.length;
     const name = esc((venue.name || "").toUpperCase());
     const primary = venue.color_primary || "#1c2a4a";
@@ -80,12 +88,15 @@
     const gantryH = 430, gantryW = gantryH * 800 / 900;
     const props = `<image href="${ART}gantry.png" x="${FINISH - gantryW / 2 + 2}" y="${TRACK_TOP - gantryH + 12}" width="${gantryW}" height="${gantryH}"/>
       <image href="${ART}finish-strip.png" x="${FINISH - stripW / 2}" y="${TRACK_TOP - 14}" width="${stripW}" height="${stripH}"/>`;
+    // themed scenery props sit on top of the barrier wall (wall layer), spaced along the course, never on the lanes
+    let scenery = "";
+    for (let i = 0; i < theme.props; i++) { const h = 210, wmax = 300; scenery += `<image href="${ART}prop-${i + 1}.png" x="${700 + i * 1500}" y="${WALL_Y + 24 - h}" width="${wmax}" height="${h}" preserveAspectRatio="xMidYMax meet"/>`; }
     const laneFeet = n <= 4 ? LANE_FEET.slice(0, n) : Array.from({ length: n }, (_, i) => Math.round(LANE_FEET[0] - 20 + i * ((LANE_FEET[3] - LANE_FEET[0] + 20) / (n - 1))));
     return { laneFeet, svg: `
       <defs>${window.MASCOTS.DEFS.replace(/<\/?defs>/g, "")}</defs>
-      <rect x="0" y="0" width="${W}" height="${H}" fill="#1b7fd6"/>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="${theme.sky}"/>
       <g class="layer-far">${tiles(ART + "far.jpg", 0, 1080, need(PARALLAX.far))}</g>
-      <g class="layer-wall">${tiles(ART + "wall.png", WALL_Y, 540, need(PARALLAX.wall))}${banners}</g>
+      <g class="layer-wall">${tiles(ART + "wall.png", WALL_Y, 540, need(PARALLAX.wall))}${scenery}${banners}</g>
       <g class="layer-track">${trackTiles}${props}</g>
       <g class="layer-racers"></g>` };
   }
@@ -98,7 +109,7 @@
       <svg class="world" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice"></svg>
       <div class="race-hud"><div class="race-comm"></div><div class="race-board"><div class="rows"></div><div class="race-strip"><span class="flag">🏁</span></div></div><div class="race-big"></div></div></div>`;
     const svg = container.querySelector("svg.world"), comm = container.querySelector(".race-comm"), board = container.querySelector(".race-board .rows"), strip = container.querySelector(".race-strip"), big = container.querySelector(".race-big");
-    const world = buildWorld(racers, venue);
+    const world = buildWorld(racers, venue, opts.theme);
     svg.innerHTML = world.svg;
     const far = svg.querySelector(".layer-far"), wall = svg.querySelector(".layer-wall"), track = svg.querySelector(".layer-track"), racerLayer = svg.querySelector(".layer-racers");
 
@@ -236,5 +247,5 @@
     return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); } };
   }
 
-  window.RACE = { run };
+  window.RACE = { run, THEMES };
 })();
