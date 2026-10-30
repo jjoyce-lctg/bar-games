@@ -135,12 +135,12 @@ function buildPlinko(seg, accent, segIndex) {
   box(O.x + W + 1 + T, cy + P.hopper / 2, zc, T, H / 2 + P.hopper / 2, SW / 2 + 3.8, null, wallMat);
   // hopper: two slanted plates leaning outward above the slot. They start a little below the wall tops and just inside the slot faces, so there is no ledge to sit on.
   const hh = P.hopper + 1.0, hw = 3.4, hl = Math.hypot(hh, hw), tilt = Math.atan2(hw, hh);
-  const zb = SW / 2 + 0.1, yb = O.y - 1.0;
+  const zb = SW / 2 + T * hh / hl + 0.06, yb = O.y - 1.0; // the plate's inner bottom corner lands just inside the wall, not in the slot
   box(cx, yb + hh / 2, zc - (zb + hw / 2), W / 2 + 1, hl / 2, T, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -tilt), wallMat);
   box(cx, yb + hh / 2, zc + (zb + hw / 2), W / 2 + 1, hl / 2, T, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), tilt), glassMat);
   // pegs
   const pegQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1));
-  for (let r = 0; r < P.pegRows; r++) { const y = O.y - 1.6 - r * ((H - 2.4) / P.pegRows); const off = (r % 2) * P.pegGap / 2; for (let x = O.x + off; x <= O.x + W; x += P.pegGap) { const m = new THREE.Mesh(new THREE.CylinderGeometry(P.pegR, P.pegR, SW, 12), pegMat); m.position.set(x, y, zc); m.quaternion.copy(pegQ); m.castShadow = true; group.add(m); solids.push({ kind: "cyl", pos: [x, y, zc], r: P.pegR, half: SW / 2, q: [pegQ.x, pegQ.y, pegQ.z, pegQ.w], restitution: 0.75 }); } }
+  for (let r = 0; r < P.pegRows; r++) { const y = O.y - 1.6 - r * ((H - 2.4) / P.pegRows); const off = (r % 2) * P.pegGap / 2; for (let x = O.x + 0.7 + off; x <= O.x + W - 0.6; x += P.pegGap) { const m = new THREE.Mesh(new THREE.CylinderGeometry(P.pegR, P.pegR, SW, 12), pegMat); m.position.set(x, y, zc); m.quaternion.copy(pegQ); m.castShadow = true; group.add(m); solids.push({ kind: "cyl", pos: [x, y, zc], r: P.pegR, half: SW / 2, q: [pegQ.x, pegQ.y, pegQ.z, pegQ.w], restitution: 0.75 }); } }
   // samples: entry above the hopper, then down the middle of the board to the open bottom
   const samples = [], tangents = [], frames = [], bank = [];
   const n = 40; for (let i = 0; i <= n; i++) { const t = i / n; samples.push(new THREE.Vector3(O.x - 1 + (W / 2 + 1) * Math.min(1, t * 1.6), O.y + P.hopper - (H + P.hopper + 1) * t, zc)); }
@@ -362,7 +362,7 @@ export async function run(container, opts) {
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
-      if (started && sp < 0.3) { m.stillFor += dt; if (m.stillFor > 1.5) { const tg = track.tangents[m.prog]; m.body.applyImpulse({ x: tg.x * 1.2, y: 0.3, z: tg.z * 1.2 }, true); m.stillFor = 0; } } else m.stillFor = 0;
+      if (started && sp < 0.3) { m.stillFor += dt; if (m.stillFor > 1.2) { const tg = track.tangents[m.prog]; const loose = track.loose.some(([a, b]) => m.prog >= a && m.prog <= b); if (loose) m.body.applyImpulse({ x: (Math.random() - 0.5) * 2.4, y: 0.9, z: (Math.random() - 0.5) * 0.4 }, true); else m.body.applyImpulse({ x: tg.x * 1.2, y: 0.3, z: tg.z * 1.2 }, true); m.stillFor = 0; } } else m.stillFor = 0;
       if (m.prog >= C.finishT * N) {
         m.finished = true; order.push(m); if (m.label) m.label.visible = false;
         if (order.length === 1) { say(`${first(m.player)} takes it!`, 3500); audio("finish", { racer: "marble" }); onFinish(order.map((x) => x.player)); big.innerHTML = `<div class="t">${esc(first(m.player).toUpperCase())} WINS!</div><div class="s">${esc(m.player.name)}</div>`; }
@@ -374,8 +374,8 @@ export async function run(container, opts) {
     if (!calledPlinko && C.plinkoFrom && leadProg >= C.plinkoFrom) { calledPlinko = true; say("Into the plinko board!", 2400); audio("stumble", { racer: "marble" }); }
     // race over once the top places are in (or everyone is): fade out, stop simulating, show the results
     const want = Math.min(placesToShow, marbles.length);
-    if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 45))) {
-      finishedFlag = true; const results = order.map((x) => x.player);
+    if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 20))) {
+      finishedFlag = true; const results = [...order, ...marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog)].map((x) => x.player);
       setTimeout(() => { if (stopped) return; fade.classList.add("on"); setTimeout(() => { if (stopped) return; ending = true; big.innerHTML = ""; showFinal(results); onDone(results); }, 1300); }, 1800);
     }
     if (order.length >= 1 && firstFinishAt < 0) firstFinishAt = simTime;
@@ -385,7 +385,7 @@ export async function run(container, opts) {
       const p = new THREE.Vector3().copy(focus.body.translation()), tg = track.tangents[focus.prog], fr = track.frames[focus.prog];
       const liveProgs = marbles.filter((m) => !m.finished).map((m) => m.prog).sort((a, b) => b - a);
       const spread = liveProgs.length > 2 ? liveProgs[0] - liveProgs[Math.floor(liveProgs.length / 2)] : 0;
-      const want = order.length ? { name: "finishCam" } : pickShot(focus.prog, spread, simTime);
+      const want = (order.length && (focus.finished || focus.prog >= N * 0.9)) ? { name: "finishCam" } : pickShot(focus.prog, spread, simTime);
       let cut = false;
       if ((want.name !== shot.name || (want.center && want.center !== shot.center)) && simTime - shot.lastChange > 2.5) { shot.name = want.name; shot.center = want.center || null; shot.lastChange = simTime; cut = true;
         if (want.name === "tracksidePan") { const ahead = track.samples[Math.min(N, focus.prog + 34)], f2 = track.frames[Math.min(N, focus.prog + 34)]; shot.anchor.copy(ahead).addScaledVector(f2.side, 11).add(new THREE.Vector3(0, 7, 0)); }
