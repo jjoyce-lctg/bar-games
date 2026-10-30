@@ -51,7 +51,7 @@ function helix(cx, cz, r, y0, y1, turns, n, startAngle = 0, dir = 1) {
 }
 // make each segment start exactly where the previous one ended (unless the previous one is a jump), so there is no gap to fall through
 function joinSegments(segs) {
-  for (let i = 1; i < segs.length; i++) { const prev = segs[i - 1]; if (prev.kick || segs[i].funnel) continue; segs[i].points.unshift(prev.funnel ? new THREE.Vector3(prev.funnel.center.x, prev.funnel.yHole, prev.funnel.center.z) : prev.points[prev.points.length - 1].clone()); }
+  for (let i = 1; i < segs.length; i++) { const prev = segs[i - 1]; if (prev.kick || prev.plinko || segs[i].funnel || segs[i].plinko) continue; segs[i].points.unshift(prev.funnel ? new THREE.Vector3(prev.funnel.center.x, prev.funnel.yHole, prev.funnel.center.z) : prev.points[prev.points.length - 1].clone()); }
 }
 const COURSES = {
   classic() {
@@ -75,13 +75,12 @@ const COURSES = {
     // 4. big sweep back across the course, ending in a kick (jump 2)
     segs.push({ points: [V(21.6, -19.9, 13), V(20, -21.3, 20), V(8, -23.8, 32), V(-16, -26.8, 36), V(-40, -29.8, 28), V(-62, -33.3, 6), V(-66, -35.8, -8), V(-64, -38.3, -18), V(-61, -40.8, -26)], kick: true, spinners: [0.55] });
     // 5. landing, chicane and finish straight
-    segs.push({ points: [V(-59.7, -43.8, -29.4), V(-57, -46.3, -37), V(-50, -48.8, -44), V(-37, -50.3, -46), V(-18, -52, -38)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
-    segs.push({ points: [V(-11.6, -52.5, -33.2), V(-4, -53.3, -27.5)], wide: true, r: 1.0 });
-    // 6. the funnel: the whole field swirls into one bowl and drops through the hole. Leaders lose their gap here.
-    segs.push({ funnel: { center: V(1.6, -57.2, -34.9), rTop: 12, rHole: 2.6, yHole: -66.9, turns: 3, dir: -1, wall: 4, entryAngle: 2.91 } });
-    // 7. the drop: closed tube straight down out of the hole, curling out toward the ledge
-    segs.push({ points: [V(1.8, -72, -35), V(3, -76, -36.5), V(7, -79.5, -39), V(13, -81.5, -40)], tube: true });
-    // 8. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Knocked off here = respawn at the funnel.
+    segs.push({ points: [V(-59.7, -43.8, -29.4), V(-57, -46.3, -37), V(-50, -48.8, -44), V(-37, -50.3, -46), V(-27, -51.4, -40.5), V(-19, -52, -38.2), V(-12, -52.6, -38)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
+    // 6. the plinko board: a vertical slot full of bouncy pegs. The field rains down through it, nobody knows where they'll come out.
+    segs.push({ plinko: { origin: V(-11, -60, -38), width: 16, height: 14, slot: 1.4, hopper: 3, pegRows: 6, pegGap: 2.2, pegR: 0.35 } });
+    // 7. collecting trough under the board, sloping into the ledge
+    segs.push({ points: [V(-15, -76.2, -38), V(-6, -77.2, -38), V(4, -78.4, -38), V(12, -80.4, -38.5), V(17, -83, -39.5), V(19, -84.3, -40)], wide: true, r: 1.6 });
+    // 8. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Knocked off here = back to the top of the plinko board.
     segs.push({ points: [V(20, -85.3, -40), V(36, -88.3, -40), V(50, -90.8, -40)], open: true, r: 1.6, arc: 50, spinners: [0.55], bumpers: [0.22] });
     // 9. finish straight
     segs.push({ points: [V(60, -92.3, -40), V(72, -93.3, -40), V(84, -94.3, -40)], wide: true });
@@ -121,6 +120,33 @@ function buildFunnel(seg, accent, segIndex) {
   for (let i = 0; i <= N; i++) { const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)]; const t = new THREE.Vector3().subVectors(b, a).normalize(); tangents.push(t); let side = new THREE.Vector3().crossVectors(t, up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); const down = new THREE.Vector3().crossVectors(t, side).normalize(); if (down.y > 0) { down.negate(); side.negate(); } frames.push({ side, down }); bank.push(0); }
   const bowlIdx = idx.slice(0, idx.length - wallIdx.length);
   return { samples, tangents, frames, mesh, shell, obstacles: [], arcDeg: 180, bank, vertices: new Float32Array(pos), indices: new Uint32Array(bowlIdx), wallIndices: new Uint32Array(wallIdx), R: F.rHole, endBank: 0, segIndex, kick: false, funnel: true, loose: true };
+}
+// Build a plinko board: back wall, glass front, side walls, a hopper on top and staggered pegs in the slot. Marbles fall through, the slot is open at the bottom.
+function buildPlinko(seg, accent, segIndex) {
+  const P = seg.plinko, O = P.origin, W = P.width, H = P.height, SW = P.slot, zc = O.z; // slot runs along +x, spans z in [zc - SW/2, zc + SW/2]
+  const solids = [], group = new THREE.Group();
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x1c2a44, roughness: 0.8 }), glassMat = new THREE.MeshPhysicalMaterial({ color: 0xbfd6ff, transparent: true, opacity: 0.22, roughness: 0.1, side: THREE.DoubleSide });
+  const pegMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 });
+  const box = (cx, cy, cz, hx, hy, hz, q, mat, phys = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(hx * 2, hy * 2, hz * 2), mat); m.position.set(cx, cy, cz); if (q) m.quaternion.copy(q); m.castShadow = m.receiveShadow = true; group.add(m); if (phys) solids.push({ kind: "box", pos: [cx, cy, cz], half: [hx, hy, hz], q: q ? [q.x, q.y, q.z, q.w] : [0, 0, 0, 1], restitution: 0.3 }); };
+  const T = 0.2, cx = O.x + W / 2, cy = O.y - H / 2;
+  box(cx, cy, zc - SW / 2 - T, W / 2 + 1, H / 2, T, null, wallMat);          // back wall
+  box(cx, cy, zc + SW / 2 + T, W / 2 + 1, H / 2, T, null, glassMat);         // front (glass)
+  box(O.x - 1 - T, cy + P.hopper / 2, zc, T, H / 2 + P.hopper / 2, SW / 2 + 3.8, null, wallMat); // sides, tall enough to close the hopper ends
+  box(O.x + W + 1 + T, cy + P.hopper / 2, zc, T, H / 2 + P.hopper / 2, SW / 2 + 3.8, null, wallMat);
+  // hopper: two slanted plates leaning outward above the slot. They start a little below the wall tops and just inside the slot faces, so there is no ledge to sit on.
+  const hh = P.hopper + 1.0, hw = 3.4, hl = Math.hypot(hh, hw), tilt = Math.atan2(hw, hh);
+  const zb = SW / 2 + 0.1, yb = O.y - 1.0;
+  box(cx, yb + hh / 2, zc - (zb + hw / 2), W / 2 + 1, hl / 2, T, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -tilt), wallMat);
+  box(cx, yb + hh / 2, zc + (zb + hw / 2), W / 2 + 1, hl / 2, T, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), tilt), glassMat);
+  // pegs
+  const pegQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1));
+  for (let r = 0; r < P.pegRows; r++) { const y = O.y - 1.6 - r * ((H - 2.4) / P.pegRows); const off = (r % 2) * P.pegGap / 2; for (let x = O.x + off; x <= O.x + W; x += P.pegGap) { const m = new THREE.Mesh(new THREE.CylinderGeometry(P.pegR, P.pegR, SW, 12), pegMat); m.position.set(x, y, zc); m.quaternion.copy(pegQ); m.castShadow = true; group.add(m); solids.push({ kind: "cyl", pos: [x, y, zc], r: P.pegR, half: SW / 2, q: [pegQ.x, pegQ.y, pegQ.z, pegQ.w], restitution: 0.75 }); } }
+  // samples: entry above the hopper, then down the middle of the board to the open bottom
+  const samples = [], tangents = [], frames = [], bank = [];
+  const n = 40; for (let i = 0; i <= n; i++) { const t = i / n; samples.push(new THREE.Vector3(O.x - 1 + (W / 2 + 1) * Math.min(1, t * 1.6), O.y + P.hopper - (H + P.hopper + 1) * t, zc)); }
+  const N = samples.length - 1, up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i <= N; i++) { const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)]; const t = new THREE.Vector3().subVectors(b, a).normalize(); tangents.push(t); frames.push({ side: new THREE.Vector3(0, 0, 1), down: new THREE.Vector3(0, -1, 0) }); bank.push(0); }
+  return { samples, tangents, frames, mesh: group, shell: new THREE.Group(), obstacles: [], solids, arcDeg: PIPE_ARC, bank, vertices: new Float32Array(0), indices: new Uint32Array(0), R: PIPE_R, endBank: 0, segIndex, kick: false, loose: true, plinko: true, center: new THREE.Vector3(cx, cy, zc) };
 }
 // Build one segment: half-pipe (or full tube) mesh + trimesh along a Catmull-Rom spline. Returns samples/frames and geometry.
 const segRadius = (seg) => (seg.wide || seg.open) ? PIPE_R * (seg.r || 1.35) : PIPE_R;
@@ -173,7 +199,7 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
   return { samples, tangents, frames, mesh, shell, obstacles, arcDeg, bank, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R, endBank: Math.atan2(Math.sin(bank[N]), Math.cos(bank[N])), segIndex, kick: !!seg.kick };
 }
 function buildTrack(course, accent) {
-  const parts = []; course.segments.forEach((sg, i) => { if (sg.funnel) { parts.push(buildFunnel(sg, accent, i)); return; } const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick && !prev.funnel; if (join) { const pp = parts[i - 1], ps = pp.samples, fr = pp.frames[ps.length - 1]; sg.points[0] = ps[ps.length - 1].clone().addScaledVector(fr.down, pp.R - segRadius(sg)); } /* floors line up across a change of pipe width */ parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0, join ? parts[i - 1].arcDeg : PIPE_ARC)); });
+  const parts = []; course.segments.forEach((sg, i) => { if (sg.funnel) { parts.push(buildFunnel(sg, accent, i)); return; } if (sg.plinko) { parts.push(buildPlinko(sg, accent, i)); return; } const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick && !prev.funnel && !prev.plinko; if (join) { const pp = parts[i - 1], ps = pp.samples, fr = pp.frames[ps.length - 1]; sg.points[0] = ps[ps.length - 1].clone().addScaledVector(fr.down, pp.R - segRadius(sg)); } /* floors line up across a change of pipe width */ parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0, join ? parts[i - 1].arcDeg : PIPE_ARC)); });
   const samples = [], tangents = [], frames = [], segOf = [], jumps = [], obstacles = [], banks = [], loose = [];
   parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.obstacles.forEach((o) => obstacles.push({ ...o, i: o.i + samples.length })); p.bank.forEach((b) => banks.push(b)); if (p.loose) loose.push([samples.length - 30, samples.length + p.samples.length + 50]); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
   return { parts, samples, tangents, frames, segOf, jumps, obstacles, banks, loose };
@@ -215,7 +241,7 @@ export async function run(container, opts) {
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
   C.finishT = 0.97;
-  C.funnels = []; { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) { C.funnels.push({ entry: acc + 2, from: acc, to: acc + p.samples.length - 3, dampTo: acc + p.samples.length + (track.parts[i + 1] ? track.parts[i + 1].samples.length : 0), center: C.segments[i].funnel.center }); C.funnelEntry = acc + 2; } if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
+  C.funnels = []; C.respawnAt = 0; { let acc = 0; track.parts.forEach((p, i) => { if (p.plinko) { C.respawnAt = acc + 1; C.plinkoFrom = acc; C.plinkoCenter = p.center; } if (p.funnel) { if (!C.respawnAt) C.respawnAt = acc + 2; C.funnels.push({ entry: acc + 2, from: acc, to: acc + p.samples.length - 3, dampTo: acc + p.samples.length + (track.parts[i + 1] ? track.parts[i + 1].samples.length : 0), center: C.segments[i].funnel.center }); C.funnelEntry = acc + 2; } if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
   const GROUND_Y = -108;
   // finish arch + checkered band
   const fi = Math.floor(C.finishT * (track.samples.length - 1)), fp = track.samples[fi], ft = track.tangents[fi], ff = track.frames[fi];
@@ -227,7 +253,7 @@ export async function run(container, opts) {
 
   // ---- physics ----
   const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
-  track.parts.forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1)));
+  track.parts.forEach((p) => { if (p.indices.length) world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1)); (p.solids || []).forEach((so) => { const d = so.kind === "box" ? RAPIER.ColliderDesc.cuboid(...so.half) : RAPIER.ColliderDesc.cylinder(so.half, so.r); world.createCollider(d.setTranslation(...so.pos).setRotation({ x: so.q[0], y: so.q[1], z: so.q[2], w: so.q[3] }).setRestitution(so.restitution).setFriction(0.05)); }); });
   // funnels get a second collision skin a little below the surface so a marble dropping in fast can never tunnel through
   track.parts.filter((p) => p.funnel).forEach((p) => { world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -1.6, 0).setFriction(0.02).setRestitution(0.05)); world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.wallIndices).setFriction(0.3).setRestitution(0.05)); });
   world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -109, 0));
@@ -273,7 +299,7 @@ export async function run(container, opts) {
   });
 
   // ---- state ----
-  const order = []; let calledFunnel = false, calledLedge = false, firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
+  const order = []; let calledFunnel = false, calledLedge = false, calledPlinko = false, firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
   // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
   // overhead (above the spiral), jumpCam (side-on at a jump), finishCam (at the line looking back), wide (leader to median when spread out).
@@ -284,7 +310,7 @@ export async function run(container, opts) {
     zones.push({ from: spiralStart + 10, to: spiralEnd - 10, name: "overhead" });
     track.jumps.forEach((j) => zones.push({ from: j - 28, to: j + 45, name: "jumpCam", jump: j }));
     zones.push({ from: Math.floor(N1 * 0.9), to: N1, name: "finishCam" });
-    { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) zones.push({ from: acc - 15, to: acc + p.samples.length + 40, name: "funnelCam", center: C.segments[i].funnel.center }); acc += p.samples.length; }); }
+    { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) zones.push({ from: acc - 15, to: acc + p.samples.length + 40, name: "funnelCam", center: C.segments[i].funnel.center }); if (p.plinko) zones.push({ from: acc - 10, to: acc + p.samples.length + 30, name: "plinkoCam", center: p.center }); acc += p.samples.length; }); }
   }
   function pickShot(prog, spread, simT) {
     const z = zones.find((z) => prog >= z.from && prog <= z.to); if (z) return z;
@@ -327,12 +353,12 @@ export async function run(container, opts) {
       const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60) || track.loose.some(([a, b]) => m.prog >= a && m.prog <= b);
       if (t.y < GROUND_Y + 1.5 || (started && !nearJump && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
         (window.__rs = window.__rs || []).push([m.prog, +t.x.toFixed(1), +t.y.toFixed(1), +t.z.toFixed(1)]);
-        const offLedge = m.prog >= C.ledgeFrom - 10; // past the funnel: respawn at the funnel entry, a ~10 s penalty, instead of the top
-        const si = offLedge ? C.funnelEntry : 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
+        const offLedge = m.prog >= (C.plinkoFrom || C.ledgeFrom) - 5; // anything lost from the plinko board onward respawns at the top of the board instead of the top of the course
+        const si = offLedge ? C.respawnAt : 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
         const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, offLedge ? 0 : PIPE_R - BALL_R - 0.3);
         m.body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = si; m.prog = si;
         m.resets = (m.resets || 0) + 1; m.offLedge = (m.offLedge || 0) + (offLedge ? 1 : 0);
-        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back through the funnel.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
+        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back to the plinko board.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
@@ -345,6 +371,7 @@ export async function run(container, opts) {
     }
     C.funnels.forEach((f, k) => { if (!f.called && leadProg >= f.entry) { f.called = true; say(k === 0 ? "Into the tornado! Everybody back in it." : "Into the funnel! Anyone's race now.", 2800); audio("stretch", { racer: "marble" }); } });
     if (!calledLedge && C.ledgeFrom && leadProg >= C.ledgeFrom) { calledLedge = true; say("The Ledge. Hold on!", 2200); }
+    if (!calledPlinko && C.plinkoFrom && leadProg >= C.plinkoFrom) { calledPlinko = true; say("Into the plinko board!", 2400); audio("stumble", { racer: "marble" }); }
     // race over once the top places are in (or everyone is): fade out, stop simulating, show the results
     const want = Math.min(placesToShow, marbles.length);
     if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 45))) {
@@ -370,6 +397,7 @@ export async function run(container, opts) {
       else if (shot.name === "tracksidePan") { desired = shot.anchor; look = p.clone(); }
       else if (shot.name === "jumpCam") { desired = shot.anchor; look = p.clone(); }
       else if (shot.name === "finishCam") { desired = shot.anchor; look = p.clone(); }
+      else if (shot.name === "plinkoCam") { const pc = shot.center || C.plinkoCenter; desired = pc.clone().add(new THREE.Vector3(0, 2, 30)); look = pc.clone().add(new THREE.Vector3(0, -1, 0)); }
       else if (shot.name === "funnelCam") { const fc = shot.center || C.funnels[0].center; desired = fc.clone().add(new THREE.Vector3(-16, 26, 18)); look = fc.clone().add(new THREE.Vector3(0, -4, 0)); }
       else if (shot.name === "wide") { desired = p.clone().addScaledVector(tg, -34).add(new THREE.Vector3(0, 20, 0)); look = p.clone().addScaledVector(tg, -8); }
       else { desired = p.clone().addScaledVector(tg, -14).add(new THREE.Vector3(0, 7, 0)); look = p.clone().addScaledVector(tg, 9); }
