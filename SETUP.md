@@ -38,7 +38,7 @@ Admin page > **Entries** > tick "Winners only" + "Not yet texted" > **Export CSV
 
 ## Announcer clips
 
-Recorded MP3s go in `site/announcer/` named by key (send them to Claude as a zip and they get added with the manifest). Keys:
+Voice: ElevenLabs "David - Sports Arena Announcer" (keep the same voice and settings for every clip). Recorded MP3s go in `site/announcer/` named by key (send them to Claude as a zip and they get added with the manifest). Keys:
 
 | Key | Line |
 |---|---|
