@@ -47,15 +47,15 @@ Voice: ElevenLabs "David - Sports Arena Announcer" (keep the same voice and sett
 | set | Get set! |
 | go | And they're off! |
 | lead | We've got a new leader! |
-| lead-hotdog / lead-beer / lead-pretzel / lead-pizza / lead-dino | Hot Dog takes the lead! (etc.) |
+| lead-hotdog / lead-beer / lead-pretzel / lead-pizza / lead-dino / lead-skeleton / lead-santa / lead-turkey | Hot Dog takes the lead! (etc.) |
 | down | Oh! Down goes a racer! |
-| down-hotdog / down-beer / down-pretzel / down-pizza / down-dino | Oh no, Hot Dog goes down! (etc.) |
+| down-hotdog / down-beer / down-pretzel / down-pizza / down-dino / down-skeleton / down-santa / down-turkey | Oh no, Hot Dog goes down! (etc.) |
 | stretch | Here they come down the stretch! |
 | close | It's going to be close! Photo finish! |
 | runaway | And they're running away with it! |
 | comeback | What a comeback! Look at them go! |
 | wins | We have a winner! |
-| wins-hotdog / wins-beer / wins-pretzel / wins-pizza / wins-dino | Hot Dog wins it! Hot Dog takes the race! (etc.) |
+| wins-hotdog / wins-beer / wins-pretzel / wins-pizza / wins-dino / wins-skeleton / wins-santa / wins-turkey | Hot Dog wins it! Hot Dog takes the race! (etc.) |
 
 Keys: M on the console mutes everything. The crowd is generated live and needs no files.
 

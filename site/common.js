@@ -20,6 +20,9 @@
   const BUILTIN_ART = {
     hotdog: { extra: true }, beer: { extra: true }, pretzel: { extra: true }, pizza: { extra: true },
     dino: { extra: true, scale: 1.45, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
+    skeleton: { extra: true, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
+    santa: { extra: true, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
+    turkey: { extra: true, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
   };
   const decorateOptions = (options) => (options || []).map((o) => {
     const out = { ...o }, art = BUILTIN_ART[out.id];
@@ -50,7 +53,7 @@
         { id: "v6", name: "Blue Bayou", slug: "blue-bayou", color_primary: "#0b4f6c", color_accent: "#c9a227", tagline: "Laissez les bons temps rouler", default_prize: "a round on us", sort_order: 6, active: true, logo_url: null },
       ],
       games: [{ key: "race", name: "Mascot Race", description: "Guests pick a racer. The racers run. Everyone who picked the winner gets the prize.", sort_order: 1, active: true,
-        options: [{ id: "hotdog", label: "Hot Dog", emoji: "🌭" }, { id: "beer", label: "Beer", emoji: "🍺" }, { id: "pretzel", label: "Pretzel", emoji: "🥨" }, { id: "pizza", label: "Pizza", emoji: "🍕" }, { id: "dino", label: "Dino", emoji: "🦖" }] }],
+        options: [{ id: "hotdog", label: "Hot Dog", emoji: "🌭" }, { id: "beer", label: "Beer", emoji: "🍺" }, { id: "pretzel", label: "Pretzel", emoji: "🥨" }, { id: "pizza", label: "Pizza", emoji: "🍕" }, { id: "dino", label: "Dino", emoji: "🦖" }, { id: "skeleton", label: "Skeleton", emoji: "💀" }, { id: "santa", label: "Santa", emoji: "🎅" }, { id: "turkey", label: "Turkey", emoji: "🦃" }] }],
       rounds: [], entries: [],
     };
     const persist = () => save(state);
