@@ -96,23 +96,32 @@
   function preload(keys) { keys.forEach(clip); }
 
   // ---- lobby music: gapless playlist of sfx/music-N.mp3, plays on the sign-up and leaderboard screens ----
-  const music = { buffers: [], gain: null, src: null, idx: 0, on: false, loading: false, level: 0.55 };
+  // choice: "random" (pick one track at page load and loop it) or a key like "music-2"
+  const music = { buffers: {}, keys: [], gain: null, src: null, on: false, loading: false, level: 0.55, choice: "random", picked: null };
+  try { music.choice = localStorage.getItem("lctg.music") || "random"; } catch {}
   async function loadMusic() {
     if (music.loading || music.buffers.length || !ctx) return; music.loading = true;
-    const keys = [...sfxAvail].filter((k) => /^music-\d+$/.test(k)).sort();
-    for (const k of keys) { try { const ab = await (await fetch(SFX + k + ".mp3")).arrayBuffer(); music.buffers.push(await ctx.decodeAudioData(ab)); } catch (e) { console.warn("music", k, e); } }
+    music.keys = [...sfxAvail].filter((k) => /^music-\d+$/.test(k)).sort();
+    for (const k of music.keys) { try { const ab = await (await fetch(SFX + k + ".mp3")).arrayBuffer(); music.buffers[k] = await ctx.decodeAudioData(ab); } catch (e) { console.warn("music", k, e); } }
     music.gain = ctx.createGain(); music.gain.gain.value = 0; music.gain.connect(master); music.loading = false;
     if (music.on) playNextTrack();
   }
-  function playNextTrack() {
-    if (!music.on || !music.buffers.length || !ctx) return;
-    const buf = music.buffers[music.idx % music.buffers.length]; music.idx++;
-    const src = ctx.createBufferSource(); src.buffer = buf; src.connect(music.gain); src.onended = () => { if (music.src === src) { music.src = null; playNextTrack(); } };
-    src.start(); music.src = src;
+  function currentTrackKey() {
+    if (music.choice !== "random" && music.buffers[music.choice]) return music.choice;
+    if (!music.picked || !music.buffers[music.picked]) music.picked = music.keys[Math.floor(Math.random() * music.keys.length)];
+    return music.picked;
   }
+  function playNextTrack() {
+    if (!music.on || !music.keys.length || !ctx) return;
+    const buf = music.buffers[currentTrackKey()]; if (!buf) return;
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = 0.02; src.loopEnd = Math.max(0.1, buf.duration - 0.02);
+    src.connect(music.gain); src.start(); music.src = src;
+  }
+  function setMusicChoice(key) { music.choice = key || "random"; try { localStorage.setItem("lctg.music", music.choice); } catch {} if (music.src) { try { music.src.stop(); } catch {} music.src = null; } if (music.on) playNextTrack(); }
+  const musicOptions = () => music.keys.length ? music.keys : [...sfxAvail].filter((k) => /^music-\d+$/.test(k)).sort();
   function setMusic(on) {
     music.on = on; if (!ctx) return;
-    if (on) { if (!music.buffers.length) { if (sfxAvail.size) loadMusic(); else setTimeout(() => setMusic(music.on), 800); return; } if (!music.src) playNextTrack(); music.gain.gain.setTargetAtTime(music.level, ctx.currentTime, 0.4); }
+    if (on) { if (!music.keys.length) { if (sfxAvail.size) loadMusic(); else setTimeout(() => setMusic(music.on), 800); return; } if (!music.src) playNextTrack(); music.gain.gain.setTargetAtTime(music.level, ctx.currentTime, 0.4); }
     else if (music.gain) { music.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); setTimeout(() => { if (!music.on && music.src) { try { music.src.onended = null; music.src.stop(); } catch {} music.src = null; } }, 1500); }
   }
   // duck music under the announcer too
@@ -142,5 +151,5 @@
   function setMuted(m) { muted = m; try { localStorage.setItem("lctg.muted", m ? "1" : "0"); } catch {} if (master) master.gain.setTargetAtTime(m ? 0 : volume, ctx.currentTime, 0.05); if (m && current) current.pause(); Object.values(sfxCache).forEach((a) => { if (m) a.volume = 0; }); }
   document.addEventListener("keydown", (e) => { if ((e.key === "m" || e.key === "M") && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) setMuted(!muted); });
 
-  window.AUDIO = { unlock, event, say, preload, setMuted, isMuted: () => muted, setCrowd, setMusic, ready: () => !!ctx };
+  window.AUDIO = { unlock, event, say, preload, setMuted, isMuted: () => muted, setCrowd, setMusic, setMusicChoice, musicChoice: () => music.choice, musicOptions, ready: () => !!ctx };
 })();

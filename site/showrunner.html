@@ -125,6 +125,7 @@
   <div><label>Sign-up countdown (seconds)</label><input id="sCountdown" type="number" min="20" max="600" step="5"></div>
   <div><label>Game</label><select id="sGame"></select></div>
   <div><label>Racers (pick 4)</label><div id="sRacers" class="stack" style="gap:.4rem"></div></div>
+  <div><label>Lobby music</label><select id="sMusic"></select></div>
   <div class="row"><button id="sMute" class="btn small">Mute</button><button id="sFull" class="btn small">Fullscreen</button></div>
   <div class="row"><a href="index.html" class="btn small">Portal</a><button id="sLogout" class="btn small">Log out</button></div>
   <button id="sClose" class="btn primary" style="width:100%">Close (S)</button>
@@ -189,13 +190,14 @@
 
   // ---------- settings panel ----------
   const settings = $("#settings");
-  function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; renderRacerPicker(); $("#sGame").onchange = renderRacerPicker; $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
+  function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; renderRacerPicker(); $("#sGame").onchange = renderRacerPicker;
+    const mo = AUDIO.musicOptions(); $("#sMusic").innerHTML = `<option value="random">Random (pick one per night)</option>` + mo.map((k, i) => `<option value="${k}">Track ${i + 1}</option>`).join(""); $("#sMusic").value = AUDIO.musicChoice(); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
   async function closeSettings() {
     const picked = $$("#sRacers input:checked").map((cb) => cb.value);
     if (picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
     const rosterChanged = JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game));
     const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
-    state.settings.racers = picked;
+    state.settings.racers = picked; if ($("#sMusic").value !== AUDIO.musicChoice()) AUDIO.setMusicChoice($("#sMusic").value);
     state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings();
     if (venueChanged) setVenue($("#sVenue").value);
     $("#stPrize").textContent = prizeText(); settings.classList.remove("on");
