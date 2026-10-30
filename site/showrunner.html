@@ -315,7 +315,7 @@
 
   async function renderBoard() {
     if (state.phase !== "results") return;
-    clearTimers(); state.phase = "board";
+    clearTimers(); state.phase = "board"; try { AUDIO.event("board"); } catch {}
     let night = [], season = []; try { [night, season] = await Promise.all([api.leaderboard(state.venue.id, "night", 10), api.leaderboard(state.venue.id, "season", 10)]); } catch (e) { toast(e.message); }
     const table = (rows, empty) => rows.length ? `<table>${rows.map((t) => `<tr><td class="r">${t.rank}</td><td>${esc(t.display_name)}</td><td class="w">${t.wins ? t.wins + "W" : ""}</td><td class="p">${t.points}</td></tr>`).join("")}</table>` : `<div class="empty">${empty}</div>`;
     $("#stageBody").innerHTML = `<div class="board">

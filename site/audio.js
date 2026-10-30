@@ -95,14 +95,37 @@
   }
   function preload(keys) { keys.forEach(clip); }
 
+  // ---- lobby music: gapless playlist of sfx/music-N.mp3, plays on the sign-up and leaderboard screens ----
+  const music = { buffers: [], gain: null, src: null, idx: 0, on: false, loading: false, level: 0.55 };
+  async function loadMusic() {
+    if (music.loading || music.buffers.length || !ctx) return; music.loading = true;
+    const keys = [...sfxAvail].filter((k) => /^music-\d+$/.test(k)).sort();
+    for (const k of keys) { try { const ab = await (await fetch(SFX + k + ".mp3")).arrayBuffer(); music.buffers.push(await ctx.decodeAudioData(ab)); } catch (e) { console.warn("music", k, e); } }
+    music.gain = ctx.createGain(); music.gain.gain.value = 0; music.gain.connect(master); music.loading = false;
+    if (music.on) playNextTrack();
+  }
+  function playNextTrack() {
+    if (!music.on || !music.buffers.length || !ctx) return;
+    const buf = music.buffers[music.idx % music.buffers.length]; music.idx++;
+    const src = ctx.createBufferSource(); src.buffer = buf; src.connect(music.gain); src.onended = () => { if (music.src === src) { music.src = null; playNextTrack(); } };
+    src.start(); music.src = src;
+  }
+  function setMusic(on) {
+    music.on = on; if (!ctx) return;
+    if (on) { if (!music.buffers.length) { if (sfxAvail.size) loadMusic(); else setTimeout(() => setMusic(music.on), 800); return; } if (!music.src) playNextTrack(); music.gain.gain.setTargetAtTime(music.level, ctx.currentTime, 0.4); }
+    else if (music.gain) { music.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); setTimeout(() => { if (!music.on && music.src) { try { music.src.onended = null; music.src.stop(); } catch {} music.src = null; } }, 1500); }
+  }
+  // duck music under the announcer too
+  setInterval(() => { if (music.on && music.gain && ctx) { const duck = current && !current.paused ? 0.35 : 1; music.gain.gain.setTargetAtTime(music.level * duck, ctx.currentTime, 0.15); } }, 100);
+
   // ---- events from the race engine ----
   const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
   function event(name, d = {}) {
     if (!ctx) return;
     const who = slug(d.racerId || d.racer);
     switch (name) {
-      case "lobby": setCrowd(0.22); say("welcome", { interrupt: false }); break;
-      case "marks": setCrowd(0.3); say("marks"); break;
+      case "lobby": setCrowd(0); setMusic(true); say("welcome", { interrupt: false }); break;
+      case "marks": setMusic(false); setCrowd(0.3); say("marks"); break;
       case "set": beep(); setCrowd(0.35); say("set"); break;
       case "go": horn(); cheer(0.7); crowdBurst(0.6, 1500); setCrowd(0.55); say("go"); break;
       case "lead": cheer(0.5); crowdBurst(0.3, 800); say([`lead-${who}`, "lead"]); break;
@@ -111,12 +134,13 @@
       case "photo": crowdBurst(0.4, 1200); break;
       case "finish": roar(); crowdBurst(0.8, 3000); setCrowd(0.9); sting(); setTimeout(() => say([`wins-${who}`, "wins"]), 350); setTimeout(() => setCrowd(0.4), 5000); break;
       case "results": setCrowd(0.35); break;
-      case "end": setCrowd(0); break;
+      case "board": setCrowd(0); setMusic(true); break;
+      case "end": setCrowd(0); setMusic(false); break;
       case "countbeep": beep(); break;
     }
   }
   function setMuted(m) { muted = m; try { localStorage.setItem("lctg.muted", m ? "1" : "0"); } catch {} if (master) master.gain.setTargetAtTime(m ? 0 : volume, ctx.currentTime, 0.05); if (m && current) current.pause(); Object.values(sfxCache).forEach((a) => { if (m) a.volume = 0; }); }
   document.addEventListener("keydown", (e) => { if ((e.key === "m" || e.key === "M") && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) setMuted(!muted); });
 
-  window.AUDIO = { unlock, event, say, preload, setMuted, isMuted: () => muted, setCrowd, ready: () => !!ctx };
+  window.AUDIO = { unlock, event, say, preload, setMuted, isMuted: () => muted, setCrowd, setMusic, ready: () => !!ctx };
 })();
