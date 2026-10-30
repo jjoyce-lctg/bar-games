@@ -51,7 +51,7 @@ function helix(cx, cz, r, y0, y1, turns, n, startAngle = 0, dir = 1) {
 }
 // make each segment start exactly where the previous one ended (unless the previous one is a jump), so there is no gap to fall through
 function joinSegments(segs) {
-  for (let i = 1; i < segs.length; i++) { const prev = segs[i - 1]; if (prev.kick) continue; segs[i].points.unshift(prev.points[prev.points.length - 1].clone()); }
+  for (let i = 1; i < segs.length; i++) { const prev = segs[i - 1]; if (prev.kick || segs[i].funnel) continue; segs[i].points.unshift(prev.funnel ? new THREE.Vector3(prev.funnel.center.x, prev.funnel.yHole, prev.funnel.center.z) : prev.points[prev.points.length - 1].clone()); }
 }
 const COURSES = {
   classic() {
@@ -60,23 +60,57 @@ const COURSES = {
     // 1. opening run with two bends, ending in a kick (jump 1)
     segs.push({ points: [V(0, 96, 0), V(0, 94, 10), V(1, 89, 24), V(8, 83, 38), V(24, 79, 48), V(42, 76, 44), V(52, 71, 30), V(51, 67.5, 20), V(50, 64.5, 12)], kick: true });
     // 2. landing bowl (wider), into the spiral: enters heading -x at (10,57,0), exits heading +z at (26,30,-16)
-    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(28, 57, -10), V(20, 56.5, -5), V(14, 56.1, -1), ...helix(10, -16, 16, 56, 26, 1.75, 30, Math.PI / 2, 1)], wide: true, r: 1.55, pegs: [0.45, 0.72] });
+    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(28, 57, -10), V(20, 56.5, -5), V(14, 56.1, -2), ...helix(10, -16, 12, 56, 26, 1.75, 30, Math.PI / 2, 1)], wide: true, r: 1.55, pegs: [0.45, 0.72] });
     // 3. twist: a closed tube that rolls two full turns while dropping down a straight
-    segs.push({ points: [V(26, 25.2, -12), V(26, 23, -6), V(26, 19, 1), V(26, 15.5, 7), V(26, 14.3, 10)], tube: true, roll: 2 });
+    segs.push({ points: [V(22, 25.2, -12), V(22, 23, -6), V(22, 19, 1), V(22, 15.5, 7), V(22, 14.3, 10)], tube: true, roll: 2 });
     // 4. big sweep back across the course, ending in a kick (jump 2)
-    segs.push({ points: [V(25.6, 13.4, 13), V(24, 12, 20), V(10, 9.5, 32), V(-16, 6.5, 36), V(-40, 3.5, 28), V(-62, 0, 6), V(-66, -2.5, -8), V(-64, -5, -18), V(-61, -7.5, -26)], kick: true, spinners: [0.55] });
+    segs.push({ points: [V(21.6, 13.4, 13), V(20, 12, 20), V(8, 9.5, 32), V(-16, 6.5, 36), V(-40, 3.5, 28), V(-62, 0, 6), V(-66, -2.5, -8), V(-64, -5, -18), V(-61, -7.5, -26)], kick: true, spinners: [0.55] });
     // 5. landing, chicane and finish straight
-    segs.push({ points: [V(-59.7, -10.5, -29.4), V(-57, -13, -37), V(-50, -15.5, -44), V(-37, -17.5, -46), V(-18, -20, -38), V(-4, -22, -27)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
-    // 6. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Get knocked off here and it's back to the top.
-    segs.push({ points: [V(12, -24, -30), V(32, -28, -34), V(48, -31, -34)], open: true, r: 1.6, arc: 50, spinners: [0.55], bumpers: [0.22] });
-    // 7. finish straight
-    segs.push({ points: [V(58, -32.5, -34), V(70, -34, -34), V(84, -35.5, -34)], wide: true });
+    segs.push({ points: [V(-59.7, -10.5, -29.4), V(-57, -13, -37), V(-50, -15.5, -44), V(-37, -17, -46), V(-18, -18.5, -38), V(-10, -19.5, -28.2), V(-4, -20, -27)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
+    // 6. the funnel: the whole field swirls into one bowl and drops through the hole. Leaders lose their gap here.
+    segs.push({ funnel: { center: V(2, -27.3, -33), rTop: 10, rHole: 1.7, yHole: -37, turns: 2, dir: -1, entryAngle: Math.atan2(-27 + 33, -4 - 2) } });
+    // 7. the drop: closed tube straight down out of the hole, curling out toward the ledge
+    segs.push({ points: [V(2, -41, -33.3), V(3, -45, -35.5), V(7, -48.5, -38.5), V(13, -50.5, -40)], tube: true });
+    // 8. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Knocked off here = respawn at the funnel.
+    segs.push({ points: [V(20, -52, -40), V(36, -55, -40), V(50, -57.5, -40)], open: true, r: 1.6, arc: 50, spinners: [0.55], bumpers: [0.22] });
+    // 9. finish straight
+    segs.push({ points: [V(60, -59, -40), V(72, -60, -40), V(84, -61, -40)], wide: true });
     joinSegments(segs);
     return { segments: segs, name: "Classic", spiral: { center: V(10, 44, -16), radius: 16 } };
   },
 };
 export const COURSE_NAMES = Object.keys(COURSES);
 
+function stripeTexture(accent, dark = false) {
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const g = cv.getContext("2d");
+  g.fillStyle = dark ? "#cfd9ea" : "#dfe6f2"; g.fillRect(0, 0, 256, 64); g.fillStyle = "#b9c4d8"; g.fillRect(0, 0, 256, 7); g.fillRect(0, 57, 256, 7);
+  g.fillStyle = "#cfd8e8"; for (let x = 0; x < 256; x += 32) g.fillRect(x, 7, 2, 50); g.fillStyle = accent; g.fillRect(0, 30, 256, 4);
+  const tex = new THREE.CanvasTexture(cv); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; tex.colorSpace = THREE.SRGBColorSpace; return tex;
+}
+// Build a funnel: a bowl (surface of revolution) with a short wall ring at the rim, open where the track enters. Samples spiral from the rim to the hole.
+function buildFunnel(seg, accent, segIndex) {
+  const F = seg.funnel, c = F.center, yTop = c.y, depth = yTop - F.yHole;
+  const prof = (r) => F.yHole + depth * Math.pow(Math.max(0, (r - F.rHole) / (F.rTop - F.rHole)), 0.55); // steep near the hole, shallow at the rim
+  const RINGS = 22, SEGS = 56, pos = [], uvs = [], idx = [];
+  for (let i = 0; i <= RINGS; i++) { const r = F.rTop - (F.rTop - F.rHole) * (i / RINGS), y = prof(r); for (let j = 0; j <= SEGS; j++) { const a = (j / SEGS) * Math.PI * 2; pos.push(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r); uvs.push(j / SEGS * 6, i / RINGS); } }
+  for (let i = 0; i < RINGS; i++) for (let j = 0; j < SEGS; j++) { const a = i * (SEGS + 1) + j, b = a + SEGS + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  // rim wall, with a gap around the entry
+  const base = pos.length / 3, WALL_H = 3.2, gap = 0.5;
+  const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  // the wall is low where the track comes in over it (the entry pipe's floor sits above this lip), full height everywhere else
+  for (let j = 0; j <= SEGS; j++) { const a = (j / SEGS) * Math.PI * 2, h = WALL_H; pos.push(c.x + Math.cos(a) * F.rTop, yTop, c.z + Math.sin(a) * F.rTop); uvs.push(j / SEGS * 6, 1); pos.push(c.x + Math.cos(a) * (F.rTop + 0.2), yTop + h, c.z + Math.sin(a) * (F.rTop + 0.2)); uvs.push(j / SEGS * 6, 1.2); }
+  for (let j = 0; j < SEGS; j++) { const k = base + j * 2; idx.push(k, k + 1, k + 2, k + 2, k + 1, k + 3); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+  const tex = stripeTexture(accent); const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.05 })); mesh.receiveShadow = true;
+  const shell = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ visible: false }));
+  // samples: a spiral from the rim entry to the hole, then straight down to the hole exit
+  const samples = [], tangents = [], frames = [], bank = [], n = Math.round(F.turns * 60);
+  for (let i = 0; i <= n; i++) { const t = i / n, a = F.entryAngle + F.dir * t * F.turns * Math.PI * 2, r = F.rTop - 1.2 - (F.rTop - 1.2 - F.rHole * 0.6) * t * t; samples.push(new THREE.Vector3(c.x + Math.cos(a) * r, prof(r) + 0.3, c.z + Math.sin(a) * r)); }
+  samples.push(new THREE.Vector3(c.x, F.yHole - 2, c.z));
+  const N = samples.length - 1, up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i <= N; i++) { const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)]; const t = new THREE.Vector3().subVectors(b, a).normalize(); tangents.push(t); let side = new THREE.Vector3().crossVectors(t, up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); const down = new THREE.Vector3().crossVectors(t, side).normalize(); if (down.y > 0) { down.negate(); side.negate(); } frames.push({ side, down }); bank.push(0); }
+  return { samples, tangents, frames, mesh, shell, obstacles: [], arcDeg: 180, bank, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R: F.rHole, endBank: 0, segIndex, kick: false, funnel: true, loose: true };
+}
 // Build one segment: half-pipe (or full tube) mesh + trimesh along a Catmull-Rom spline. Returns samples/frames and geometry.
 function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE_ARC) {
   const curve = new THREE.CatmullRomCurve3(seg.points, false, "centripetal", 0.5);
@@ -108,10 +142,7 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
   }
   for (let i = 0; i < N; i++) for (let j = 0; j < SEG; j++) { const a = i * (SEG + 1) + j, b = a + SEG + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2)); geo.setIndex(idx); geo.computeVertexNormals();
-  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const g = cv.getContext("2d");
-  g.fillStyle = seg.tube ? "#cfd9ea" : "#dfe6f2"; g.fillRect(0, 0, 256, 64); g.fillStyle = "#b9c4d8"; g.fillRect(0, 0, 256, 7); g.fillRect(0, 57, 256, 7);
-  g.fillStyle = "#cfd8e8"; for (let x = 0; x < 256; x += 32) g.fillRect(x, 7, 2, 50); g.fillStyle = accent; g.fillRect(0, 30, 256, 4);
-  const tex = new THREE.CanvasTexture(cv); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; tex.colorSpace = THREE.SRGBColorSpace;
+  const tex = stripeTexture(accent, !!seg.tube);
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.FrontSide, roughness: 0.6, metalness: 0.05, transparent: !!seg.tube, opacity: seg.tube ? 0.75 : 1 })); mesh.receiveShadow = true;
   const shellGeo = geo.clone(); { const n = shellGeo.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i)); }
   const shell = new THREE.Mesh(shellGeo, new THREE.MeshStandardMaterial({ color: 0x4a5b80, side: THREE.BackSide, roughness: 0.9, transparent: !!seg.tube, opacity: seg.tube ? 0.5 : 1 }));
@@ -122,10 +153,10 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
   return { samples, tangents, frames, mesh, shell, obstacles, arcDeg, bank, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R, endBank: Math.atan2(Math.sin(bank[N]), Math.cos(bank[N])), segIndex, kick: !!seg.kick };
 }
 function buildTrack(course, accent) {
-  const parts = []; course.segments.forEach((sg, i) => { const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick; if (join) { const ps = parts[i - 1].samples; sg.points[0] = ps[ps.length - 1].clone(); } parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0, join ? parts[i - 1].arcDeg : PIPE_ARC)); });
-  const samples = [], tangents = [], frames = [], segOf = [], jumps = [], obstacles = [], banks = [];
-  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.obstacles.forEach((o) => obstacles.push({ ...o, i: o.i + samples.length })); p.bank.forEach((b) => banks.push(b)); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
-  return { parts, samples, tangents, frames, segOf, jumps, obstacles, banks };
+  const parts = []; course.segments.forEach((sg, i) => { if (sg.funnel) { parts.push(buildFunnel(sg, accent, i)); return; } const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick && !prev.funnel; if (join) { const ps = parts[i - 1].samples; sg.points[0] = ps[ps.length - 1].clone(); } parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0, join ? parts[i - 1].arcDeg : PIPE_ARC)); });
+  const samples = [], tangents = [], frames = [], segOf = [], jumps = [], obstacles = [], banks = [], loose = [];
+  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.obstacles.forEach((o) => obstacles.push({ ...o, i: o.i + samples.length })); p.bank.forEach((b) => banks.push(b)); if (p.loose) loose.push([samples.length - 30, samples.length + p.samples.length + 20]); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
+  return { parts, samples, tangents, frames, segOf, jumps, obstacles, banks, loose };
 }
 
 function makeLabel(text, color) {
@@ -149,7 +180,7 @@ export async function run(container, opts) {
 
   // ---- three ----
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setPixelRatio(Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   const skyTop = new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#6fb6ff"), 0.55), skyBot = new THREE.Color("#e9f2ff");
   { const cv = document.createElement("canvas"); cv.width = 2; cv.height = 256; const g = cv.getContext("2d"); const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "#" + skyTop.getHexString()); gr.addColorStop(1, "#" + skyBot.getHexString()); g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
@@ -159,27 +190,13 @@ export async function run(container, opts) {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9bb8, 1.3));
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -44; ground.receiveShadow = true; scene.add(ground);
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -70; ground.receiveShadow = true; scene.add(ground);
 
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
   C.finishT = 0.97;
-  // support pillars, skipped wherever the pillar line would pass through another piece of track
-  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x9fb0cc, roughness: 0.9 });
-  const GROUND_Y = -44;
-  const partR = (i) => track.parts[track.segOf[i]].R;
-  const clear = (x, z, top, i) => { for (let k = 0; k < track.samples.length; k += 2) { if (Math.abs(k - i) < 14) continue; const q = track.samples[k]; if (q.y - partR(k) * 0.5 < top && Math.hypot(q.x - x, q.z - z) < partR(k) + 0.9) return false; } return true; };
-  for (let i = 25; i < track.samples.length; i += 42) {
-    const p = track.samples[i], R = partR(i), fr = track.frames[i]; const top = p.y - R * 0.85, h = top - GROUND_Y; if (h < 2 || i > C.finishT * track.samples.length - 40) continue;
-    // try straight under the pipe first, then beside it (with a bracket arm) when a lower piece of track is in the way
-    const cands = [0, R + 1.1, -(R + 1.1)]; let placed = false;
-    for (const off of cands) {
-      const x = p.x + fr.side.x * off, z = p.z + fr.side.z * off; if (!clear(x, z, top, i)) continue;
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.65, h, 10), pillarMat); m.position.set(x, GROUND_Y + h / 2, z); m.castShadow = true; scene.add(m);
-      if (off) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, Math.abs(off) + 0.6, 8), pillarMat); arm.position.set(p.x + fr.side.x * off / 2, top, p.z + fr.side.z * off / 2); arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), fr.side.clone().multiplyScalar(Math.sign(off))); scene.add(arm); }
-      placed = true; break;
-    }
-  }
+  { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) C.funnelEntry = acc + 2; if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
+  const GROUND_Y = -70;
   // finish arch + checkered band
   const fi = Math.floor(C.finishT * (track.samples.length - 1)), fp = track.samples[fi], ft = track.tangents[fi], ff = track.frames[fi];
   { const arch = new THREE.Group(); const post = new THREE.CylinderGeometry(0.3, 0.3, 8, 10), pm = new THREE.MeshStandardMaterial({ color: 0xffffff });
@@ -191,7 +208,9 @@ export async function run(container, opts) {
   // ---- physics ----
   const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
   track.parts.forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(0.08).setRestitution(0.1)));
-  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -45, 0));
+  // funnels get a second collision skin a little below the surface so a marble dropping in fast can never tunnel through
+  track.parts.filter((p) => p.funnel).forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -0.4, 0).setFriction(0.08).setRestitution(0.1)));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -71, 0));
   // ---- obstacles: pegs (bouncy posts), bumpers (big pinball pads) and spinners (kinematic rotating bars) ----
   const spinners = []; const obsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 }), bumpMat = new THREE.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.3, emissive: 0x3a0010 });
   const floorPoint = (i, off) => { const c = track.samples[i], fr = track.frames[i], R = track.parts[track.segOf[i]].R, b = track.banks[i] || 0; const q = new THREE.Quaternion().setFromAxisAngle(track.tangents[i], b); const S = fr.side.clone().applyQuaternion(q), D = fr.down.clone().applyQuaternion(q); const th = Math.asin(THREE.MathUtils.clamp(off / R, -0.95, 0.95)); return { p: c.clone().addScaledVector(S, Math.sin(th) * R).addScaledVector(D, Math.cos(th) * R), up: D.clone().negate() }; };
@@ -234,7 +253,7 @@ export async function run(container, opts) {
   });
 
   // ---- state ----
-  const order = []; let firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
+  const order = []; let calledFunnel = false, calledLedge = false, firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
   // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
   // overhead (above the spiral), jumpCam (side-on at a jump), finishCam (at the line looking back), wide (leader to median when spread out).
@@ -245,6 +264,7 @@ export async function run(container, opts) {
     zones.push({ from: spiralStart + 10, to: spiralEnd - 10, name: "overhead" });
     track.jumps.forEach((j) => zones.push({ from: j - 28, to: j + 45, name: "jumpCam", jump: j }));
     zones.push({ from: Math.floor(N1 * 0.9), to: N1, name: "finishCam" });
+    { let acc = 0; track.parts.forEach((p) => { if (p.funnel) zones.push({ from: acc - 15, to: acc + p.samples.length - 5, name: "funnelCam" }); acc += p.samples.length; }); }
   }
   function pickShot(prog, spread, simT) {
     const z = zones.find((z) => prog >= z.from && prog <= z.to); if (z) return z;
@@ -255,7 +275,7 @@ export async function run(container, opts) {
   const N = track.samples.length - 1;
   function progressOf(m) {
     const p = m.body.translation(); let best = m.hint, bd = Infinity;
-    for (let i = Math.max(0, m.hint - 25); i <= Math.min(N, m.hint + 90); i++) { const s = track.samples[i]; const d = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = i; } }
+    const inLoose = track.loose.some(([a, b]) => m.hint >= a && m.hint <= b); for (let i = Math.max(0, m.hint - 25); i <= Math.min(N, m.hint + (inLoose ? 200 : 90)); i++) { const s = track.samples[i]; const d = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = i; } }
     m.hint = best; return best;
   }
   function release() { world.removeCollider(gate, false); scene.remove(gateMesh); started = true; say("And away they go!"); audio("go"); }
@@ -281,14 +301,15 @@ export async function run(container, opts) {
       m.prog = progressOf(m);
       if (m.prog > leadProg) { leadProg = m.prog; leader = m; }
       // off the track (fell to the ground, or landed somewhere that isn't where it should be): back to the top
-      const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60);
+      const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60) || track.loose.some(([a, b]) => m.prog >= a && m.prog <= b);
       if (t.y < GROUND_Y + 1.5 || (started && !nearJump && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
         (window.__rs = window.__rs || []).push([m.prog, +t.x.toFixed(1), +t.y.toFixed(1), +t.z.toFixed(1)]);
-        const si = 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
-        const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, PIPE_R - BALL_R - 0.3);
+        const offLedge = m.prog >= C.ledgeFrom - 10; // past the funnel: respawn at the funnel entry, a ~10 s penalty, instead of the top
+        const si = offLedge ? C.funnelEntry : 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
+        const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, offLedge ? 0 : PIPE_R - BALL_R - 0.3);
         m.body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = si; m.prog = si;
-        m.resets = (m.resets || 0) + 1; 
-        if (simTime - lastOffAt > 1.2) { say(`${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
+        m.resets = (m.resets || 0) + 1; m.offLedge = (m.offLedge || 0) + (offLedge ? 1 : 0);
+        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back through the funnel.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
@@ -299,6 +320,8 @@ export async function run(container, opts) {
         else if (order.length <= 3) say(`${first(m.player)} in ${["", "", "second", "third"][order.length]}!`);
       }
     }
+    if (!calledFunnel && C.funnelEntry && leadProg >= C.funnelEntry) { calledFunnel = true; say("Into the funnel! Anyone's race now.", 2800); audio("stretch", { racer: "marble" }); }
+    if (!calledLedge && C.ledgeFrom && leadProg >= C.ledgeFrom) { calledLedge = true; say("The Ledge. Hold on!", 2200); }
     // race over once the top places are in (or everyone is): fade out, stop simulating, show the results
     const want = Math.min(placesToShow, marbles.length);
     if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 45))) {
@@ -324,8 +347,9 @@ export async function run(container, opts) {
       else if (shot.name === "tracksidePan") { desired = shot.anchor; look = p.clone(); }
       else if (shot.name === "jumpCam") { desired = shot.anchor; look = p.clone(); }
       else if (shot.name === "finishCam") { desired = shot.anchor; look = p.clone(); }
+      else if (shot.name === "funnelCam") { const F = C.segments.find((g) => g.funnel).funnel; desired = F.center.clone().add(new THREE.Vector3(-14, 24, 16)); look = F.center.clone().add(new THREE.Vector3(0, -4, 0)); }
       else if (shot.name === "wide") { desired = p.clone().addScaledVector(tg, -34).add(new THREE.Vector3(0, 20, 0)); look = p.clone().addScaledVector(tg, -8); }
-      else { desired = p.clone().addScaledVector(tg, -19).add(new THREE.Vector3(0, 10, 0)); look = p.clone().addScaledVector(tg, 10); }
+      else { desired = p.clone().addScaledVector(tg, -14).add(new THREE.Vector3(0, 7, 0)); look = p.clone().addScaledVector(tg, 9); }
       if (!camInit || cut) { camPos.copy(desired); camLook.copy(look); camInit = true; }
       camPos.lerp(desired, 1 - Math.pow(0.02, dt)); camLook.lerp(look, 1 - Math.pow(0.005, dt));
       if (camPos.y < GROUND_Y + 2.5) camPos.y = GROUND_Y + 2.5; if (window.__cam) { camPos.set(...window.__cam.pos); camLook.set(...window.__cam.look); } camera.position.copy(camPos); camera.lookAt(camLook);
