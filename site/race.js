@@ -2,7 +2,8 @@
    const ctl = RACE.run(containerEl, { racers, winnerId, venue, onDone });  ctl.stop()
    racers: [{ id, label, emoji, image_url? }]  (image_url = optional uploaded artwork used instead of the vector mascot) */
 (function () {
-  const W = 1920, H = 1080, L = 7600, START = 420, FINISH = L - 520;
+  let W = 1920;   // scene width in 1080-high units; set per run from the container's shape so wide screens see more track, never a zoomed crop
+  const H = 1080, L = 7600, START = 420, FINISH = L - 520;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -104,9 +105,11 @@
   function run(container, opts) {
     injectCss();
     const { racers, winnerId, venue = {}, onDone = () => {}, duration = 15000 } = opts;
+    const rect = container.getBoundingClientRect(); const aspect = rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 16 / 9;
+    W = Math.max(1200, Math.round(H * aspect));
     const n = racers.length;
     container.innerHTML = `<div class="race-wrap" style="--accent:${venue.color_accent || "#ffcd00"}">
-      <svg class="world" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice"></svg>
+      <svg class="world" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="race-hud"><div class="race-comm"></div><div class="race-board"><div class="rows"></div><div class="race-strip"><span class="flag">🏁</span></div></div><div class="race-big"></div></div></div>`;
     const svg = container.querySelector("svg.world"), comm = container.querySelector(".race-comm"), board = container.querySelector(".race-board .rows"), strip = container.querySelector(".race-strip"), big = container.querySelector(".race-big");
     const world = buildWorld(racers, venue, opts.theme);
