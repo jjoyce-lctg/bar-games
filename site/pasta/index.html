@@ -5,26 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Blue Bayou Pasta To-Go</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amarante&family=Alef:wght@400;700&display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#f4efe6;font-family:Georgia,"Times New Roman",serif;color:#2b2420;}
-.wrap{max-width:460px;margin:0 auto;padding:24px 18px 48px;}
-h1{font-size:26px;margin:0 0 4px;letter-spacing:.5px;}
-.sub{margin:0 0 20px;color:#6b5f55;font-size:15px;}
-label{display:block;font-size:14px;font-weight:bold;margin:14px 0 6px;}
-input,select{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1px solid #c9bdb0;border-radius:8px;background:#fff;font-family:inherit;color:#2b2420;}
+:root{--navy:#0c3f7a;--blue:#3f77a8;--sky:#8dd7f7;--yellow:#eeee22;--bg:#1f2327;--panel:#2b3036;--text:#f4f6f8;--muted:#b9c2cc;}
+body{margin:0;background:var(--bg);font-family:Alef,Arial,sans-serif;color:var(--text);}
+.wrap{max-width:460px;margin:0 auto;padding:20px 18px 48px;}
+.logo{display:block;width:170px;margin:4px auto 14px;}
+h1{font-family:Amarante,Georgia,serif;font-size:30px;margin:0 0 6px;text-align:center;color:var(--sky);letter-spacing:.5px;font-weight:normal;}
+.sub{margin:0 0 18px;color:var(--muted);font-size:15px;text-align:center;line-height:1.45;}
+.sub b{color:var(--yellow);font-weight:normal;font-family:Amarante,Georgia,serif;font-size:19px;}
+label{display:block;font-size:13px;font-weight:bold;margin:14px 0 6px;color:var(--sky);text-transform:uppercase;letter-spacing:.6px;}
+input,select{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1px solid #4a5563;border-radius:8px;background:var(--panel);color:var(--text);font-family:inherit;}
+input:focus,select:focus{outline:2px solid var(--sky);border-color:var(--sky);}
 select:disabled{opacity:.6;}
-button{width:100%;margin-top:22px;padding:14px;font-size:17px;border:0;border-radius:8px;background:#7a1f1f;color:#fff;font-family:inherit;cursor:pointer;}
-button:disabled{background:#a89a8c;cursor:default;}
-.note{font-size:13px;color:#6b5f55;margin-top:6px;}
-.msg{margin-top:18px;padding:14px;border-radius:8px;font-size:16px;display:none;}
-.ok{background:#e3efe0;color:#214d1f;display:block;}
-.err{background:#f6dcdc;color:#7a1f1f;display:block;}
-.loading{padding:40px 0;text-align:center;color:#6b5f55;}
+button{width:100%;margin-top:22px;padding:14px;font-size:18px;border:0;border-radius:8px;background:var(--yellow);color:var(--navy);font-family:Amarante,Georgia,serif;letter-spacing:.5px;cursor:pointer;}
+button:disabled{background:#6f7680;color:#2b3036;cursor:default;}
+.note{font-size:13px;color:var(--muted);margin-top:6px;}
+.msg{margin-top:18px;padding:14px;border-radius:8px;font-size:16px;display:none;line-height:1.45;}
+.ok{background:#153a5e;color:#fff;border:1px solid var(--sky);display:block;}
+.err{background:#4a1f1f;color:#ffd9d9;border:1px solid #b24a4a;display:block;}
+.loading{padding:40px 0;text-align:center;color:var(--muted);}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Blue Bayou</h1>
+  <img class="logo" src="logo.png" alt="Blue Bayou Bar & Grill">
+  <h1>Pasta Night To-Go</h1>
   <p class="sub" style="margin-bottom:8px"><b>Pasta, sauce, garlic bread, and salad included.</b></p>
   <p class="sub">Family-style pasta, to-go! Available Thursdays. Limited order availability. Orders close at noon on pickup day. Pay when you pick up.</p>
   <div id="loading" class="loading">Loading available dates...</div>
