@@ -225,7 +225,7 @@
   const prizeText = () => state.settings.prize || state.venue.default_prize || "";
   function qrSvg(text) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
 
-  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["S", "Settings"], ["M", "Mute"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [] };
+  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["S", "Settings"], ["M", "Mute"], ["ESC", "Menu"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [["ESC", "Abort race"]] };
   const keybar = (phase) => { $("#stHint").innerHTML = `<div class="keys">${(KEYS[phase] || []).map(([k, l]) => `<span><b>${k}</b>${l}</span>`).join("")}</div>`; };
 
   // LANDING: "Wanna play a game?" with the QR live; the clock starts on Enter
@@ -276,6 +276,19 @@
     clearInterval(state.timer); state.timer = null; state.phase = "landing"; keybar("landing");
     const t = $("#timer"); if (t) { t.classList.add("idle"); t.classList.remove("urgent"); $("#timerNum").textContent = state.settings.countdown + "s"; $("#timer .fg").style.strokeDashoffset = 0; }
     const p = $(".signup .cta p"); if (p) p.innerHTML = `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`;
+  }
+  async function abortRace() {
+    clearTimers(); try { AUDIO.event("end"); } catch {}
+    const r = state.round; state.round = null;
+    if (r) { try { await api.setRoundStatus(r.id, "cancelled"); } catch {} }   // cancelled rounds score nothing and issue no prizes
+    renderLanding({ fresh: true });
+  }
+  async function exitToMenu() {
+    clearTimers(); try { AUDIO.event("end"); } catch {}
+    const r = state.round; state.round = null;
+    if (r) { try { await api.setRoundStatus(r.id, "cancelled"); } catch {} }
+    state.phase = "console"; stage.classList.remove("on", "dark"); $("#console").classList.remove("hidden"); show("viewVenue");
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch {} }
   }
   async function cycleGame(dir) {
     if (state.phase !== "landing" || state.games.length < 2) return;
@@ -356,7 +369,12 @@
     if (e.key.toLowerCase() === "s") { e.preventDefault(); openSettings(); return; }
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advance(); }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); cycleGame(e.key === "ArrowUp" ? -1 : 1); }
-    if (e.key === "Escape") { if (state.phase === "signup") stopClock(); else if (state.phase === "results" || state.phase === "board") renderLanding({ fresh: true }); }
+    if (e.key === "Escape") {
+      if (state.phase === "signup") stopClock();                       // clock running: stop it, keep the sign-ups
+      else if (state.phase === "running") abortRace();                  // mid-race: throw the race out, nothing saved
+      else if (state.phase === "results" || state.phase === "board") renderLanding({ fresh: true });
+      else if (state.phase === "landing") exitToMenu();                 // lobby: back to the bar/prize screen
+    }
   });
   stage.addEventListener("click", () => { if (!settings.classList.contains("on") && state.phase !== "running") advance(); });
 

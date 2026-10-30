@@ -24,7 +24,7 @@ The first account created becomes the admin. Open `admin.html` on the hosted sit
 ## Day to day (VJ / DJ)
 
 1. Open the portal on the laptop, log in, choose Showrunner, pick the bar and tonight's prize, click "Go to the TV screen". From here everything on the laptop is safe to mirror to the TVs.
-2. The landing screen is "Wanna play a game?" with the QR code live, so guests can scan any time. Up/down arrows pick the game. Press **Enter** to start the clock (default 2 minutes, change it in settings). The race starts when it hits zero, or press **Enter** again to race now. **Esc** stops the clock.
+2. The landing screen is "Wanna play a game?" with the QR code live, so guests can scan any time. Up/down arrows pick the game. Press **Enter** to start the clock (default 2 minutes, change it in settings). The race starts when it hits zero, or press **Enter** again to race now. **Esc** stops the clock. During a race, **Esc** aborts it (nothing scored, no prizes). On the landing screen, **Esc** goes back to the bar/prize menu.
 3. Race, winner screen (14 s), leaderboard (15 s), then back to the landing screen with a fresh code. **Enter** skips ahead at any point.
 4. The key bar at the bottom of the screen shows what each key does. **S** settings (bar, prize, countdown, game, which 4 racers run, mute, log out), **F** fullscreen, **M** mute. Clicking the screen also advances.
 

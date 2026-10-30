@@ -1,0 +1,16 @@
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const root = path.resolve(__dirname, '../site');
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg' };
+const server = http.createServer((req, res) => { const p = path.join(root, decodeURIComponent(req.url.split('?')[0])); fs.readFile(p, (e, d) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream' }); res.end(d); }); }).listen(8770);
+(async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1920, height: 1080 } }); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+await p.goto('http://localhost:8770/showrunner.html?mock=1'); await p.evaluate(() => { localStorage.removeItem('barGamesMock'); }); await p.reload();
+await p.fill('#username','dj'); await p.fill('#password','dj'); await p.click('#btnLogin'); await p.waitForSelector('#viewVenue:not(.hidden)'); await p.click('#btnVenue'); await p.waitForSelector('.signup .code');
+await p.keyboard.press('Enter'); await p.waitForTimeout(400); await p.keyboard.press('Enter'); await p.waitForTimeout(5000);
+console.log('racing:', !!(await p.$('.race-wrap')));
+await p.keyboard.press('Escape'); await p.waitForSelector('.signup .code'); await p.waitForTimeout(300);
+const rounds = await p.evaluate(() => JSON.parse(localStorage.getItem('barGamesMock')).rounds.map(r => r.status));
+console.log('after abort -> landing, rounds:', rounds);
+await p.keyboard.press('Escape'); await p.waitForSelector('#viewVenue:not(.hidden)');
+console.log('after esc on landing -> menu, rounds:', await p.evaluate(() => JSON.parse(localStorage.getItem('barGamesMock')).rounds.map(r => r.status)), 'errors', errs);
+await b.close(); server.close(); })();
