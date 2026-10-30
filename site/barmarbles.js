@@ -39,33 +39,41 @@ function helix(cx, cz, r, y0, y1, turns, n, startAngle = 0, dir = 1) {
   for (let i = 0; i <= n; i++) { const t = i / n, a = startAngle + dir * t * turns * Math.PI * 2; out.push(new THREE.Vector3(cx + Math.cos(a) * r, y0 + (y1 - y0) * t, cz + Math.sin(a) * r)); }
   return out;
 }
+// make each segment start exactly where the previous one ended (unless the previous one is a jump), so there is no gap to fall through
+function joinSegments(segs) {
+  for (let i = 1; i < segs.length; i++) { const prev = segs[i - 1]; if (prev.kick) continue; segs[i].points.unshift(prev.points[prev.points.length - 1].clone()); }
+}
 const COURSES = {
   classic() {
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
-    const P = [
-      // opening run: a ramp with two sweeping bends
-      V(0, 92, 0), V(0, 90, 10), V(1, 85, 24), V(8, 79, 38), V(24, 74, 48), V(42, 70, 44), V(52, 66, 28), V(46, 62, 12), V(34, 60, 2),
-    ];
-    // spiral: enters heading -x at (10,57,0), 1.75 turns around (10,-16), exits heading +z at (26,30,-16)
-    P.push(...helix(10, -16, 16, 57, 30, 1.75, 30, Math.PI / 2, 1));
-    // big sweep back across the course, then a chicane and the finish straight
-    P.push(V(28, 27, 4), V(18, 24, 24), V(-6, 21, 34), V(-34, 18, 30), V(-58, 15, 14), V(-66, 12, -10), V(-54, 9, -28), V(-30, 7, -34), V(-6, 5.5, -28), V(10, 4, -16), V(26, 3, -24), V(44, 2, -30), V(66, 0.5, -30), V(86, -1, -30));
-    return { points: P, finishT: 0.985, name: "Classic" };
+    const segs = [];
+    // 1. opening run with two bends, ending in a kick (jump 1)
+    segs.push({ points: [V(0, 96, 0), V(0, 94, 10), V(1, 89, 24), V(8, 83, 38), V(24, 79, 48), V(42, 76, 44), V(52, 71, 30), V(51, 67.5, 20), V(50, 64.5, 12)], kick: true });
+    // 2. landing bowl (wider), into the spiral: enters heading -x at (10,57,0), exits heading +z at (26,30,-16)
+    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(28, 57, -10), V(20, 56.5, -5), V(14, 56.1, -1), ...helix(10, -16, 16, 56, 32, 1.75, 30, Math.PI / 2, 1)], wide: true, r: 1.55 });
+    // 3. twist: a closed tube that rolls two full turns while dropping down a straight
+    segs.push({ points: [V(26, 31.2, -12), V(26, 29, -6), V(26, 25, 1), V(26, 21.5, 7), V(26, 20.3, 10)], tube: true, roll: 2 });
+    // 4. big sweep back across the course, ending in a kick (jump 2)
+    segs.push({ points: [V(25.6, 19.4, 13), V(24, 18.2, 20), V(10, 16.5, 32), V(-16, 15, 36), V(-40, 13.5, 28), V(-62, 11.5, 6), V(-66, 9.5, -8), V(-64, 7.5, -18), V(-61, 5.5, -26)], kick: true });
+    // 5. landing, chicane and finish straight
+    segs.push({ points: [V(-59.7, 2.5, -29.4), V(-57, 0, -37), V(-50, -2.5, -44), V(-37, -4.5, -46), V(-18, -7, -38), V(-4, -9, -27), V(12, -11, -30), V(32, -13, -34), V(58, -15, -34), V(84, -17, -34)], wide: true, r: 1.55 });
+    joinSegments(segs);
+    return { segments: segs, name: "Classic", spiral: { center: V(10, 44, -16), radius: 16 } };
   },
 };
 export const COURSE_NAMES = Object.keys(COURSES);
 
-// Build a half-pipe mesh + trimesh collider along a Catmull-Rom spline.
-function buildTrack(points, accent) {
-  const curve = new THREE.CatmullRomCurve3(points, false, "centripetal", 0.5);
-  const N = 800, SEG = 14;
-  const samples = curve.getSpacedPoints(N), tangents = [];
-  // never let the track climb: a spline between control points can bulge upward and make a dip that traps marbles
-  const MIN_DROP = 0.035;
-  for (let i = 1; i <= N; i++) if (samples[i].y > samples[i - 1].y - MIN_DROP) samples[i].y = samples[i - 1].y - MIN_DROP;
-  // smooth the corrected heights a little so the fix doesn't leave kinks
-  for (let k = 0; k < 3; k++) for (let i = 1; i < N; i++) samples[i].y = Math.min(samples[i].y, (samples[i - 1].y + samples[i].y + samples[i + 1].y) / 3);
-  const frames = []; const up = new THREE.Vector3(0, 1, 0);
+// Build one segment: half-pipe (or full tube) mesh + trimesh along a Catmull-Rom spline. Returns samples/frames and geometry.
+function buildSegment(seg, accent, segIndex, prevR, prevBank = 0) {
+  const curve = new THREE.CatmullRomCurve3(seg.points, false, "centripetal", 0.5);
+  const len = curve.getLength(); const N = Math.max(40, Math.round(len / 0.9)), SEG = seg.tube ? 18 : 14;
+  const R = seg.wide ? PIPE_R * (seg.r || 1.35) : PIPE_R, arcDeg = seg.tube ? 180 : PIPE_ARC;
+  const samples = curve.getSpacedPoints(N), tangents = [], frames = [];
+  const MIN_DROP = 0.035, kickFrom = seg.kick ? Math.floor(N * 0.9) : N + 1;
+  for (let i = 1; i <= N; i++) { if (i < kickFrom && samples[i].y > samples[i - 1].y - MIN_DROP) samples[i].y = samples[i - 1].y - MIN_DROP; }
+  for (let k = 0; k < 3; k++) for (let i = 1; i < Math.min(N, kickFrom); i++) samples[i].y = Math.min(samples[i].y, (samples[i - 1].y + samples[i].y + samples[i + 1].y) / 3);
+  if (seg.kick) { const base = samples[kickFrom - 1].y; for (let i = kickFrom; i <= N; i++) { const t = (i - kickFrom + 1) / (N - kickFrom + 1); samples[i].y = base + t * t * 0.6; } }
+  const up = new THREE.Vector3(0, 1, 0);
   for (let i = 0; i <= N; i++) {
     const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)];
     const t = new THREE.Vector3().subVectors(b, a).normalize(); tangents.push(t);
@@ -73,39 +81,33 @@ function buildTrack(points, accent) {
     let down = new THREE.Vector3().crossVectors(t, side).normalize(); if (down.y > 0) { down.negate(); side.negate(); }
     frames.push({ side, down });
   }
-  // bank on curves: rotate the section around the tangent proportionally to lateral curvature
   const bank = new Array(N + 1).fill(0);
-  for (let i = 2; i < N - 1; i++) { const a = tangents[i - 2], b = tangents[i + 1]; const cross = new THREE.Vector3().crossVectors(a, b); bank[i] = THREE.MathUtils.clamp(-cross.y * 14, -0.55, 0.55); }
+  for (let i = 2; i < N - 1; i++) { const cross = new THREE.Vector3().crossVectors(tangents[i - 2], tangents[i + 1]); bank[i] = THREE.MathUtils.clamp(-cross.y * 14, -0.55, 0.55); }
   for (let k = 0; k < 6; k++) for (let i = 1; i < N; i++) bank[i] = (bank[i - 1] + bank[i] + bank[i + 1]) / 3;
-  const pos = [], uvs = [], idx = [];
-  const arc = THREE.MathUtils.degToRad(PIPE_ARC);
+  if (seg.roll) for (let i = 0; i <= N; i++) bank[i] = Math.max(0, (i - 12) / (N - 12)) * seg.roll * Math.PI * 2; // roll starts once the tube has closed
+  if (prevR) for (let i = 0; i <= Math.min(N, 30); i++) bank[i] = THREE.MathUtils.lerp(prevBank, bank[i], i / 30); // continue the previous segment's banking into this one
+  const pos = [], uvs = [], idx = [], arc = THREE.MathUtils.degToRad(arcDeg);
   for (let i = 0; i <= N; i++) {
     const c = samples[i], { side, down } = frames[i], t = tangents[i];
-    const q = new THREE.Quaternion().setFromAxisAngle(t, bank[i]);
-    const S = side.clone().applyQuaternion(q), D = down.clone().applyQuaternion(q);
-    for (let j = 0; j <= SEG; j++) {
-      const th = -arc + (2 * arc) * (j / SEG);
-      const p = c.clone().addScaledVector(S, Math.sin(th) * PIPE_R).addScaledVector(D, Math.cos(th) * PIPE_R);
-      pos.push(p.x, p.y, p.z); uvs.push(i / N * 60, j / SEG);
-    }
+    const q = new THREE.Quaternion().setFromAxisAngle(t, bank[i]); const S = side.clone().applyQuaternion(q), D = down.clone().applyQuaternion(q);
+    for (let j = 0; j <= SEG; j++) { const Ri = prevR ? THREE.MathUtils.lerp(prevR, R, Math.min(1, i / 30)) : R; const arcI = seg.tube && prevR ? THREE.MathUtils.lerp(THREE.MathUtils.degToRad(PIPE_ARC), arc, Math.min(1, i / 10)) : arc; const th = -arcI + (2 * arcI) * (j / SEG); const p = c.clone().addScaledVector(S, Math.sin(th) * Ri).addScaledVector(D, Math.cos(th) * Ri); pos.push(p.x, p.y, p.z); uvs.push(i / N * (len / 8), j / SEG); }
   }
   for (let i = 0; i < N; i++) for (let j = 0; j < SEG; j++) { const a = i * (SEG + 1) + j, b = a + SEG + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2)); geo.setIndex(idx); geo.computeVertexNormals();
-  { // normals must point into the pipe (up at the bottom of the trough) so the running surface is lit
-    const nrm = geo.attributes.normal, mid = Math.floor(SEG / 2); if (nrm.getY(10 * (SEG + 1) + mid) < 0) { for (let i = 0; i < nrm.count; i++) nrm.setXYZ(i, -nrm.getX(i), -nrm.getY(i), -nrm.getZ(i)); nrm.needsUpdate = true; }
-  }
-  // stripe texture
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const g = cv.getContext("2d");
-  g.fillStyle = "#dfe6f2"; g.fillRect(0, 0, 256, 64); g.fillStyle = "#b9c4d8"; g.fillRect(0, 0, 256, 7); g.fillRect(0, 57, 256, 7);
-  g.fillStyle = "#cfd8e8"; for (let x = 0; x < 256; x += 32) g.fillRect(x, 7, 2, 50);
-  g.fillStyle = accent; g.fillRect(0, 30, 256, 4);
+  g.fillStyle = seg.tube ? "#cfd9ea" : "#dfe6f2"; g.fillRect(0, 0, 256, 64); g.fillStyle = "#b9c4d8"; g.fillRect(0, 0, 256, 7); g.fillRect(0, 57, 256, 7);
+  g.fillStyle = "#cfd8e8"; for (let x = 0; x < 256; x += 32) g.fillRect(x, 7, 2, 50); g.fillStyle = accent; g.fillRect(0, 30, 256, 4);
   const tex = new THREE.CanvasTexture(cv); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; tex.colorSpace = THREE.SRGBColorSpace;
-  const mat = new THREE.MeshStandardMaterial({ map: tex, side: THREE.FrontSide, roughness: 0.6, metalness: 0.05 });
-  const mesh = new THREE.Mesh(geo, mat); mesh.receiveShadow = true;
-  // outer shell for a solid look
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.FrontSide, roughness: 0.6, metalness: 0.05, transparent: !!seg.tube, opacity: seg.tube ? 0.75 : 1 })); mesh.receiveShadow = true;
   const shellGeo = geo.clone(); { const n = shellGeo.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i)); }
-  const shell = new THREE.Mesh(shellGeo, new THREE.MeshStandardMaterial({ color: 0x4a5b80, side: THREE.BackSide, roughness: 0.9 }));
-  return { curve, samples, tangents, frames, mesh, shell, vertices: new Float32Array(pos), indices: new Uint32Array(idx) };
+  const shell = new THREE.Mesh(shellGeo, new THREE.MeshStandardMaterial({ color: 0x4a5b80, side: THREE.BackSide, roughness: 0.9, transparent: !!seg.tube, opacity: seg.tube ? 0.5 : 1 }));
+  return { samples, tangents, frames, mesh, shell, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R, endBank: Math.atan2(Math.sin(bank[N]), Math.cos(bank[N])), segIndex, kick: !!seg.kick };
+}
+function buildTrack(course, accent) {
+  const parts = []; course.segments.forEach((sg, i) => { const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick; if (join) { const ps = parts[i - 1].samples; sg.points[0] = ps[ps.length - 1].clone(); } parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0)); });
+  const samples = [], tangents = [], frames = [], segOf = [], jumps = [];
+  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
+  return { parts, samples, tangents, frames, segOf, jumps };
 }
 
 function makeLabel(text, color) {
@@ -139,13 +141,27 @@ export async function run(container, opts) {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9bb8, 1.3));
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -6; ground.receiveShadow = true; scene.add(ground);
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -10; ground.receiveShadow = true; scene.add(ground);
 
   const C = (COURSES[course] || COURSES.classic)();
-  const track = buildTrack(C.points, accent); scene.add(track.mesh); scene.add(track.shell);
-  // support pillars every so often
+  const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
+  C.finishT = 0.97;
+  // support pillars, skipped wherever the pillar line would pass through another piece of track
   const pillarMat = new THREE.MeshStandardMaterial({ color: 0x9fb0cc, roughness: 0.9 });
-  for (let i = 25; i < track.samples.length; i += 40) { const p = track.samples[i]; const h = p.y + 6 - PIPE_R; if (h > 2) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, h, 10), pillarMat); m.position.set(p.x, -6 + h / 2, p.z); m.castShadow = true; scene.add(m); } }
+  const GROUND_Y = -30;
+  const partR = (i) => track.parts[track.segOf[i]].R;
+  const clear = (x, z, top, i) => { for (let k = 0; k < track.samples.length; k += 2) { if (Math.abs(k - i) < 14) continue; const q = track.samples[k]; if (q.y - partR(k) * 0.5 < top && Math.hypot(q.x - x, q.z - z) < partR(k) + 0.9) return false; } return true; };
+  for (let i = 25; i < track.samples.length; i += 30) {
+    const p = track.samples[i], R = partR(i), fr = track.frames[i]; const top = p.y - R * 0.85, h = top - GROUND_Y; if (h < 2 || i > C.finishT * track.samples.length - 40) continue;
+    // try straight under the pipe first, then beside it (with a bracket arm) when a lower piece of track is in the way
+    const cands = [0, R + 1.1, -(R + 1.1)]; let placed = false;
+    for (const off of cands) {
+      const x = p.x + fr.side.x * off, z = p.z + fr.side.z * off; if (!clear(x, z, top, i)) continue;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.65, h, 10), pillarMat); m.position.set(x, GROUND_Y + h / 2, z); m.castShadow = true; scene.add(m);
+      if (off) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, Math.abs(off) + 0.6, 8), pillarMat); arm.position.set(p.x + fr.side.x * off / 2, top, p.z + fr.side.z * off / 2); arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), fr.side.clone().multiplyScalar(Math.sign(off))); scene.add(arm); }
+      placed = true; break;
+    }
+  }
   // finish arch + checkered band
   const fi = Math.floor(C.finishT * (track.samples.length - 1)), fp = track.samples[fi], ft = track.tangents[fi], ff = track.frames[fi];
   { const arch = new THREE.Group(); const post = new THREE.CylinderGeometry(0.3, 0.3, 8, 10), pm = new THREE.MeshStandardMaterial({ color: 0xffffff });
@@ -156,20 +172,21 @@ export async function run(container, opts) {
 
   // ---- physics ----
   const world = new RAPIER.World({ x: 0, y: -26, z: 0 });
-  world.createCollider(RAPIER.ColliderDesc.trimesh(track.vertices, track.indices).setFriction(0.12).setRestitution(0.1));
-  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -7, 0));
+  track.parts.forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(0.12).setRestitution(0.1)));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -31, 0));
   // start pen: marbles stacked in the pipe behind a gate
-  const s0 = track.samples[0], t0 = track.tangents[0], f0 = track.frames[0];
   const gateI = 60, gp = track.samples[gateI], gt = track.tangents[gateI];
   const gate = world.createCollider(RAPIER.ColliderDesc.cuboid(PIPE_R + 0.5, PIPE_R, 0.25).setTranslation(gp.x, gp.y, gp.z).setRotation(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt)));
   const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(2 * PIPE_R + 1, 2 * PIPE_R, 0.5), new THREE.MeshStandardMaterial({ color: 0xff4d4d })); gateMesh.position.copy(gp); gateMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt); scene.add(gateMesh);
 
   const ballGeo = new THREE.SphereGeometry(BALL_R, 20, 14);
+  // random start slots + a little jitter so no slot (and no sign-up order) has an edge night after night
+  const slots = players.map((_, i) => i); for (let i = slots.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [slots[i], slots[k]] = [slots[k], slots[i]]; }
   const marbles = players.map((p, i) => {
     const color = p.color || PALETTE[i % PALETTE.length];
-    const perRow = 4, row = Math.floor(i / perRow), col = i % perRow;
+    const perRow = 4, row = Math.floor(slots[i] / perRow), col = slots[i] % perRow;
     const si = Math.max(2, gateI - 3 - row * 3), c = track.samples[si], fr = track.frames[si];
-    const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, PIPE_R - BALL_R - 0.15).add(new THREE.Vector3(0, 0.2 + (row % 3) * 0.1, 0));
+    const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, PIPE_R - BALL_R - 0.15).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.2 + (row % 3) * 0.1, (Math.random() - 0.5) * 0.08));
     const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.01).setAngularDamping(0.2).setCcdEnabled(true));
     world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.12).setRestitution(0.2), body);
     const mesh = new THREE.Mesh(ballGeo, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 })); mesh.castShadow = true; scene.add(mesh);
@@ -180,10 +197,26 @@ export async function run(container, opts) {
   // ---- state ----
   const order = []; let started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
+  // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
+  // overhead (above the spiral), jumpCam (side-on at a jump), finishCam (at the line looking back), wide (leader to median when spread out).
+  const shot = { name: "chase", until: 0, anchor: new THREE.Vector3(), lastChange: 0 };
+  const zones = []; // progress ranges with a preferred shot
+  { const N1 = track.samples.length - 1;
+    const spiralStart = track.parts[0].samples.length + 2, spiralEnd = spiralStart + track.parts[1].samples.length - 12;
+    zones.push({ from: spiralStart + 10, to: spiralEnd - 10, name: "overhead" });
+    track.jumps.forEach((j) => zones.push({ from: j - 28, to: j + 45, name: "jumpCam", jump: j }));
+    zones.push({ from: Math.floor(N1 * 0.9), to: N1, name: "finishCam" });
+  }
+  function pickShot(prog, spread, simT) {
+    const z = zones.find((z) => prog >= z.from && prog <= z.to); if (z) return z;
+    if (spread > 140) return { name: "wide" };
+    // on open track, cut to a trackside pan for 4 s every 11 s
+    const cyc = simT % 11; return cyc > 7 ? { name: "tracksidePan" } : { name: "chase" };
+  }
   const N = track.samples.length - 1;
   function progressOf(m) {
     const p = m.body.translation(); let best = m.hint, bd = Infinity;
-    for (let i = Math.max(0, m.hint - 25); i <= Math.min(N, m.hint + 60); i++) { const s = track.samples[i]; const d = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = i; } }
+    for (let i = Math.max(0, m.hint - 25); i <= Math.min(N, m.hint + 90); i++) { const s = track.samples[i]; const d = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = i; } }
     m.hint = best; return best;
   }
   function release() { world.removeCollider(gate, false); scene.remove(gateMesh); started = true; say("And away they go!"); audio("go"); }
@@ -204,8 +237,11 @@ export async function run(container, opts) {
       m.prog = progressOf(m);
       if (m.prog > leadProg) { leadProg = m.prog; leader = m; }
       // fell off the course: put it back on the track at its last progress point
-      if (t.y < -4 || (started && m.prog < N && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
-        const s = track.samples[Math.max(0, m.prog - 2)]; m.body.setTranslation({ x: s.x, y: s.y + 0.5, z: s.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60);
+      if (t.y < GROUND_Y + 1.5 || (started && !nearJump && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
+        // off the course: back onto the track a little behind where it left (after a jump, onto the landing)
+        const j = track.jumps.find((j) => m.prog > j - 30 && m.prog <= j + 60); const back = j ? j + 8 : Math.max(0, m.prog - 2);
+        const s = track.samples[Math.min(N, back)]; m.body.setTranslation({ x: s.x, y: s.y + 0.6, z: s.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = Math.min(N, back); m.resets = (m.resets || 0) + 1; (window.__rs = window.__rs || []).push([m.prog, +t.x.toFixed(1), +t.y.toFixed(1), +t.z.toFixed(1), track.samples[m.prog].y.toFixed(1), !!j]); if (j) { m.jumpResets = (m.jumpResets || 0) + 1; } if (m.prog > 235 && m.prog < 275 && !window.__bad) window.__bad = m.tr;
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
@@ -220,11 +256,25 @@ export async function run(container, opts) {
     // camera: chase the leader (or the finish once someone has won)
     const focus = leader || order[order.length - 1];
     if (focus) {
-      const p = focus.body.translation(), tg = track.tangents[focus.prog];
-      const desired = new THREE.Vector3(p.x, p.y, p.z).addScaledVector(tg, -19).add(new THREE.Vector3(0, 10, 0));
-      const look = new THREE.Vector3(p.x, p.y, p.z).addScaledVector(tg, 10);
-      if (!camInit) { camPos.copy(desired); camLook.copy(look); camInit = true; }
-      camPos.lerp(desired, 1 - Math.pow(0.02, dt)); camLook.lerp(look, 1 - Math.pow(0.01, dt));
+      const p = new THREE.Vector3().copy(focus.body.translation()), tg = track.tangents[focus.prog], fr = track.frames[focus.prog];
+      const liveProgs = marbles.filter((m) => !m.finished).map((m) => m.prog).sort((a, b) => b - a);
+      const spread = liveProgs.length > 2 ? liveProgs[0] - liveProgs[Math.floor(liveProgs.length / 2)] : 0;
+      const want = order.length ? { name: "finishCam" } : pickShot(focus.prog, spread, simTime);
+      let cut = false;
+      if (want.name !== shot.name && simTime - shot.lastChange > 2.5) { shot.name = want.name; shot.lastChange = simTime; cut = true;
+        if (want.name === "tracksidePan") { const ahead = track.samples[Math.min(N, focus.prog + 34)], f2 = track.frames[Math.min(N, focus.prog + 34)]; shot.anchor.copy(ahead).addScaledVector(f2.side, 11).add(new THREE.Vector3(0, 7, 0)); }
+        if (want.name === "jumpCam") { const j = track.samples[want.jump], fj = track.frames[want.jump], tj = track.tangents[want.jump]; shot.anchor.copy(j).addScaledVector(fj.side, 22).addScaledVector(tj, 8).add(new THREE.Vector3(0, 4, 0)); }
+        if (want.name === "finishCam") { shot.anchor.copy(fp).addScaledVector(ft, 16).addScaledVector(ff.side, 8).add(new THREE.Vector3(0, 9, 0)); }
+      }
+      let desired, look;
+      if (shot.name === "overhead") { desired = C.spiral.center.clone().add(new THREE.Vector3(6, 42, 6)); look = p.clone(); }
+      else if (shot.name === "tracksidePan") { desired = shot.anchor; look = p.clone(); }
+      else if (shot.name === "jumpCam") { desired = shot.anchor; look = p.clone(); }
+      else if (shot.name === "finishCam") { desired = shot.anchor; look = p.clone(); }
+      else if (shot.name === "wide") { desired = p.clone().addScaledVector(tg, -34).add(new THREE.Vector3(0, 20, 0)); look = p.clone().addScaledVector(tg, -8); }
+      else { desired = p.clone().addScaledVector(tg, -19).add(new THREE.Vector3(0, 10, 0)); look = p.clone().addScaledVector(tg, 10); }
+      if (!camInit || cut) { camPos.copy(desired); camLook.copy(look); camInit = true; }
+      camPos.lerp(desired, 1 - Math.pow(0.02, dt)); camLook.lerp(look, 1 - Math.pow(0.005, dt));
       camera.position.copy(camPos); camera.lookAt(camLook);
     }
     // render
@@ -237,7 +287,7 @@ export async function run(container, opts) {
     prog.style.width = `${Math.min(100, 100 * leadProg / (C.finishT * N)).toFixed(1)}%`; left.textContent = live;
     raf = requestAnimationFrame(step);
   }
-  window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { started, simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
+  window.__shot = () => shot.name; window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), jumpResets: marbles.reduce((a, m) => a + (m.jumpResets || 0), 0), started, N, finishAt: Math.round(C.finishT * N), parts: track.parts.map((p) => p.samples.length), simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
   let lastDt = 1 / 60;
   raf = requestAnimationFrame(step);
   return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); try { renderer.dispose(); } catch {} }, order: () => order.map((m) => m.player) };
