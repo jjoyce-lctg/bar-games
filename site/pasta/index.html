@@ -68,7 +68,7 @@ function fill(a){
     var t = d.label;
     if (d.status === "full") t += " (sold out)";
     else if (d.status === "closed") t += " (ordering closed)";
-    else { t += " (" + d.remaining + " left)"; anyOpen = true; }
+    else { anyOpen = true; }
     opt(ds, d.key, t, d.status !== "open");
   });
   var ws = el("window"); ws.innerHTML = ""; a.windows.forEach(function(w){ opt(ws, w, w); });
