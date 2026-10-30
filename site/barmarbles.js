@@ -50,13 +50,17 @@ const COURSES = {
     // 1. opening run with two bends, ending in a kick (jump 1)
     segs.push({ points: [V(0, 96, 0), V(0, 94, 10), V(1, 89, 24), V(8, 83, 38), V(24, 79, 48), V(42, 76, 44), V(52, 71, 30), V(51, 67.5, 20), V(50, 64.5, 12)], kick: true });
     // 2. landing bowl (wider), into the spiral: enters heading -x at (10,57,0), exits heading +z at (26,30,-16)
-    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(28, 57, -10), V(20, 56.5, -5), V(14, 56.1, -1), ...helix(10, -16, 16, 56, 32, 1.75, 30, Math.PI / 2, 1)], wide: true, r: 1.55 });
+    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(28, 57, -10), V(20, 56.5, -5), V(14, 56.1, -1), ...helix(10, -16, 16, 56, 26, 1.75, 30, Math.PI / 2, 1)], wide: true, r: 1.55, pegs: [0.45, 0.72] });
     // 3. twist: a closed tube that rolls two full turns while dropping down a straight
-    segs.push({ points: [V(26, 31.2, -12), V(26, 29, -6), V(26, 25, 1), V(26, 21.5, 7), V(26, 20.3, 10)], tube: true, roll: 2 });
+    segs.push({ points: [V(26, 25.2, -12), V(26, 23, -6), V(26, 19, 1), V(26, 15.5, 7), V(26, 14.3, 10)], tube: true, roll: 2 });
     // 4. big sweep back across the course, ending in a kick (jump 2)
-    segs.push({ points: [V(25.6, 19.4, 13), V(24, 18.2, 20), V(10, 16.5, 32), V(-16, 15, 36), V(-40, 13.5, 28), V(-62, 11.5, 6), V(-66, 9.5, -8), V(-64, 7.5, -18), V(-61, 5.5, -26)], kick: true });
+    segs.push({ points: [V(25.6, 13.4, 13), V(24, 12, 20), V(10, 9.5, 32), V(-16, 6.5, 36), V(-40, 3.5, 28), V(-62, 0, 6), V(-66, -2.5, -8), V(-64, -5, -18), V(-61, -7.5, -26)], kick: true, spinners: [0.55] });
     // 5. landing, chicane and finish straight
-    segs.push({ points: [V(-59.7, 2.5, -29.4), V(-57, 0, -37), V(-50, -2.5, -44), V(-37, -4.5, -46), V(-18, -7, -38), V(-4, -9, -27), V(12, -11, -30), V(32, -13, -34), V(58, -15, -34), V(84, -17, -34)], wide: true, r: 1.55 });
+    segs.push({ points: [V(-59.7, -10.5, -29.4), V(-57, -13, -37), V(-50, -15.5, -44), V(-37, -17.5, -46), V(-18, -20, -38), V(-4, -22, -27)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
+    // 6. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Get knocked off here and it's back to the top.
+    segs.push({ points: [V(12, -24, -30), V(32, -28, -34), V(48, -31, -34)], open: true, r: 1.6, arc: 50, spinners: [0.55], bumpers: [0.22] });
+    // 7. finish straight
+    segs.push({ points: [V(58, -32.5, -34), V(70, -34, -34), V(84, -35.5, -34)], wide: true });
     joinSegments(segs);
     return { segments: segs, name: "Classic", spiral: { center: V(10, 44, -16), radius: 16 } };
   },
@@ -64,10 +68,10 @@ const COURSES = {
 export const COURSE_NAMES = Object.keys(COURSES);
 
 // Build one segment: half-pipe (or full tube) mesh + trimesh along a Catmull-Rom spline. Returns samples/frames and geometry.
-function buildSegment(seg, accent, segIndex, prevR, prevBank = 0) {
+function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE_ARC) {
   const curve = new THREE.CatmullRomCurve3(seg.points, false, "centripetal", 0.5);
   const len = curve.getLength(); const N = Math.max(40, Math.round(len / 0.9)), SEG = seg.tube ? 18 : 14;
-  const R = seg.wide ? PIPE_R * (seg.r || 1.35) : PIPE_R, arcDeg = seg.tube ? 180 : PIPE_ARC;
+  const R = (seg.wide || seg.open) ? PIPE_R * (seg.r || 1.35) : PIPE_R, arcDeg = seg.tube ? 180 : seg.open ? (seg.arc || 60) : PIPE_ARC;
   const samples = curve.getSpacedPoints(N), tangents = [], frames = [];
   const MIN_DROP = 0.035, kickFrom = seg.kick ? Math.floor(N * 0.9) : N + 1;
   for (let i = 1; i <= N; i++) { if (i < kickFrom && samples[i].y > samples[i - 1].y - MIN_DROP) samples[i].y = samples[i - 1].y - MIN_DROP; }
@@ -90,7 +94,7 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0) {
   for (let i = 0; i <= N; i++) {
     const c = samples[i], { side, down } = frames[i], t = tangents[i];
     const q = new THREE.Quaternion().setFromAxisAngle(t, bank[i]); const S = side.clone().applyQuaternion(q), D = down.clone().applyQuaternion(q);
-    for (let j = 0; j <= SEG; j++) { const Ri = prevR ? THREE.MathUtils.lerp(prevR, R, Math.min(1, i / 30)) : R; const arcI = seg.tube && prevR ? THREE.MathUtils.lerp(THREE.MathUtils.degToRad(PIPE_ARC), arc, Math.min(1, i / 10)) : arc; const th = -arcI + (2 * arcI) * (j / SEG); const p = c.clone().addScaledVector(S, Math.sin(th) * Ri).addScaledVector(D, Math.cos(th) * Ri); pos.push(p.x, p.y, p.z); uvs.push(i / N * (len / 8), j / SEG); }
+    for (let j = 0; j <= SEG; j++) { const Ri = prevR ? THREE.MathUtils.lerp(prevR, R, Math.min(1, i / 30)) : R; const arcI = prevR ? THREE.MathUtils.lerp(THREE.MathUtils.degToRad(prevArc), arc, Math.min(1, i / (seg.tube ? 10 : 16))) : arc; const th = -arcI + (2 * arcI) * (j / SEG); const p = c.clone().addScaledVector(S, Math.sin(th) * Ri).addScaledVector(D, Math.cos(th) * Ri); pos.push(p.x, p.y, p.z); uvs.push(i / N * (len / 8), j / SEG); }
   }
   for (let i = 0; i < N; i++) for (let j = 0; j < SEG; j++) { const a = i * (SEG + 1) + j, b = a + SEG + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2)); geo.setIndex(idx); geo.computeVertexNormals();
@@ -101,13 +105,17 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0) {
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.FrontSide, roughness: 0.6, metalness: 0.05, transparent: !!seg.tube, opacity: seg.tube ? 0.75 : 1 })); mesh.receiveShadow = true;
   const shellGeo = geo.clone(); { const n = shellGeo.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i)); }
   const shell = new THREE.Mesh(shellGeo, new THREE.MeshStandardMaterial({ color: 0x4a5b80, side: THREE.BackSide, roughness: 0.9, transparent: !!seg.tube, opacity: seg.tube ? 0.5 : 1 }));
-  return { samples, tangents, frames, mesh, shell, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R, endBank: Math.atan2(Math.sin(bank[N]), Math.cos(bank[N])), segIndex, kick: !!seg.kick };
+  const obstacles = []; // {kind, i, off} in sample index + side offset (world placement happens in run())
+  (seg.pegs || []).forEach((t) => { const i0 = Math.round(t * N); [[0, -0.42], [8, 0.42], [16, -0.42]].forEach(([di, o]) => obstacles.push({ kind: "peg", i: Math.min(N, i0 + di), off: o * R })); });
+  (seg.spinners || []).forEach((t) => obstacles.push({ kind: "spinner", i: Math.round(t * N), off: 0 }));
+  (seg.bumpers || []).forEach((t) => { const i0 = Math.round(t * N); obstacles.push({ kind: "bumper", i: i0, off: -0.5 * R }); obstacles.push({ kind: "bumper", i: Math.min(N, i0 + 6), off: 0.5 * R }); });
+  return { samples, tangents, frames, mesh, shell, obstacles, arcDeg, bank, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R, endBank: Math.atan2(Math.sin(bank[N]), Math.cos(bank[N])), segIndex, kick: !!seg.kick };
 }
 function buildTrack(course, accent) {
-  const parts = []; course.segments.forEach((sg, i) => { const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick; if (join) { const ps = parts[i - 1].samples; sg.points[0] = ps[ps.length - 1].clone(); } parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0)); });
-  const samples = [], tangents = [], frames = [], segOf = [], jumps = [];
-  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
-  return { parts, samples, tangents, frames, segOf, jumps };
+  const parts = []; course.segments.forEach((sg, i) => { const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick; if (join) { const ps = parts[i - 1].samples; sg.points[0] = ps[ps.length - 1].clone(); } parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0, join ? parts[i - 1].arcDeg : PIPE_ARC)); });
+  const samples = [], tangents = [], frames = [], segOf = [], jumps = [], obstacles = [], banks = [];
+  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.obstacles.forEach((o) => obstacles.push({ ...o, i: o.i + samples.length })); p.bank.forEach((b) => banks.push(b)); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
+  return { parts, samples, tangents, frames, segOf, jumps, obstacles, banks };
 }
 
 function makeLabel(text, color) {
@@ -141,17 +149,17 @@ export async function run(container, opts) {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9bb8, 1.3));
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -10; ground.receiveShadow = true; scene.add(ground);
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -44; ground.receiveShadow = true; scene.add(ground);
 
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
   C.finishT = 0.97;
   // support pillars, skipped wherever the pillar line would pass through another piece of track
   const pillarMat = new THREE.MeshStandardMaterial({ color: 0x9fb0cc, roughness: 0.9 });
-  const GROUND_Y = -30;
+  const GROUND_Y = -44;
   const partR = (i) => track.parts[track.segOf[i]].R;
   const clear = (x, z, top, i) => { for (let k = 0; k < track.samples.length; k += 2) { if (Math.abs(k - i) < 14) continue; const q = track.samples[k]; if (q.y - partR(k) * 0.5 < top && Math.hypot(q.x - x, q.z - z) < partR(k) + 0.9) return false; } return true; };
-  for (let i = 25; i < track.samples.length; i += 30) {
+  for (let i = 25; i < track.samples.length; i += 42) {
     const p = track.samples[i], R = partR(i), fr = track.frames[i]; const top = p.y - R * 0.85, h = top - GROUND_Y; if (h < 2 || i > C.finishT * track.samples.length - 40) continue;
     // try straight under the pipe first, then beside it (with a bracket arm) when a lower piece of track is in the way
     const cands = [0, R + 1.1, -(R + 1.1)]; let placed = false;
@@ -171,9 +179,30 @@ export async function run(container, opts) {
     scene.add(arch); }
 
   // ---- physics ----
-  const world = new RAPIER.World({ x: 0, y: -26, z: 0 });
-  track.parts.forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(0.12).setRestitution(0.1)));
-  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -31, 0));
+  const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
+  track.parts.forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(0.08).setRestitution(0.1)));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -45, 0));
+  // ---- obstacles: pegs (bouncy posts), bumpers (big pinball pads) and spinners (kinematic rotating bars) ----
+  const spinners = []; const obsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 }), bumpMat = new THREE.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.3, emissive: 0x3a0010 });
+  const floorPoint = (i, off) => { const c = track.samples[i], fr = track.frames[i], R = track.parts[track.segOf[i]].R, b = track.banks[i] || 0; const q = new THREE.Quaternion().setFromAxisAngle(track.tangents[i], b); const S = fr.side.clone().applyQuaternion(q), D = fr.down.clone().applyQuaternion(q); const th = Math.asin(THREE.MathUtils.clamp(off / R, -0.95, 0.95)); return { p: c.clone().addScaledVector(S, Math.sin(th) * R).addScaledVector(D, Math.cos(th) * R), up: D.clone().negate() }; };
+  const upQuat = (up) => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), up);
+  track.obstacles.forEach((o) => {
+    const { p, up } = floorPoint(o.i, o.off);
+    if (o.kind === "peg" || o.kind === "bumper") {
+      const r = o.kind === "peg" ? 0.38 : 0.9, h = o.kind === "peg" ? 1.5 : 1.1, q = upQuat(up), c = p.clone().addScaledVector(up, h / 2 - 0.15);
+      world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, r).setTranslation(c.x, c.y, c.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setRestitution(o.kind === "peg" ? 0.9 : 0.9).setFriction(0.05));
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.08, h, 14), o.kind === "peg" ? obsMat : bumpMat); m.position.copy(c); m.quaternion.copy(q); m.castShadow = true; scene.add(m);
+    } else if (o.kind === "spinner") {
+      const q = upQuat(up), c = p.clone().addScaledVector(up, 0.55), R = track.parts[track.segOf[o.i]].R, armLen = R * (track.parts[track.segOf[o.i]].arcDeg < 70 ? 1.15 : 1.7);
+      const body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(c.x, c.y, c.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }));
+      world.createCollider(RAPIER.ColliderDesc.cuboid(armLen / 2, 0.45, 0.3).setRestitution(0.6).setFriction(0.1), body);
+      world.createCollider(RAPIER.ColliderDesc.cuboid(0.3, 0.45, armLen / 2).setRestitution(0.6).setFriction(0.1), body);
+      const g = new THREE.Group(); g.position.copy(c); g.quaternion.copy(q);
+      const a1 = new THREE.Mesh(new THREE.BoxGeometry(armLen, 0.9, 0.6), obsMat), a2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, armLen), obsMat); a1.castShadow = a2.castShadow = true; g.add(a1, a2);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 12), bumpMat); g.add(hub); scene.add(g);
+      spinners.push({ body, group: g, base: q, up, rate: (spinners.length % 2 ? -1 : 1) * 2.2, angle: 0 });
+    }
+  });
   // start pen: marbles stacked in the pipe behind a gate
   const gateI = 60, gp = track.samples[gateI], gt = track.tangents[gateI];
   const gate = world.createCollider(RAPIER.ColliderDesc.cuboid(PIPE_R + 0.5, PIPE_R, 0.25).setTranslation(gp.x, gp.y, gp.z).setRotation(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt)));
@@ -187,15 +216,15 @@ export async function run(container, opts) {
     const perRow = 4, row = Math.floor(slots[i] / perRow), col = slots[i] % perRow;
     const si = Math.max(2, gateI - 3 - row * 3), c = track.samples[si], fr = track.frames[si];
     const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, PIPE_R - BALL_R - 0.15).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.2 + (row % 3) * 0.1, (Math.random() - 0.5) * 0.08));
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.01).setAngularDamping(0.2).setCcdEnabled(true));
-    world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.12).setRestitution(0.2), body);
+    const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.004).setAngularDamping(0.2).setCcdEnabled(true));
+    world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.08).setRestitution(0.25), body);
     const mesh = new THREE.Mesh(ballGeo, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 })); mesh.castShadow = true; scene.add(mesh);
     const label = i < maxLabels ? makeLabel(first(p).slice(0, 10), color) : null; if (label) scene.add(label);
     return { player: { ...p, color }, body, mesh, label, hint: si, prog: si, finished: false, stillFor: 0 };
   });
 
   // ---- state ----
-  const order = []; let started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
+  const order = []; let lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
   // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
   // overhead (above the spiral), jumpCam (side-on at a jump), finishCam (at the line looking back), wide (leader to median when spread out).
@@ -227,7 +256,7 @@ export async function run(container, opts) {
     if (stopped) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
     if (!started && simTime >= releaseAt) release();
-    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; } if (acc > 0.25) acc = 0;
+    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { sp.angle += sp.rate / 60; const q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; } if (acc > 0.25) acc = 0;
     let leader = null, leadProg = -1, live = 0;
     for (const m of marbles) {
       const t = m.body.translation(); m.mesh.position.set(t.x, t.y, t.z); const r = m.body.rotation(); m.mesh.quaternion.set(r.x, r.y, r.z, r.w);
@@ -236,12 +265,15 @@ export async function run(container, opts) {
       live++;
       m.prog = progressOf(m);
       if (m.prog > leadProg) { leadProg = m.prog; leader = m; }
-      // fell off the course: put it back on the track at its last progress point
+      // off the track (fell to the ground, or landed somewhere that isn't where it should be): back to the top
       const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60);
       if (t.y < GROUND_Y + 1.5 || (started && !nearJump && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
-        // off the course: back onto the track a little behind where it left (after a jump, onto the landing)
-        const j = track.jumps.find((j) => m.prog > j - 30 && m.prog <= j + 60); const back = j ? j + 8 : Math.max(0, m.prog - 2);
-        const s = track.samples[Math.min(N, back)]; m.body.setTranslation({ x: s.x, y: s.y + 0.6, z: s.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = Math.min(N, back); m.resets = (m.resets || 0) + 1; (window.__rs = window.__rs || []).push([m.prog, +t.x.toFixed(1), +t.y.toFixed(1), +t.z.toFixed(1), track.samples[m.prog].y.toFixed(1), !!j]); if (j) { m.jumpResets = (m.jumpResets || 0) + 1; } if (m.prog > 235 && m.prog < 275 && !window.__bad) window.__bad = m.tr;
+        (window.__rs = window.__rs || []).push([m.prog, +t.x.toFixed(1), +t.y.toFixed(1), +t.z.toFixed(1)]);
+        const si = 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
+        const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, PIPE_R - BALL_R - 0.3);
+        m.body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = si; m.prog = si;
+        m.resets = (m.resets || 0) + 1; 
+        if (simTime - lastOffAt > 1.2) { say(`${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
@@ -275,7 +307,7 @@ export async function run(container, opts) {
       else { desired = p.clone().addScaledVector(tg, -19).add(new THREE.Vector3(0, 10, 0)); look = p.clone().addScaledVector(tg, 10); }
       if (!camInit || cut) { camPos.copy(desired); camLook.copy(look); camInit = true; }
       camPos.lerp(desired, 1 - Math.pow(0.02, dt)); camLook.lerp(look, 1 - Math.pow(0.005, dt));
-      camera.position.copy(camPos); camera.lookAt(camLook);
+      if (camPos.y < GROUND_Y + 2.5) camPos.y = GROUND_Y + 2.5; if (window.__cam) { camPos.set(...window.__cam.pos); camLook.set(...window.__cam.look); } camera.position.copy(camPos); camera.lookAt(camLook);
     }
     // render
     const W = canvas.clientWidth, H = canvas.clientHeight; if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
