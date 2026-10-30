@@ -257,7 +257,7 @@
   // SIGN-UP: same screen, clock running; race starts at zero
   function startSignup() {
     if (state.phase !== "landing") return;
-    state.phase = "signup"; keybar("signup");
+    state.phase = "signup"; keybar("signup"); try { AUDIO.event("clock"); } catch {}
     const secs = state.settings.countdown, C = 2 * Math.PI * 45, t0 = Date.now();
     $("#timer").classList.remove("idle"); $("#timerNum").textContent = secs;
     $(".signup .cta p").innerHTML = `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.<br>The race starts when the clock runs out.`;

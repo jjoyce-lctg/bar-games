@@ -133,7 +133,8 @@
     if (!ctx) return;
     const who = slug(d.racerId || d.racer);
     switch (name) {
-      case "lobby": setCrowd(0); setMusic(true); say("welcome", { interrupt: false }); break;
+      case "lobby": setCrowd(0); setMusic(true); break;
+      case "clock": say("welcome"); break;
       case "marks": setMusic(false); setCrowd(0.3); say("marks"); break;
       case "set": beep(); setCrowd(0.35); say("set"); break;
       case "go": horn(); cheer(0.7); crowdBurst(0.6, 1500); setCrowd(0.55); say("go"); break;
