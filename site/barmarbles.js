@@ -60,21 +60,28 @@ const COURSES = {
     // 1. opening run with two bends, ending in a kick (jump 1)
     segs.push({ points: [V(0, 96, 0), V(0, 94, 10), V(1, 89, 24), V(8, 83, 38), V(24, 79, 48), V(42, 76, 44), V(52, 71, 30), V(51, 67.5, 20), V(50, 64.5, 12)], kick: true });
     // 2. landing bowl (wider), into the spiral: enters heading -x at (10,57,0), exits heading +z at (26,30,-16)
-    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(28, 57, -10), V(20, 56.5, -5), V(14, 56.1, -2), ...helix(10, -16, 12, 56, 26, 1.75, 30, Math.PI / 2, 1)], wide: true, r: 1.55, pegs: [0.45, 0.72] });
+    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 59, -5), V(43.5, 58, -11), V(38, 57.3, -13), V(30, 57, -9), V(24, 56.6, -3.5), V(19.9, 56.3, -2.2), V(14, 56, -2)], wide: true, r: 1.55 });
+    // 2b. the tornado: a wide hyperbolic funnel right above the spiral. The whole field swirls here and the start grid stops mattering.
+    segs.push({ funnel: { center: V(8, 50.3, -14.2), rTop: 13.6, rHole: 2.6, yHole: 40.6, turns: 3, dir: 1, wall: 5, entryAngle: Math.atan2(-2 + 14.2, 14 - 8) } });
+    // 2c. out of the hole and into the spiral
+    segs.push({ points: [V(8, 38, -14.2), V(8.9, 35.5, -14.5), V(11.2, 33.4, -15.2), V(14, 32.5, -15.8), V(18, 32, -13), V(19.8, 31.6, -8.5), V(17, 31.2, -5), V(13.5, 31.1, -4.2)], tube: true });
+    // first half turn of the spiral is a closed tube (marbles arrive fast out of the tornado), then it opens up
+    segs.push({ points: [...helix(10, -16, 12, 31, 22.4, 0.5, 10, Math.PI / 2, 1)], tube: true });
+    segs.push({ points: [...helix(10, -16, 12, 22.4, 1, 1.25, 22, Math.PI / 2 + Math.PI, 1)], wide: true, r: 1.55, pegs: [0.35, 0.68] });
     // 3. twist: a closed tube that rolls two full turns while dropping down a straight
-    segs.push({ points: [V(22, 25.2, -12), V(22, 23, -6), V(22, 19, 1), V(22, 15.5, 7), V(22, 14.3, 10)], tube: true, roll: 2 });
+    segs.push({ points: [V(22, 0.2, -12), V(22, -2, -6), V(22, -6, 1), V(22, -9.5, 7), V(22, -10.7, 10)], tube: true, roll: 2 });
     // 4. big sweep back across the course, ending in a kick (jump 2)
-    segs.push({ points: [V(21.6, 13.4, 13), V(20, 12, 20), V(8, 9.5, 32), V(-16, 6.5, 36), V(-40, 3.5, 28), V(-62, 0, 6), V(-66, -2.5, -8), V(-64, -5, -18), V(-61, -7.5, -26)], kick: true, spinners: [0.55] });
+    segs.push({ points: [V(21.6, -11.6, 13), V(20, -13, 20), V(8, -15.5, 32), V(-16, -18.5, 36), V(-40, -21.5, 28), V(-62, -25, 6), V(-66, -27.5, -8), V(-64, -30, -18), V(-61, -32.5, -26)], kick: true, spinners: [0.55] });
     // 5. landing, chicane and finish straight
-    segs.push({ points: [V(-59.7, -10.5, -29.4), V(-57, -13, -37), V(-50, -15.5, -44), V(-37, -17, -46), V(-18, -18.5, -38), V(-10, -19.5, -28.2), V(-4, -20, -27)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
+    segs.push({ points: [V(-59.7, -35.5, -29.4), V(-57, -38, -37), V(-50, -40.5, -44), V(-37, -42, -46), V(-18, -43.5, -38), V(-10, -44.5, -28.2), V(-4, -45, -27)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
     // 6. the funnel: the whole field swirls into one bowl and drops through the hole. Leaders lose their gap here.
-    segs.push({ funnel: { center: V(2, -27.3, -33), rTop: 10, rHole: 1.7, yHole: -37, turns: 2, dir: -1, entryAngle: Math.atan2(-27 + 33, -4 - 2) } });
+    segs.push({ funnel: { center: V(2, -52.3, -33), rTop: 10, rHole: 2.2, yHole: -62, turns: 2, dir: -1, entryAngle: Math.atan2(-27 + 33, -4 - 2) } });
     // 7. the drop: closed tube straight down out of the hole, curling out toward the ledge
-    segs.push({ points: [V(2, -41, -33.3), V(3, -45, -35.5), V(7, -48.5, -38.5), V(13, -50.5, -40)], tube: true });
+    segs.push({ points: [V(2, -66, -33.3), V(3, -70, -35.5), V(7, -73.5, -38.5), V(13, -75.5, -40)], tube: true });
     // 8. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Knocked off here = respawn at the funnel.
-    segs.push({ points: [V(20, -52, -40), V(36, -55, -40), V(50, -57.5, -40)], open: true, r: 1.6, arc: 50, spinners: [0.55], bumpers: [0.22] });
+    segs.push({ points: [V(20, -77, -40), V(36, -80, -40), V(50, -82.5, -40)], open: true, r: 1.6, arc: 50, spinners: [0.55], bumpers: [0.22] });
     // 9. finish straight
-    segs.push({ points: [V(60, -59, -40), V(72, -60, -40), V(84, -61, -40)], wide: true });
+    segs.push({ points: [V(60, -84, -40), V(72, -85, -40), V(84, -86, -40)], wide: true });
     joinSegments(segs);
     return { segments: segs, name: "Classic", spiral: { center: V(10, 44, -16), radius: 16 } };
   },
@@ -90,22 +97,22 @@ function stripeTexture(accent, dark = false) {
 // Build a funnel: a bowl (surface of revolution) with a short wall ring at the rim, open where the track enters. Samples spiral from the rim to the hole.
 function buildFunnel(seg, accent, segIndex) {
   const F = seg.funnel, c = F.center, yTop = c.y, depth = yTop - F.yHole;
-  const prof = (r) => F.yHole + depth * Math.pow(Math.max(0, (r - F.rHole) / (F.rTop - F.rHole)), 0.55); // steep near the hole, shallow at the rim
-  const RINGS = 22, SEGS = 56, pos = [], uvs = [], idx = [];
-  for (let i = 0; i <= RINGS; i++) { const r = F.rTop - (F.rTop - F.rHole) * (i / RINGS), y = prof(r); for (let j = 0; j <= SEGS; j++) { const a = (j / SEGS) * Math.PI * 2; pos.push(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r); uvs.push(j / SEGS * 6, i / RINGS); } }
+  const cc = depth / (1 / F.rHole - 1 / F.rTop); const prof = (r) => yTop - cc * (1 / Math.max(F.rHole, r) - 1 / F.rTop); // hyperbolic: a few degrees at the rim, near vertical at the hole
+  const RINGS = 30, SEGS = 64, pos = [], uvs = [], idx = [];
+  for (let i = 0; i <= RINGS; i++) { const r = F.rTop * Math.pow(F.rHole / F.rTop, i / RINGS), y = prof(r); for (let j = 0; j <= SEGS; j++) { const a = (j / SEGS) * Math.PI * 2; pos.push(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r); uvs.push(j / SEGS * 6, i / RINGS); } }
   for (let i = 0; i < RINGS; i++) for (let j = 0; j < SEGS; j++) { const a = i * (SEGS + 1) + j, b = a + SEGS + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   // rim wall, with a gap around the entry
-  const base = pos.length / 3, WALL_H = 3.2, gap = 0.5;
+  const base = pos.length / 3, WALL_H = F.wall || 3.2, gap = 0.35;
   const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
   // the wall is low where the track comes in over it (the entry pipe's floor sits above this lip), full height everywhere else
-  for (let j = 0; j <= SEGS; j++) { const a = (j / SEGS) * Math.PI * 2, h = WALL_H; pos.push(c.x + Math.cos(a) * F.rTop, yTop, c.z + Math.sin(a) * F.rTop); uvs.push(j / SEGS * 6, 1); pos.push(c.x + Math.cos(a) * (F.rTop + 0.2), yTop + h, c.z + Math.sin(a) * (F.rTop + 0.2)); uvs.push(j / SEGS * 6, 1.2); }
+  for (let j = 0; j <= SEGS; j++) { const a = (j / SEGS) * Math.PI * 2, h = angDiff(a, F.entryAngle) < gap ? 1.5 : WALL_H; pos.push(c.x + Math.cos(a) * F.rTop, yTop, c.z + Math.sin(a) * F.rTop); uvs.push(j / SEGS * 6, 1); pos.push(c.x + Math.cos(a) * (F.rTop + 0.2), yTop + h, c.z + Math.sin(a) * (F.rTop + 0.2)); uvs.push(j / SEGS * 6, 1.2); }
   for (let j = 0; j < SEGS; j++) { const k = base + j * 2; idx.push(k, k + 1, k + 2, k + 2, k + 1, k + 3); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2)); geo.setIndex(idx); geo.computeVertexNormals();
   const tex = stripeTexture(accent); const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.05 })); mesh.receiveShadow = true;
   const shell = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ visible: false }));
   // samples: a spiral from the rim entry to the hole, then straight down to the hole exit
   const samples = [], tangents = [], frames = [], bank = [], n = Math.round(F.turns * 60);
-  for (let i = 0; i <= n; i++) { const t = i / n, a = F.entryAngle + F.dir * t * F.turns * Math.PI * 2, r = F.rTop - 1.2 - (F.rTop - 1.2 - F.rHole * 0.6) * t * t; samples.push(new THREE.Vector3(c.x + Math.cos(a) * r, prof(r) + 0.3, c.z + Math.sin(a) * r)); }
+  for (let i = 0; i <= n; i++) { const t = i / n, a = F.entryAngle + F.dir * t * F.turns * Math.PI * 2, r = (F.rTop - 1.2) * Math.pow(F.rHole * 0.6 / (F.rTop - 1.2), t); samples.push(new THREE.Vector3(c.x + Math.cos(a) * r, prof(r) + 0.3, c.z + Math.sin(a) * r)); }
   samples.push(new THREE.Vector3(c.x, F.yHole - 2, c.z));
   const N = samples.length - 1, up = new THREE.Vector3(0, 1, 0);
   for (let i = 0; i <= N; i++) { const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)]; const t = new THREE.Vector3().subVectors(b, a).normalize(); tangents.push(t); let side = new THREE.Vector3().crossVectors(t, up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); const down = new THREE.Vector3().crossVectors(t, side).normalize(); if (down.y > 0) { down.negate(); side.negate(); } frames.push({ side, down }); bank.push(0); }
@@ -125,8 +132,16 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
   for (let i = 0; i <= N; i++) {
     const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)];
     const t = new THREE.Vector3().subVectors(b, a).normalize(); tangents.push(t);
-    let side = new THREE.Vector3().crossVectors(t, up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize();
-    let down = new THREE.Vector3().crossVectors(t, side).normalize(); if (down.y > 0) { down.negate(); side.negate(); }
+    let side = new THREE.Vector3().crossVectors(t, up);
+    if (side.lengthSq() < 0.09 && frames.length) { // near-vertical: carry the previous frame's side across (parallel transport) so the rings never flip
+      side.copy(frames[frames.length - 1].side).addScaledVector(t, -frames[frames.length - 1].side.dot(t));
+      if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+    } else if (side.lengthSq() < 1e-4) side.set(1, 0, 0);
+    side.normalize();
+    let down = new THREE.Vector3().crossVectors(t, side).normalize();
+    if (frames.length && side.dot(frames[frames.length - 1].side) < 0) { side.negate(); down.negate(); }
+    else if (!frames.length && down.y > 0) { down.negate(); side.negate(); }
+    else if (down.y > 0.3 && Math.abs(t.y) < 0.95) { down.negate(); side.negate(); }
     frames.push({ side, down });
   }
   const bank = new Array(N + 1).fill(0);
@@ -155,7 +170,7 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
 function buildTrack(course, accent) {
   const parts = []; course.segments.forEach((sg, i) => { if (sg.funnel) { parts.push(buildFunnel(sg, accent, i)); return; } const prev = i ? course.segments[i - 1] : null; const join = prev && !prev.kick && !prev.funnel; if (join) { const ps = parts[i - 1].samples; sg.points[0] = ps[ps.length - 1].clone(); } parts.push(buildSegment(sg, accent, i, join ? parts[i - 1].R : 0, join ? parts[i - 1].endBank : 0, join ? parts[i - 1].arcDeg : PIPE_ARC)); });
   const samples = [], tangents = [], frames = [], segOf = [], jumps = [], obstacles = [], banks = [], loose = [];
-  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.obstacles.forEach((o) => obstacles.push({ ...o, i: o.i + samples.length })); p.bank.forEach((b) => banks.push(b)); if (p.loose) loose.push([samples.length - 30, samples.length + p.samples.length + 20]); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
+  parts.forEach((p, i) => { if (p.kick) jumps.push(samples.length + p.samples.length - 1); p.obstacles.forEach((o) => obstacles.push({ ...o, i: o.i + samples.length })); p.bank.forEach((b) => banks.push(b)); if (p.loose) loose.push([samples.length - 30, samples.length + p.samples.length + 50]); p.samples.forEach((s, k) => { samples.push(s); tangents.push(p.tangents[k]); frames.push(p.frames[k]); segOf.push(i); }); });
   return { parts, samples, tangents, frames, segOf, jumps, obstacles, banks, loose };
 }
 
@@ -190,13 +205,13 @@ export async function run(container, opts) {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9bb8, 1.3));
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -70; ground.receiveShadow = true; scene.add(ground);
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -95; ground.receiveShadow = true; scene.add(ground);
 
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
   C.finishT = 0.97;
-  { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) C.funnelEntry = acc + 2; if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
-  const GROUND_Y = -70;
+  C.funnels = []; { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) { C.funnels.push({ entry: acc + 2, from: acc, to: acc + p.samples.length - 3, center: C.segments[i].funnel.center }); C.funnelEntry = acc + 2; } if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
+  const GROUND_Y = -95;
   // finish arch + checkered band
   const fi = Math.floor(C.finishT * (track.samples.length - 1)), fp = track.samples[fi], ft = track.tangents[fi], ff = track.frames[fi];
   { const arch = new THREE.Group(); const post = new THREE.CylinderGeometry(0.3, 0.3, 8, 10), pm = new THREE.MeshStandardMaterial({ color: 0xffffff });
@@ -210,7 +225,7 @@ export async function run(container, opts) {
   track.parts.forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(0.08).setRestitution(0.1)));
   // funnels get a second collision skin a little below the surface so a marble dropping in fast can never tunnel through
   track.parts.filter((p) => p.funnel).forEach((p) => world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -0.4, 0).setFriction(0.08).setRestitution(0.1)));
-  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -71, 0));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -96, 0));
   // ---- obstacles: pegs (bouncy posts), bumpers (big pinball pads) and spinners (kinematic rotating bars) ----
   const spinners = []; const obsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 }), bumpMat = new THREE.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.3, emissive: 0x3a0010 });
   const floorPoint = (i, off) => { const c = track.samples[i], fr = track.frames[i], R = track.parts[track.segOf[i]].R, b = track.banks[i] || 0; const q = new THREE.Quaternion().setFromAxisAngle(track.tangents[i], b); const S = fr.side.clone().applyQuaternion(q), D = fr.down.clone().applyQuaternion(q); const th = Math.asin(THREE.MathUtils.clamp(off / R, -0.95, 0.95)); return { p: c.clone().addScaledVector(S, Math.sin(th) * R).addScaledVector(D, Math.cos(th) * R), up: D.clone().negate() }; };
@@ -264,7 +279,7 @@ export async function run(container, opts) {
     zones.push({ from: spiralStart + 10, to: spiralEnd - 10, name: "overhead" });
     track.jumps.forEach((j) => zones.push({ from: j - 28, to: j + 45, name: "jumpCam", jump: j }));
     zones.push({ from: Math.floor(N1 * 0.9), to: N1, name: "finishCam" });
-    { let acc = 0; track.parts.forEach((p) => { if (p.funnel) zones.push({ from: acc - 15, to: acc + p.samples.length - 5, name: "funnelCam" }); acc += p.samples.length; }); }
+    { let acc = 0; track.parts.forEach((p, i) => { if (p.funnel) zones.push({ from: acc - 15, to: acc + p.samples.length + 40, name: "funnelCam", center: C.segments[i].funnel.center }); acc += p.samples.length; }); }
   }
   function pickShot(prog, spread, simT) {
     const z = zones.find((z) => prog >= z.from && prog <= z.to); if (z) return z;
@@ -275,7 +290,7 @@ export async function run(container, opts) {
   const N = track.samples.length - 1;
   function progressOf(m) {
     const p = m.body.translation(); let best = m.hint, bd = Infinity;
-    const inLoose = track.loose.some(([a, b]) => m.hint >= a && m.hint <= b); for (let i = Math.max(0, m.hint - 25); i <= Math.min(N, m.hint + (inLoose ? 200 : 90)); i++) { const s = track.samples[i]; const d = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = i; } }
+    const inLoose = track.loose.some(([a, b]) => m.hint >= a && m.hint <= b); for (let i = Math.max(0, m.hint - (inLoose ? 220 : 25)); i <= Math.min(N, m.hint + (inLoose ? 200 : 90)); i++) { const s = track.samples[i]; const d = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 + (s.z - p.z) ** 2; if (d < bd) { bd = d; best = i; } }
     m.hint = best; return best;
   }
   function release() { world.removeCollider(gate, false); scene.remove(gateMesh); started = true; say("And away they go!"); audio("go"); }
@@ -300,6 +315,8 @@ export async function run(container, opts) {
       live++;
       m.prog = progressOf(m);
       if (m.prog > leadProg) { leadProg = m.prog; leader = m; }
+      // rolling resistance in the funnels (otherwise a marble can orbit the bowl forever): extra damping while inside one
+      { const inF = C.funnels.some((f) => m.prog >= f.from && m.prog <= f.to); if (inF !== m.inFunnel) { m.inFunnel = inF; m.body.setLinearDamping(inF ? 0.32 : 0.004); } }
       // off the track (fell to the ground, or landed somewhere that isn't where it should be): back to the top
       const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60) || track.loose.some(([a, b]) => m.prog >= a && m.prog <= b);
       if (t.y < GROUND_Y + 1.5 || (started && !nearJump && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
@@ -320,7 +337,7 @@ export async function run(container, opts) {
         else if (order.length <= 3) say(`${first(m.player)} in ${["", "", "second", "third"][order.length]}!`);
       }
     }
-    if (!calledFunnel && C.funnelEntry && leadProg >= C.funnelEntry) { calledFunnel = true; say("Into the funnel! Anyone's race now.", 2800); audio("stretch", { racer: "marble" }); }
+    C.funnels.forEach((f, k) => { if (!f.called && leadProg >= f.entry) { f.called = true; say(k === 0 ? "Into the tornado! Everybody back in it." : "Into the funnel! Anyone's race now.", 2800); audio("stretch", { racer: "marble" }); } });
     if (!calledLedge && C.ledgeFrom && leadProg >= C.ledgeFrom) { calledLedge = true; say("The Ledge. Hold on!", 2200); }
     // race over once the top places are in (or everyone is): fade out, stop simulating, show the results
     const want = Math.min(placesToShow, marbles.length);
@@ -337,7 +354,7 @@ export async function run(container, opts) {
       const spread = liveProgs.length > 2 ? liveProgs[0] - liveProgs[Math.floor(liveProgs.length / 2)] : 0;
       const want = order.length ? { name: "finishCam" } : pickShot(focus.prog, spread, simTime);
       let cut = false;
-      if (want.name !== shot.name && simTime - shot.lastChange > 2.5) { shot.name = want.name; shot.lastChange = simTime; cut = true;
+      if ((want.name !== shot.name || (want.center && want.center !== shot.center)) && simTime - shot.lastChange > 2.5) { shot.name = want.name; shot.center = want.center || null; shot.lastChange = simTime; cut = true;
         if (want.name === "tracksidePan") { const ahead = track.samples[Math.min(N, focus.prog + 34)], f2 = track.frames[Math.min(N, focus.prog + 34)]; shot.anchor.copy(ahead).addScaledVector(f2.side, 11).add(new THREE.Vector3(0, 7, 0)); }
         if (want.name === "jumpCam") { const j = track.samples[want.jump], fj = track.frames[want.jump], tj = track.tangents[want.jump]; shot.anchor.copy(j).addScaledVector(fj.side, 22).addScaledVector(tj, 8).add(new THREE.Vector3(0, 4, 0)); }
         if (want.name === "finishCam") { shot.anchor.copy(fp).addScaledVector(ft, 16).addScaledVector(ff.side, 8).add(new THREE.Vector3(0, 9, 0)); }
@@ -347,7 +364,7 @@ export async function run(container, opts) {
       else if (shot.name === "tracksidePan") { desired = shot.anchor; look = p.clone(); }
       else if (shot.name === "jumpCam") { desired = shot.anchor; look = p.clone(); }
       else if (shot.name === "finishCam") { desired = shot.anchor; look = p.clone(); }
-      else if (shot.name === "funnelCam") { const F = C.segments.find((g) => g.funnel).funnel; desired = F.center.clone().add(new THREE.Vector3(-14, 24, 16)); look = F.center.clone().add(new THREE.Vector3(0, -4, 0)); }
+      else if (shot.name === "funnelCam") { const fc = shot.center || C.funnels[0].center; desired = fc.clone().add(new THREE.Vector3(-16, 26, 18)); look = fc.clone().add(new THREE.Vector3(0, -4, 0)); }
       else if (shot.name === "wide") { desired = p.clone().addScaledVector(tg, -34).add(new THREE.Vector3(0, 20, 0)); look = p.clone().addScaledVector(tg, -8); }
       else { desired = p.clone().addScaledVector(tg, -14).add(new THREE.Vector3(0, 7, 0)); look = p.clone().addScaledVector(tg, 9); }
       if (!camInit || cut) { camPos.copy(desired); camLook.copy(look); camInit = true; }
@@ -364,7 +381,7 @@ export async function run(container, opts) {
     prog.style.width = `${Math.min(100, 100 * leadProg / (C.finishT * N)).toFixed(1)}%`; left.textContent = live;
     raf = requestAnimationFrame(step);
   }
-  window.__shot = () => shot.name; window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), jumpResets: marbles.reduce((a, m) => a + (m.jumpResets || 0), 0), started, N, finishAt: Math.round(C.finishT * N), parts: track.parts.map((p) => p.samples.length), simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
+  window.__track = track; window.__marbles = marbles; window.__world = world; window.__shot = () => shot.name; window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), jumpResets: marbles.reduce((a, m) => a + (m.jumpResets || 0), 0), started, N, finishAt: Math.round(C.finishT * N), parts: track.parts.map((p) => p.samples.length), simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
   let lastDt = 1 / 60;
   raf = requestAnimationFrame(step);
   return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); try { renderer.dispose(); } catch {} }, order: () => order.map((m) => m.player) };
