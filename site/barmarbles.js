@@ -93,11 +93,21 @@ const COURSES = {
 };
 export const COURSE_NAMES = Object.keys(COURSES);
 
+// ---- world art (site/world/*). Loaded once per page; anything that fails to load falls back to the flat canvas look.
+const WORLD_DIR = new URL("./world/", import.meta.url).href;
+const WORLD_FILES = { sky: "sky.jpg", floor: "floor.jpg", pipe: "pipe.jpg", banner: "banner.jpg", crowd: "crowd.jpg", beer: "neon-beer.png", cocktail: "neon-cocktail.png", bolt: "neon-bolt.png", arrow: "neon-arrow.png", star: "neon-star.png", flag: "neon-flag.png" };
+const WORLD = {}; // name -> HTMLImageElement once loaded
+const worldReady = Promise.all(Object.entries(WORLD_FILES).map(([k, f]) => new Promise((res) => { const im = new Image(); im.onload = () => { WORLD[k] = im; res(); }; im.onerror = () => res(); im.src = WORLD_DIR + f; })));
+function imgTexture(name, { repeat, wrap = true } = {}) {
+  if (!WORLD[name]) return null; const tex = new THREE.Texture(WORLD[name]); tex.needsUpdate = true; tex.colorSpace = THREE.SRGBColorSpace;
+  if (wrap) { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; } if (repeat) tex.repeat.set(repeat[0], repeat[1]); tex.anisotropy = 4; return tex;
+}
 function stripeTexture(accent, dark = false) {
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const g = cv.getContext("2d");
-  g.fillStyle = dark ? "#cfd9ea" : "#dfe6f2"; g.fillRect(0, 0, 256, 64); g.fillStyle = "#b9c4d8"; g.fillRect(0, 0, 256, 7); g.fillRect(0, 57, 256, 7);
-  g.fillStyle = "#cfd8e8"; for (let x = 0; x < 256; x += 32) g.fillRect(x, 7, 2, 50); g.fillStyle = accent; g.fillRect(0, 30, 256, 4);
-  const tex = new THREE.CanvasTexture(cv); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; tex.colorSpace = THREE.SRGBColorSpace; return tex;
+  if (WORLD.pipe) { g.drawImage(WORLD.pipe, 0, 0, 256, 64); if (dark) { g.fillStyle = "rgba(120,140,170,0.18)"; g.fillRect(0, 0, 256, 64); } }
+  else { g.fillStyle = dark ? "#cfd9ea" : "#dfe6f2"; g.fillRect(0, 0, 256, 64); g.fillStyle = "#cfd8e8"; for (let x = 0; x < 256; x += 32) g.fillRect(x, 7, 2, 50); }
+  g.fillStyle = "#b9c4d8"; g.fillRect(0, 0, 256, 7); g.fillRect(0, 57, 256, 7); g.fillStyle = accent; g.fillRect(0, 30, 256, 4);
+  const tex = new THREE.CanvasTexture(cv); tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return tex;
 }
 // Build a funnel: a bowl (surface of revolution) with a short wall ring at the rim, open where the track enters. Samples spiral from the rim to the hole.
 function buildFunnel(seg, accent, segIndex) {
@@ -232,6 +242,7 @@ function makeLabel(text, color) {
 export async function run(container, opts) {
   injectCss();
   await RAPIER.init();
+  await Promise.race([worldReady, new Promise((r) => setTimeout(r, 4000))]); // art is nice to have, never a reason to hold the race
   const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 4, render = true, turbo = false, stats = false } = opts;
   let simTime = 0;
   const accent = venue.color_accent || "#ffcd00";
@@ -245,14 +256,16 @@ export async function run(container, opts) {
   renderer.setPixelRatio(Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   const skyTop = new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#6fb6ff"), 0.55), skyBot = new THREE.Color("#e9f2ff");
-  { const cv = document.createElement("canvas"); cv.width = 2; cv.height = 256; const g = cv.getContext("2d"); const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "#" + skyTop.getHexString()); gr.addColorStop(1, "#" + skyBot.getHexString()); g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
-    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; }
-  scene.fog = new THREE.Fog(skyBot, 150, 320);
+  const dusk = !!WORLD.sky; // Chicago skyline at dusk wraps the whole scene when the art loaded
+  if (dusk) { const t = imgTexture("sky", { wrap: false }); t.mapping = THREE.EquirectangularReflectionMapping; scene.background = t; scene.backgroundIntensity = 1; scene.fog = new THREE.Fog(new THREE.Color("#2b3470"), 170, 360); }
+  else { const cv = document.createElement("canvas"); cv.width = 2; cv.height = 256; const g = cv.getContext("2d"); const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "#" + skyTop.getHexString()); gr.addColorStop(1, "#" + skyBot.getHexString()); g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; scene.fog = new THREE.Fog(skyBot, 150, 320); }
   const camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.1, 600);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9bb8, 1.3));
-  const sun = new THREE.DirectionalLight(0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  scene.add(new THREE.HemisphereLight(dusk ? 0xdcd2ff : 0xffffff, dusk ? 0x5a3f2a : 0x8a9bb8, 1.3));
+  const sun = new THREE.DirectionalLight(dusk ? 0xffd9b0 : 0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -108; ground.receiveShadow = true; scene.add(ground);
+  const floorTex = imgTexture("floor", { repeat: [36, 36] });
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), floorTex ? new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.75, metalness: 0.05 }) : new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -108; ground.receiveShadow = true; scene.add(ground);
 
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
@@ -263,9 +276,28 @@ export async function run(container, opts) {
   const fi = Math.floor(C.finishT * (track.samples.length - 1)), fp = track.samples[fi], ft = track.tangents[fi], ff = track.frames[fi];
   { const arch = new THREE.Group(); const post = new THREE.CylinderGeometry(0.3, 0.3, 8, 10), pm = new THREE.MeshStandardMaterial({ color: 0xffffff });
     for (const s of [-1, 1]) { const m = new THREE.Mesh(post, pm); m.position.copy(fp).addScaledVector(ff.side, s * (PIPE_R + 0.6)).add(new THREE.Vector3(0, 2, 0)); arch.add(m); }
-    const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const g = cv.getContext("2d"); for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++) { g.fillStyle = (x + y) % 2 ? "#fff" : "#111"; g.fillRect(x * 16, y * 16, 16, 16); }
-    const bt = new THREE.CanvasTexture(cv); const banner = new THREE.Mesh(new THREE.BoxGeometry(2 * PIPE_R + 1.8, 1.2, 0.3), new THREE.MeshStandardMaterial({ map: bt })); banner.position.copy(fp).add(new THREE.Vector3(0, 6, 0)); banner.lookAt(banner.position.clone().add(ft)); arch.add(banner);
+    const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 342; const g = cv.getContext("2d");
+    if (WORLD.banner) { g.drawImage(WORLD.banner, 0, 0, 1024, 342); g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#ffffff"; g.font = "bold 92px Arial Black, Impact, sans-serif"; g.fillText("FINISH", 512, 135); g.fillStyle = "#f3c74a"; g.font = "bold 46px Arial, sans-serif"; g.fillText((venue.name || "LAST CALL TAVERN GAMES").toUpperCase(), 512, 228); }
+    else for (let x = 0; x < 64; x++) for (let y = 0; y < 21; y++) { g.fillStyle = (x + y) % 2 ? "#fff" : "#111"; g.fillRect(x * 16, y * 16, 16, 16); }
+    const bt = new THREE.CanvasTexture(cv); bt.colorSpace = THREE.SRGBColorSpace; const bw = 2 * PIPE_R + 3.4, banner = new THREE.Mesh(new THREE.BoxGeometry(bw, bw / 3, 0.3), [null, null, null, null, new THREE.MeshStandardMaterial({ map: bt, emissive: 0xffffff, emissiveMap: bt, emissiveIntensity: 0.35 }), new THREE.MeshStandardMaterial({ map: bt, emissive: 0xffffff, emissiveMap: bt, emissiveIntensity: 0.35 })].map((m) => m || new THREE.MeshStandardMaterial({ color: 0x1b2340 })));
+    banner.position.copy(fp).add(new THREE.Vector3(0, 6.6, 0)); banner.lookAt(banner.position.clone().add(ft)); arch.add(banner);
     scene.add(arch); }
+  // neon signs: billboards hung around the set pieces so each zone has a landmark the camera can read
+  const neons = [];
+  const neon = (name, pos, size = 7) => { const tex = imgTexture(name, { wrap: false }); if (!tex) return; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false })); sp.position.copy(pos); sp.scale.set(size, size, 1); sp.userData.phase = Math.random() * 6.3; sp.userData.size = size; scene.add(sp); neons.push(sp); };
+  { const s0 = track.samples[Math.min(track.samples.length - 1, Math.round(C.respawnAt || 10))]; neon("beer", s0.clone().add(new THREE.Vector3(-7, 9, 0)), 8);
+    const kicks = []; { let acc = 0; track.parts.forEach((p, i) => { if (C.segments[i].kick) kicks.push(acc + p.samples.length - 1); acc += p.samples.length; }); }
+    kicks.forEach((k, i) => { const s = track.samples[k], f = track.frames[k]; neon("bolt", s.clone().addScaledVector(f.side, i % 2 ? 7 : -7).add(new THREE.Vector3(0, 8, 0)), 7); });
+    C.funnels.forEach((f) => neon("arrow", f.center.clone().add(new THREE.Vector3(0, 14, -f.rTop - 4)), 9));
+    if (C.plinkoCenter) neon("cocktail", C.plinkoCenter.clone().add(new THREE.Vector3(-13, 9, 0)), 8);
+    if (C.ledgeFrom) { const s = track.samples[Math.min(track.samples.length - 1, C.ledgeFrom + 30)]; neon("star", s.clone().add(new THREE.Vector3(0, 10, -8)), 7); }
+    neon("flag", fp.clone().addScaledVector(ff.side, -(PIPE_R + 6)).add(new THREE.Vector3(0, 9, 0)), 8); }
+  // crowd panels: additive so the black art adds nothing and only the rim-lit silhouettes show
+  { const ct = imgTexture("crowd", { wrap: false }); if (ct) { const cm = new THREE.MeshBasicMaterial({ map: ct, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }); cm.color.setRGB(1.6, 1.6, 1.6);
+      const panel = (pos, lookAt, w = 70) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 3), cm); m.position.copy(pos); m.lookAt(lookAt); scene.add(m); };
+      if (C.plinkoCenter) panel(C.plinkoCenter.clone().add(new THREE.Vector3(0, -2, -22)), C.plinkoCenter.clone().add(new THREE.Vector3(0, -2, 30)), 60);
+      panel(fp.clone().addScaledVector(ft, -28).addScaledVector(ff.side, -36).add(new THREE.Vector3(0, 2, 0)), fp.clone().addScaledVector(ft, -28).addScaledVector(ff.side, 30).add(new THREE.Vector3(0, 2, 0)), 60);
+    } }
 
   // ---- physics ----
   const world = new RAPIER.World({ x: 0, y: -36, z: 0 });
@@ -458,7 +490,7 @@ export async function run(container, opts) {
     }
     // render
     const W = canvas.clientWidth, H = canvas.clientHeight; if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
-    if (render) renderer.render(scene, camera);
+    if (render) { for (const sp of neons) { const k = 1 + 0.05 * Math.sin(simTime * 2.1 + sp.userData.phase); sp.scale.set(sp.userData.size * k, sp.userData.size * k, 1); } renderer.render(scene, camera); }
     if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); statsEl.textContent = `fps ${(1000 / (perf.frameMs / f)).toFixed(0)}  frame ${(perf.frameMs / f).toFixed(1)} ms  physics ${(perf.phys / f).toFixed(1)} ms  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  marbles live ${live}  sim ${simTime.toFixed(1)}s`; perf.phys = perf.steps = perf.frames = perf.frameMs = 0; perf.last = performance.now(); }
     // HUD
     const liveSorted = marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog);
