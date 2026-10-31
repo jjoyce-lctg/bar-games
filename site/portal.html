@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Last Call Tavern Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=__BUILD__">
+<style>
+  body { min-height: 100vh; display: flex; flex-direction: column; background: radial-gradient(1200px 600px at 50% -10%, rgba(255,205,0,.12), transparent 60%), var(--bg); }
+  .wrap { max-width: 980px; margin: auto; padding: 2rem 1.25rem 3rem; width: 100%; }
+  .hero { text-align: center; margin-bottom: 2rem; }
+  .hero .brand { font-family: var(--display); font-size: clamp(2.6rem, 7vw, 4.5rem); line-height: 1; letter-spacing: .04em; }
+  .hero .brand span { color: var(--accent); }
+  .hero .mascots { display: flex; justify-content: center; gap: .6rem; margin: 1rem 0 .4rem; }
+  .hero .mascots img { height: 84px; }
+  .hero p { color: var(--muted); margin: .3rem 0 0; }
+  .login-box { max-width: 420px; margin: 0 auto; }
+  .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+  .choice { display: block; text-decoration: none; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.5rem; transition: transform .12s, border-color .12s; }
+  .choice:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .choice .ico { font-size: 2.4rem; margin-bottom: .6rem; }
+  .choice h2 { margin-bottom: .3rem; }
+  .choice p { color: var(--muted); margin: 0; font-size: .92rem; }
+  .choice.locked { opacity: .35; pointer-events: none; }
+  .who { text-align: center; color: var(--muted); margin-top: 1.5rem; font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="brand">LAST CALL <span>TAVERN GAMES</span></div>
+    <div class="mascots"><img src="sprites/hotdog/icon.png" alt=""><img src="sprites/beer/icon.png" alt=""><img src="sprites/pretzel/icon.png" alt=""><img src="sprites/pizza/icon.png" alt=""></div>
+    <p id="tagline">Sign in to continue.</p>
+  </div>
+
+  <section id="viewLogin" class="card login-box stack">
+    <div id="loginError" class="error hidden"></div>
+    <div><label>Username or email</label><input id="username" autocomplete="username" autocapitalize="none"></div>
+    <div><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    <button id="btnLogin" class="btn primary big" style="width:100%">Log in</button>
+    <p id="mockNote" class="muted hidden" style="font-size:.85rem">Preview mode. Try <b>dj</b> / <b>dj</b>, <b>manager</b> / <b>manager</b> or <b>admin</b> / <b>admin</b>.</p>
+  </section>
+
+  <section id="viewChoices" class="hidden">
+    <div class="choices">
+      <a class="choice" id="cShow" href="showrunner.html"><div class="ico">🎤</div><h2>Showrunner</h2><p>Run the games on the TV. Pick the bar, start a race, press Enter.</p></a>
+      <a class="choice" id="cPrize" href="staff.html"><div class="ico">🏆</div><h2>Prize Redemption</h2><p>Look up a guest by phone number and redeem their prize. Managers only.</p></a>
+      <a class="choice" id="cAdmin" href="admin.html"><div class="ico">⚙️</div><h2>Admin</h2><p>Entries, SMS list, prizes, bars, racers and logins.</p></a>
+    </div>
+    <div class="who">Signed in as <b id="whoName"></b> (<span id="whoRole"></span>) · <a href="#" id="btnLogout">Log out</a></div>
+  </section>
+</div>
+
+<script src="config.js?v=__BUILD__"></script><script src="vendor/supabase.js?v=__BUILD__"></script><script src="common.js?v=__BUILD__"></script>
+<script>
+(async function () {
+  const { api, MOCK, $ } = window.BG;
+  if (MOCK) { $("#mockNote").classList.remove("hidden"); ["cShow", "cPrize", "cAdmin"].forEach((id) => { const a = $("#" + id); a.href += "?mock=1"; }); }
+  const ROLE = { dj: "DJ", manager: "Manager", admin: "Admin" };
+  function showChoices(me) {
+    $("#viewLogin").classList.add("hidden"); $("#viewChoices").classList.remove("hidden");
+    $("#tagline").textContent = "Where to?";
+    $("#whoName").textContent = me.username; $("#whoRole").textContent = ROLE[me.role] || me.role;
+    $("#cPrize").classList.toggle("locked", !["manager", "admin"].includes(me.role));
+    $("#cAdmin").classList.toggle("locked", me.role !== "admin");
+  }
+  async function doLogin() {
+    const err = $("#loginError"); err.classList.add("hidden"); $("#btnLogin").disabled = true;
+    try { showChoices(await api.signIn($("#username").value, $("#password").value)); } catch (e) { err.textContent = e.message || "Login failed."; err.classList.remove("hidden"); } finally { $("#btnLogin").disabled = false; }
+  }
+  $("#btnLogin").onclick = doLogin; $("#password").addEventListener("keydown", (e) => e.key === "Enter" && doLogin()); $("#username").addEventListener("keydown", (e) => e.key === "Enter" && $("#password").focus());
+  $("#btnLogout").onclick = async (e) => { e.preventDefault(); await api.signOut(); location.reload(); };
+  let me = null; try { me = await api.me(); } catch {}
+  if (me) showChoices(me);
+})();
+</script>
+</body>
+</html>

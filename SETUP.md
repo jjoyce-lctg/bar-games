@@ -14,7 +14,7 @@ That is all for Supabase. Note: the free tier pauses a project after 7 days with
 ## 2. GitHub (hosts the web pages)
 
 1. Go to github.com and create an account (or use the group's if one exists).
-2. Tell Claude the account name. Claude will create the repo, push the site, and turn on GitHub Pages. Your pages will be at `https://<account>.github.io/bar-games/`.
+2. Tell Claude the account name. Claude will create the repo, push the site, and turn on GitHub Pages. Your pages will be at `https://<account>.github.io/bar-games/`. The root page is a public landing page; the staff login lives at `portal.html`. Venue logos are in `site/brand/` (from lastcalltaverngroup.com) and the landing screenshots in `site/shots/`.
 
 Live addresses (custom domain, set up 2026-10-31; the github.io address redirects there): portal `https://lastcalltaverngames.com`, Showrunner `https://lastcalltaverngames.com/showrunner.html`, prize redemption `https://lastcalltaverngames.com/staff.html`, admin `https://lastcalltaverngames.com/admin.html`. DNS is at GoDaddy (four A records to GitHub Pages plus a `www` CNAME to `jjoyce-lctg.github.io`); the domain itself is set under the repo's Settings > Pages with Enforce HTTPS on. QR codes are built from the page's own address, so they use the domain automatically.
 3. Later, when you buy a domain, point it at GitHub Pages (Claude will walk through it) and the QR codes will use the short domain automatically.
