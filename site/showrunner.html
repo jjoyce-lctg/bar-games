@@ -130,6 +130,7 @@
   <div><label>Racers (pick 4)</label><div id="sRacers" class="stack" style="gap:.4rem"></div></div>
   <div><label>Lobby music</label><select id="sMusic"></select></div>
   <div><label>Track theme</label><select id="sTheme"></select></div>
+  <div><label>Graphics (Bar Marbles)</label><select id="sGraphics"><option value="auto">Auto (recommended)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
   <div class="row"><button id="sMute" class="btn small">Mute</button><button id="sFull" class="btn small">Fullscreen</button></div>
   <div class="row"><a href="index.html" class="btn small">Portal</a><button id="sLogout" class="btn small">Log out</button></div>
   <button id="sClose" class="btn primary" style="width:100%">Close (S)</button>
@@ -195,14 +196,14 @@
   // ---------- settings panel ----------
   const settings = $("#settings");
   function openSettings() { $("#sPrize").value = state.settings.prize; $("#sCountdown").value = state.settings.countdown; $("#sGame").value = state.settings.gameKey; renderRacerPicker(); $("#sGame").onchange = renderRacerPicker;
-    $("#sTheme").innerHTML = Object.entries(RACE.THEMES).map(([k, t]) => `<option value="${k}">${esc(t.name)}</option>`).join(""); $("#sTheme").value = state.settings.theme || "classic";
+    $("#sTheme").innerHTML = Object.entries(RACE.THEMES).map(([k, t]) => `<option value="${k}">${esc(t.name)}</option>`).join(""); $("#sTheme").value = state.settings.theme || "classic"; $("#sGraphics").value = state.settings.graphics || "auto";
     const mo = AUDIO.musicOptions(); $("#sMusic").innerHTML = `<option value="random">Random (pick one per night)</option>` + mo.map((k, i) => `<option value="${k}">Track ${i + 1}</option>`).join(""); $("#sMusic").value = AUDIO.musicChoice(); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
   async function closeSettings() {
     const picked = $$("#sRacers input:checked").map((cb) => cb.value);
     if ($("#sGame").value !== "barmarbles" && picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
     const rosterChanged = JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game));
     const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
-    state.settings.racers = picked; state.settings.theme = $("#sTheme").value; if ($("#sMusic").value !== AUDIO.musicChoice()) AUDIO.setMusicChoice($("#sMusic").value);
+    state.settings.racers = picked; state.settings.theme = $("#sTheme").value; state.settings.graphics = $("#sGraphics").value; if ($("#sMusic").value !== AUDIO.musicChoice()) AUDIO.setMusicChoice($("#sMusic").value);
     state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings();
     if (venueChanged) setVenue($("#sVenue").value);
     $("#stPrize").textContent = prizeText(); settings.classList.remove("on");
@@ -336,7 +337,7 @@
     const players = field.map((e) => ({ id: e.id, name: e.name, color: hexOf(e.pick), tag: tagOf(e.name) }));
     $("#stFootLeft").innerHTML = ""; $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     const mod = await import("./barmarbles.js?v=__BUILD__");
-    state.raceCtl = await mod.run($("#raceHost"), { players, venue: state.venue, course: "classic", placesToShow: 5,
+    state.raceCtl = await mod.run($("#raceHost"), { players, venue: state.venue, course: "classic", placesToShow: 5, quality: state.settings.graphics || "auto",
       onDone: async (results) => {
         if (!demo) { try { await api.finishRoundPlaces(state.round.id, results.slice(0, 10).map((p) => p.id)); } catch (e) { toast(e.message); } }
         state.phase = "results"; keybar("results"); try { AUDIO.event("results"); } catch {}

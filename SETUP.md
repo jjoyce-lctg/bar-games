@@ -77,7 +77,9 @@ Run `supabase/005_barmarbles.sql` once in Supabase > SQL Editor. It adds the gam
 
 How it runs: in the Showrunner, use the up/down keys on the "Wanna play a game?" screen to switch to Bar Marbles. Guests scan, pick a marble colour (returning phone numbers get their last colour by default), enter name and phone. Each entry is a marble with the guest's two-letter tag on it. The race ends when the top 5 are in (or 20 s after the winner); places are recorded, the winner gets the prize exactly like the mascot race, and the results screen holds for 16 s before the leaderboard.
 
-Points: 1 for playing, +10 win, +5 second, +3 third. Need at least 2 marbles to start. Press T on the Bar Marbles landing screen for a demo race with made-up marbles (nothing recorded); D during a race shows the performance overlay.
+Points: 1 for playing, +10 win, +5 second, +3 third. Need at least 2 marbles to start. Press T on the Bar Marbles landing screen for a demo race with made-up marbles (nothing recorded); D during a race shows the performance overlay (frame rate, where the time goes, render size, which GPU Chrome is using, and the graphics tier in use).
+
+Graphics: Settings (S) has a Graphics choice for Bar Marbles, saved per laptop. Auto (the default) picks Low when Chrome is on Windows' software renderer and High otherwise, and drops to Low on its own if a machine cannot hold about 25 fps. Low has no shadows or antialiasing and starts at 1280 wide; Medium has plain shadows and antialiasing; High has soft shadows. Every tier also scales the 3D render size up and down to hold about 30 fps (never below 800 px wide), so a slow laptop gets a softer picture rather than a stuttering one. The scoreboard and banners are HTML and stay sharp regardless. Physics runs at 120 Hz with no continuous collision detection; that is what keeps a bunched field cheap.
 
 Testing: `test/bmbatch.js` runs headless races and writes fairness stats; `test/bme2e.js` runs the whole sign-up to results flow in mock mode. Press D in `barmarbles-preview.html` for the performance overlay.
 

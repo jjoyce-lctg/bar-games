@@ -243,7 +243,7 @@ export async function run(container, opts) {
   injectCss();
   await RAPIER.init();
   await Promise.race([worldReady, new Promise((r) => setTimeout(r, 4000))]); // art is nice to have, never a reason to hold the race
-  const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 8, render = true, turbo = false, stats = false } = opts;
+  const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 8, render = true, turbo = false, stats = false, quality = "auto" } = opts;
   let simTime = 0;
   const accent = venue.color_accent || "#ffcd00";
   container.innerHTML = `<div class="bm-wrap" style="--accent:${accent}"><canvas></canvas><div class="bm-hud"><div class="bm-comm"></div><div class="bm-board"><h3>Bar Marbles</h3><div class="rows"></div><div class="prog"><i></i></div></div><div class="bm-count"><b id="bmLeft">0</b> still rolling</div><div class="bm-big"></div><div class="bm-fade"></div><div class="bm-final"></div><div class="bm-stats"></div></div></div>`;
@@ -256,8 +256,12 @@ export async function run(container, opts) {
   // "lite" = no antialias, no shadows, Lambert shading, canvas capped at 1280 wide. Chosen up front when the renderer is software, and engaged at runtime if frames stay slow.
   let gpuName = "?"; { try { const c = document.createElement("canvas"), gl = c.getContext("webgl2") || c.getContext("webgl"); const ext = gl && gl.getExtension("WEBGL_debug_renderer_info"); if (gl) gpuName = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch {} }
   const softwareGpu = /basic render driver|swiftshader|llvmpipe|software|mesa offscreen/i.test(gpuName);
-  const q = new URLSearchParams(location.search).get("quality");
-  let lite = q ? q === "lite" : softwareGpu;
+  // Tiers: low = no antialias, no shadows, flat shading, starts at 1280 wide; medium = antialias, plain 1024 shadows, 1920; high = soft 2048 shadows, 1920.
+  // auto = low on a software renderer, otherwise high with a runtime drop to low if frames stay slow. All tiers keep the dynamic resolution scaler.
+  const q = new URLSearchParams(location.search).get("quality") || quality;
+  const tier = ["low", "medium", "high"].includes(q) ? q : (q === "lite" ? "low" : (softwareGpu ? "low" : "high"));
+  const autoTier = !["low", "medium", "high", "lite"].includes(q);
+  let lite = tier === "low";
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lite, powerPreference: "high-performance" });
   // Dynamic resolution. Software renderers pay per pixel whatever is drawn, so the render size is the one dial that always works:
   // start at 1920 wide (1280 in lite), then every second nudge the scale so the frame interval sits near 30 fps, never below 800 px wide. The HTML overlay stays sharp either way.
@@ -268,7 +272,7 @@ export async function run(container, opts) {
   const dyn = { ms: 0, n: 0, at: performance.now() };
   const tuneResolution = (rawMs) => { dyn.ms += rawMs; dyn.n++; const now = performance.now(); if (now - dyn.at < 1000 || dyn.n < 5) return; const avg = dyn.ms / dyn.n; dyn.ms = dyn.n = 0; dyn.at = now;
     if (avg > 38) resScale = Math.max(0.3, resScale * 0.85); else if (avg < 24) resScale = Math.min(lite ? 1.5 : 1, resScale * 1.08); };
-  renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = tier === "medium" ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
   const applyLite = () => { if (applyLite.done) return; lite = true; applyLite.done = true; renderer.shadowMap.enabled = false; renderer.setPixelRatio(capRatio());
     scene.traverse((o) => { const m = o.material; if (!m || Array.isArray(m)) return; if (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) { const n = new THREE.MeshLambertMaterial({ color: m.color, map: m.map, transparent: m.transparent, opacity: m.opacity, side: m.side, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity }); o.material = n; m.dispose(); } });
     scene.traverse((o) => { if (o.isMesh) { o.castShadow = false; } }); };
@@ -280,7 +284,7 @@ export async function run(container, opts) {
     const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; scene.fog = new THREE.Fog(skyBot, 150, 320); }
   const camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.1, 600);
   scene.add(new THREE.HemisphereLight(dusk ? 0xdcd2ff : 0xffffff, dusk ? 0x5a3f2a : 0x8a9bb8, 1.3));
-  const sun = new THREE.DirectionalLight(dusk ? 0xffd9b0 : 0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  const sun = new THREE.DirectionalLight(dusk ? 0xffd9b0 : 0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(tier === "medium" ? 1024 : 2048, tier === "medium" ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
   const floorTex = imgTexture("floor", { repeat: [1060, 1060] });
   const ground = new THREE.Mesh(new THREE.CircleGeometry(dusk ? 12000 : 400, 64), floorTex ? new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.75, metalness: 0.05 }) : new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -108; ground.receiveShadow = true; scene.add(ground);
@@ -465,7 +469,7 @@ export async function run(container, opts) {
   function step(now) {
     if (stopped) return;
     if (ending) return; // simulation and rendering stop once the results are up
-    const tStart = performance.now(); if (perf.lastNow) { const raw = now - perf.lastNow; perf.rawMs += raw; if (render && !turbo) { tuneResolution(raw); if (!lite) { slowFrames = raw > 40 ? slowFrames + 1 : Math.max(0, slowFrames - 2); if (slowFrames > 60) applyLite(); } } } perf.lastNow = now;
+    const tStart = performance.now(); if (perf.lastNow) { const raw = now - perf.lastNow; perf.rawMs += raw; if (render && !turbo) { tuneResolution(raw); if (!lite && autoTier) { slowFrames = raw > 40 ? slowFrames + 1 : Math.max(0, slowFrames - 2); if (slowFrames > 60) applyLite(); } } } perf.lastNow = now;
     let dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
     if (turbo) { acc = maxStepsPerFrame * STEP; dt = acc; } // batch mode: a fixed number of physics steps per frame, clocks run on sim time
     if (!started && simTime >= releaseAt) release();
@@ -515,7 +519,7 @@ export async function run(container, opts) {
     const W = canvas.clientWidth, H = canvas.clientHeight; if (Math.abs(renderer.getPixelRatio() - capRatio()) > 0.01) renderer.setPixelRatio(capRatio()); if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
     if (render) { for (const sp of neons) { const k = 1 + 0.05 * Math.sin(simTime * 2.1 + sp.userData.phase); sp.scale.set(sp.userData.size * k, sp.userData.size * k, 1); } const tR = performance.now(); renderer.render(scene, camera); perf.renderMs += performance.now() - tR; }
     perf.jsMs += performance.now() - tStart;
-    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; window.__fps = { fps: 1000 / raw, frame: raw, js: perf.jsMs / f, phys: perf.phys / f, lite }; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} (scale ${resScale.toFixed(2)})  marbles live ${live}  sim ${simTime.toFixed(1)}s\ngpu ${gpuName}  quality ${lite ? "lite" : "full"}`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
+    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; window.__fps = { fps: 1000 / raw, frame: raw, js: perf.jsMs / f, phys: perf.phys / f, lite }; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} (scale ${resScale.toFixed(2)})  marbles live ${live}  sim ${simTime.toFixed(1)}s\ngpu ${gpuName}  quality ${lite ? "low" : tier}${autoTier ? " (auto)" : ""}`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
     // HUD
     const liveSorted = marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog);
     const list = [...order, ...liveSorted].slice(0, placesToShow);
