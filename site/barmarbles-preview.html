@@ -5,7 +5,7 @@
 <body><div id="c"></div>
 <div id="bar">Marbles <input id="n" type="number" value="60" min="1" max="300"> <button id="go">Run</button> <span id="res"></span></div>
 <script type="module">
-import { run } from "./barmarbles.js";
+import { run } from "./barmarbles.js?v=__BUILD__";
 const NAMES=["Marcus Lee","Dana Ortiz","Sam Patel","Kelly Nguyen","Jordan Fox","Alex Kim","Taylor Reed","Chris Bell","Morgan Diaz","Riley Shaw","Jamie Cole","Casey Park","Drew Hart","Avery Lane","Quinn Moss","Reese Ward","Skyler Dean","Parker Lowe","Rowan Gray","Blake Hale"];
 let ctl=null;
 async function go(){ if(ctl) ctl.stop(); const n=+(new URLSearchParams(location.search).get('n')||document.getElementById('n').value)||60; const players=Array.from({length:n},(_,i)=>({id:'p'+i,name:NAMES[i%NAMES.length]+(i>=NAMES.length?' '+(Math.floor(i/NAMES.length)+1):'')}));

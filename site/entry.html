@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Last Call Tavern Games - Play to Win</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=__BUILD__">
 <style>
   body { background: var(--primary); min-height: 100vh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
          background-image: radial-gradient(800px 400px at 50% -10%, rgba(255,255,255,.18), transparent 60%); }
@@ -44,11 +44,11 @@
   <p class="fine" id="fine"></p>
 </div>
 
-<script src="config.js"></script>
-<script src="vendor/supabase.js"></script>
-<script src="mascots.js"></script>
-<script src="sprites.js"></script>
-<script src="common.js"></script>
+<script src="config.js?v=__BUILD__"></script>
+<script src="vendor/supabase.js?v=__BUILD__"></script>
+<script src="mascots.js?v=__BUILD__"></script>
+<script src="sprites.js?v=__BUILD__"></script>
+<script src="common.js?v=__BUILD__"></script>
 <script>
 (async function () {
   const { api, CFG, $, $$, esc, normPhone, decorateOptions, shortName } = window.BG;

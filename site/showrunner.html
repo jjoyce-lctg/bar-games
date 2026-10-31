@@ -6,7 +6,7 @@
 <title>Last Call Tavern Games - Showrunner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=__BUILD__">
 <style>
   body { min-height: 100vh; }
   #console { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem; }
@@ -135,14 +135,14 @@
   <button id="sClose" class="btn primary" style="width:100%">Close (S)</button>
 </div>
 
-<script src="config.js"></script>
-<script src="vendor/supabase.js"></script>
-<script src="vendor/qrcode.js"></script>
-<script src="mascots.js"></script>
-<script src="sprites.js"></script>
-<script src="race.js"></script>
-<script src="audio.js"></script>
-<script src="common.js"></script>
+<script src="config.js?v=__BUILD__"></script>
+<script src="vendor/supabase.js?v=__BUILD__"></script>
+<script src="vendor/qrcode.js?v=__BUILD__"></script>
+<script src="mascots.js?v=__BUILD__"></script>
+<script src="sprites.js?v=__BUILD__"></script>
+<script src="race.js?v=__BUILD__"></script>
+<script src="audio.js?v=__BUILD__"></script>
+<script src="common.js?v=__BUILD__"></script>
 <script>
 (async function () {
   const { api, MOCK, $, $$, esc, sleep, decorateOptions } = window.BG;
@@ -335,7 +335,7 @@
     if (field.length < 2) { toast("Need at least 2 marbles in. Back to sign-up."); state.phase = "landing"; try { await api.setRoundStatus(state.round.id, "open"); } catch {} renderLanding(); return; }
     const players = field.map((e) => ({ id: e.id, name: e.name, color: hexOf(e.pick), tag: tagOf(e.name) }));
     $("#stFootLeft").innerHTML = ""; $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
-    const mod = await import("./barmarbles.js");
+    const mod = await import("./barmarbles.js?v=__BUILD__");
     state.raceCtl = await mod.run($("#raceHost"), { players, venue: state.venue, course: "classic", placesToShow: 5,
       onDone: async (results) => {
         if (!demo) { try { await api.finishRoundPlaces(state.round.id, results.slice(0, 10).map((p) => p.id)); } catch (e) { toast(e.message); } }
