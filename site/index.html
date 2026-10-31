@@ -70,7 +70,7 @@
   .step p { margin:0; color:var(--muted); line-height:1.55; font-size:.95rem; }
   @media (max-width:760px) { .steps { grid-template-columns:1fr; } }
 
-  .games { display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; }
+  .games { display:grid; grid-template-columns:repeat(3,1fr); gap:1.4rem; }
   .game { background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden; }
   .game img { width:100%; aspect-ratio:16/9; object-fit:cover; }
   .game .body { padding:1.4rem 1.6rem 1.6rem; }
@@ -78,7 +78,7 @@
   .game p { margin:0; color:var(--muted); line-height:1.55; font-size:.95rem; }
   .tag { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#121212; background:var(--gold); padding:.25rem .55rem; border-radius:6px; }
   .tag.soon { background:var(--line); color:var(--muted); }
-  @media (max-width:760px) { .games { grid-template-columns:1fr; } }
+  @media (max-width:900px) { .games { grid-template-columns:1fr; } }
 
   .venues { display:grid; grid-template-columns:repeat(3,1fr); gap:1.2rem; }
   .venue { display:flex; flex-direction:column; align-items:center; text-align:center; text-decoration:none; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:1.6rem 1.2rem 1.4rem; transition:transform .12s, border-color .12s; }
@@ -145,7 +145,7 @@
     <div class="sec-head"><div class="eyebrow">How it works</div><h2>Three steps, one round</h2><p>No app, no account. Everything happens from the code on the TV.</p></div>
     <div class="steps">
       <div class="step"><div class="n">1</div><h3>Scan the code</h3><p>When the DJ opens a game, a QR code goes up on the TVs. Point your phone's camera at it.</p></div>
-      <div class="step"><div class="n">2</div><h3>Pick your racer</h3><p>Enter your name and mobile number and choose a mascot or marble. Then watch the big screen.</p></div>
+      <div class="step"><div class="n">2</div><h3>Pick your racer</h3><p>Enter your name and mobile number and choose a mascot, a marble, or wait for the cups. Then watch the big screen.</p></div>
       <div class="step"><div class="n">3</div><h3>Win a round</h3><p>If your racer wins, your prize is texted to you. Redeem it from the next day at any Last Call Tavern Group bar, for 14 days.</p></div>
     </div>
   </div>
@@ -162,6 +162,10 @@
       <div class="game">
         <img src="shots/bar-marbles.jpg" alt="Bar Marbles: marbles rolling across the finish line under a neon sign">
         <div class="body"><span class="tag">Playing now</span><h3>Bar Marbles</h3><p>Your own marble, tagged with your initials, dropped into a 3D course with a tornado, a plinko board and a knock-off ledge. First five across the line place; first across wins.</p></div>
+      </div>
+      <div class="game">
+        <img src="shots/shell-game.jpg" alt="Shell Game: cartoon gloves shuffling three red cups on a lit table">
+        <div class="body"><span class="tag">Playing now</span><h3>Shell Game</h3><p>Three cups, one ball, and a pair of gloves that don't play fair. Follow the shuffle on the big screen, then lock in your cup on your phone before the clock runs out. Everyone who's right wins.</p></div>
       </div>
     </div>
   </div>
