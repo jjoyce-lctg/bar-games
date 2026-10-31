@@ -360,7 +360,7 @@ export async function run(container, opts) {
   });
 
   // ---- state ----
-  const perf = { phys: 0, steps: 0, frames: 0, frameMs: 0, last: performance.now() }; let statsOn = !!stats; if (stats) setTimeout(() => statsEl.classList.add("on"), 0);
+  const perf = { phys: 0, steps: 0, frames: 0, frameMs: 0, rawMs: 0, jsMs: 0, renderMs: 0, lastNow: 0, last: performance.now() }; let statsOn = !!stats; if (stats) setTimeout(() => statsEl.classList.add("on"), 0);
   const order = []; let calledFunnel = false, calledLedge = false, calledPlinko = false, firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
   // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
@@ -443,6 +443,7 @@ export async function run(container, opts) {
   function step(now) {
     if (stopped) return;
     if (ending) return; // simulation and rendering stop once the results are up
+    const tStart = performance.now(); if (perf.lastNow) perf.rawMs += now - perf.lastNow; perf.lastNow = now;
     let dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
     if (turbo) { acc = maxStepsPerFrame / 60; dt = acc; } // batch mode: a fixed number of physics steps per frame, clocks run on sim time
     if (!started && simTime >= releaseAt) release();
@@ -490,8 +491,9 @@ export async function run(container, opts) {
     }
     // render
     const W = canvas.clientWidth, H = canvas.clientHeight; if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
-    if (render) { for (const sp of neons) { const k = 1 + 0.05 * Math.sin(simTime * 2.1 + sp.userData.phase); sp.scale.set(sp.userData.size * k, sp.userData.size * k, 1); } renderer.render(scene, camera); }
-    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); statsEl.textContent = `fps ${(1000 / (perf.frameMs / f)).toFixed(0)}  frame ${(perf.frameMs / f).toFixed(1)} ms  physics ${(perf.phys / f).toFixed(1)} ms  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  marbles live ${live}  sim ${simTime.toFixed(1)}s`; perf.phys = perf.steps = perf.frames = perf.frameMs = 0; perf.last = performance.now(); }
+    if (render) { for (const sp of neons) { const k = 1 + 0.05 * Math.sin(simTime * 2.1 + sp.userData.phase); sp.scale.set(sp.userData.size * k, sp.userData.size * k, 1); } const tR = performance.now(); renderer.render(scene, camera); perf.renderMs += performance.now() - tR; }
+    perf.jsMs += performance.now() - tStart;
+    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} @${renderer.getPixelRatio()}  marbles live ${live}  sim ${simTime.toFixed(1)}s`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
     // HUD
     const liveSorted = marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog);
     const list = [...order, ...liveSorted].slice(0, placesToShow);
