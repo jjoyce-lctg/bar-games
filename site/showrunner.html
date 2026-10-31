@@ -127,10 +127,10 @@
   <div><label>Tonight's prize</label><input id="sPrize"></div>
   <div><label>Sign-up countdown (seconds)</label><input id="sCountdown" type="number" min="20" max="600" step="5"></div>
   <div><label>Game</label><select id="sGame"></select></div>
-  <div><label>Racers (pick 4)</label><div id="sRacers" class="stack" style="gap:.4rem"></div></div>
+  <div id="sRacersRow"><label>Racers (pick 4)</label><div id="sRacers" class="stack" style="gap:.4rem"></div></div>
   <div><label>Lobby music</label><select id="sMusic"></select></div>
-  <div><label>Track theme</label><select id="sTheme"></select></div>
-  <div><label>Graphics (Bar Marbles)</label><select id="sGraphics"><option value="auto">Auto (recommended)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+  <div id="sThemeRow"><label>Track theme</label><select id="sTheme"></select></div>
+  <div id="sGraphicsRow"><label>Graphics</label><select id="sGraphics"><option value="auto">Auto (recommended)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
   <div class="row"><button id="sMute" class="btn small">Mute</button><button id="sFull" class="btn small">Fullscreen</button></div>
   <div class="row"><a href="index.html" class="btn small">Portal</a><button id="sLogout" class="btn small">Log out</button></div>
   <button id="sClose" class="btn primary" style="width:100%">Close (S)</button>
@@ -201,7 +201,7 @@
   async function closeSettings() {
     const picked = $$("#sRacers input:checked").map((cb) => cb.value);
     if ($("#sGame").value !== "barmarbles" && picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
-    const rosterChanged = JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game));
+    const rosterChanged = $("#sGame").value !== "barmarbles" && JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game) || []);
     const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
     state.settings.racers = picked; state.settings.theme = $("#sTheme").value; state.settings.graphics = $("#sGraphics").value; if ($("#sMusic").value !== AUDIO.musicChoice()) AUDIO.setMusicChoice($("#sMusic").value);
     state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings();
@@ -227,7 +227,8 @@
   const marbleDot = (hex, tag, px) => `<span class="mdot" style="width:${px};height:${px};background:radial-gradient(circle at 35% 30%, #fff8 0, ${esc(hex)} 45%, #0005 100%)">${esc(tag || "")}</span>`;
   function renderRacerPicker() {
     const g = state.games.find((x) => x.key === $("#sGame").value) || state.game || state.games[0]; if (!g) return;
-    const cur = roster(g);
+    const marbles = g.key === "barmarbles"; $("#sRacersRow").style.display = marbles ? "none" : ""; $("#sThemeRow").style.display = marbles ? "none" : ""; $("#sGraphicsRow").style.display = marbles ? "" : "none";
+    const cur = roster(g) || [];
     $("#sRacers").innerHTML = g.options.map((o) => `<label style="display:flex;align-items:center;gap:.6rem;margin:0;color:var(--text)"><input type="checkbox" value="${esc(o.id)}" ${cur.includes(o.id) ? "checked" : ""}> ${art(o, 34)} ${esc(o.label)}</label>`).join("");
     $$("#sRacers input").forEach((cb) => (cb.onchange = () => { const on = $$("#sRacers input:checked"); if (on.length > ROSTER_SIZE) { cb.checked = false; toast(`Pick ${ROSTER_SIZE} racers.`); } }));
   }
