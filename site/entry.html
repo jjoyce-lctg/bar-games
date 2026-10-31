@@ -31,6 +31,14 @@
   .done .e { font-size: 5rem; line-height: 1; }
   .done h2 { font-size: 2.4rem; }
   .fine { font-size: .75rem; opacity: .7; text-align: center; margin-top: 1.5rem; }
+  .swatches{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:8px 0}
+  .swatches .opt.sw{padding:6px;display:flex;align-items:center;justify-content:center;border-radius:14px}
+  .marble{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:900;text-shadow:0 1px 2px #0008;box-shadow:0 2px 6px #0004;letter-spacing:.02em}
+  .preview{display:flex;align-items:center;gap:14px;margin:6px 0 10px}
+  .field{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pred{display:flex;align-items:center;gap:10px;padding:8px 10px;border:2px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.06);color:#fff;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+  .pred.sel{border-color:var(--accent);background:rgba(255,205,0,.15)}
+  .pred:disabled{opacity:.7}
 </style>
 </head>
 <body>
@@ -47,7 +55,9 @@
 <script src="common.js"></script>
 <script>
 (async function () {
-  const { api, CFG, $, $$, esc, normPhone, decorateOptions } = window.BG;
+  const { api, CFG, $, $$, esc, normPhone, decorateOptions, shortName } = window.BG;
+  const tagOf = (n) => { const w = String(n || "").trim().split(/\s+/); return ((w[0] || "")[0] || "").toUpperCase() + ((w.length > 1 ? w[w.length - 1][0] : (w[0] || "")[1]) || "").toUpperCase(); };
+  const marble = (o, size, tag) => `<span class="marble" style="width:${size}px;height:${size}px;background:radial-gradient(circle at 35% 30%, #fff8 0, ${esc(o.hex)} 45%, #0005 100%);font-size:${Math.round(size * 0.34)}px">${esc(tag || "")}</span>`;
   const art = (o, h) => o.icon_url ? `<img src="${esc(o.icon_url)}" alt="" style="height:${h}px">` : o.image_url ? `<img src="${esc(o.image_url)}" alt="" style="height:${h}px">` : MASCOTS.standalone(o.id, h, { emoji: o.emoji });
   const code = (new URLSearchParams(location.search).get("c") || "").toUpperCase();
   const content = $("#content");
@@ -71,24 +81,32 @@
 
   let pick = null;
   try { const saved = JSON.parse(localStorage.getItem("bg.guest") || "null"); if (saved) { var savedName = saved.name, savedPhone = saved.phone; } } catch {}
+  const marbles = g.key === "barmarbles";
+  if (marbles && savedPhone) { try { pick = await api.lastMarblePick(savedPhone); } catch {} }
 
   content.innerHTML = `
-    <div class="hero"><h1>PICK YOUR <span>RACER</span></h1><p>If your racer wins, you win <b>${esc(round.prize || "")}</b>.</p></div>
-    <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${art(o, 86)}</span>${esc(o.label)}</button>`).join("")}</div>
+    ${marbles
+      ? `<div class="hero"><h1>PICK YOUR <span>MARBLE</span></h1><p>Your marble races for you. First to the line wins <b>${esc(round.prize || "")}</b>.</p></div>
+         <div class="swatches">${g.options.map((o) => `<button type="button" class="opt sw ${o.id === pick ? "sel" : ""}" data-id="${esc(o.id)}" title="${esc(o.label)}">${marble(o, 44)}</button>`).join("")}</div>
+         <div class="preview" id="preview"></div>`
+      : `<div class="hero"><h1>PICK YOUR <span>RACER</span></h1><p>If your racer wins, you win <b>${esc(round.prize || "")}</b>.</p></div>
+         <div class="options">${g.options.map((o) => `<button type="button" class="opt" data-id="${esc(o.id)}"><span class="e">${art(o, 86)}</span>${esc(o.label)}</button>`).join("")}</div>`}
     <div id="err" class="error hidden"></div>
     <div><label>Your name</label><input id="name" autocomplete="name" placeholder="First and last name" maxlength="60" value="${esc(savedName || "")}"></div>
     <div><label>Mobile number</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(312) 555-0123" value="${esc(savedPhone || "")}"></div>
     <label class="consent"><input id="optin" type="checkbox"><span>${esc(disclaimer)}</span></label>
     <button id="submit" class="btn primary big" style="width:100%">I'm in!</button>`;
 
-  $$(".opt").forEach((b) => (b.onclick = () => { pick = b.dataset.id; $$(".opt").forEach((x) => x.classList.toggle("sel", x === b)); }));
+  const preview = () => { const pv = $("#preview"); if (!pv) return; const o = g.options.find((x) => x.id === pick); pv.innerHTML = o ? `${marble(o, 96, tagOf($("#name").value))}<div><b>${esc(o.label)}</b><br><span class="mute">Your tag is on the ball. Look for it on the TV.</span></div>` : `<span class="mute">Tap a colour.</span>`; };
+  $$(".opt").forEach((b) => (b.onclick = () => { pick = b.dataset.id; $$(".opt").forEach((x) => x.classList.toggle("sel", x === b)); preview(); }));
+  if (marbles) { preview(); $("#name").addEventListener("input", preview); }
   $("#phone").addEventListener("input", (e) => { const d = normPhone(e.target.value); if (d.length === 10) e.target.value = `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`; });
 
   $("#submit").onclick = async () => {
     const err = $("#err"); err.classList.add("hidden");
     const name = $("#name").value.trim(), phone = $("#phone").value, opt_in = $("#optin").checked;
     const show = (m) => { err.textContent = m; err.classList.remove("hidden"); err.scrollIntoView({ block: "center", behavior: "smooth" }); };
-    if (!pick) return show("Pick a racer first.");
+    if (!pick) return show(marbles ? "Pick a colour first." : "Pick a racer first.");
     if (name.length < 2) return show("Please enter your name.");
     if (normPhone(phone).length !== 10) return show("Please enter a valid 10-digit mobile number.");
     if (!opt_in) return show("Please check the box so we can text you if you win.");
@@ -98,9 +116,32 @@
       if (!res || !res.ok) { show((res && res.error) || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; return; }
       try { localStorage.setItem("bg.guest", JSON.stringify({ name, phone: normPhone(phone) })); } catch {}
       const o = g.options.find((x) => x.id === pick);
+      if (marbles) return predictStep(o, name, phone);
       content.innerHTML = `<div class="done"><div class="e">${art(o, 150)}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
     } catch (e) { show(e.message || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; }
   };
+
+  // Bar Marbles step 2: who wins? (anyone in the field but you). Optional; correct picks earn bonus points on the leaderboard.
+  async function predictStep(o, name, phone) {
+    const myTag = tagOf(name);
+    let field = []; try { field = (await api.getRoundPublic(code)).field || []; } catch {}
+    const mine = field.find((f) => shortName(name) === f.name && f.pick === o.id);
+    const others = field.filter((f) => !mine || f.id !== mine.id);
+    const row = (f) => { const c = g.options.find((x) => x.id === f.pick) || o; return `<button type="button" class="pred" data-id="${esc(f.id)}">${marble(c, 34)}<span>${esc(f.name)}</span></button>`; };
+    content.innerHTML = `<div class="done"><div class="e">${marble(o, 130, myTag)}</div><h2>YOU'RE IN!</h2><p>Your marble is <b>${esc(o.label)}</b>, tag <b>${esc(myTag)}</b>. Eyes on the TV.</p></div>
+      <div class="hero" style="margin-top:8px"><h1>WHO <span>WINS?</span></h1><p>Call it. Pick any marble but your own. If you're right, you get bonus points on the leaderboard.</p></div>
+      <div id="err" class="error hidden"></div>
+      <div class="field" id="field">${others.length ? others.map(row).join("") : `<p class="mute">Nobody else is in yet. Come back to this page in a minute, or just watch the TV.</p>`}</div>
+      <p class="mute" style="text-align:center">Skip this if you like. Your marble is already in the race.</p>`;
+    $$(".pred").forEach((b) => (b.onclick = async () => {
+      $$(".pred").forEach((x) => (x.disabled = true));
+      try { const res = await api.setPrediction({ code, phone, entry_id: b.dataset.id });
+        if (!res || !res.ok) { const err = $("#err"); err.textContent = (res && res.error) || "Couldn't save that pick."; err.classList.remove("hidden"); $$(".pred").forEach((x) => (x.disabled = false)); return; }
+        $$(".pred").forEach((x) => x.classList.toggle("sel", x === b));
+        $("#field").insertAdjacentHTML("afterend", `<p class="done" style="padding:10px 0"><b>Locked in.</b> You called ${esc(b.textContent.trim().replace(/\.$/, ""))}. Good luck to both of you.</p>`);
+      } catch (e) { const err = $("#err"); err.textContent = e.message || "Couldn't save that pick."; err.classList.remove("hidden"); $$(".pred").forEach((x) => (x.disabled = false)); }
+    }));
+  }
 })();
 </script>
 </body>

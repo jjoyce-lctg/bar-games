@@ -83,6 +83,9 @@
   #settings { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 90vw); background: var(--panel); border-left: 1px solid var(--line); padding: 1.5rem; transform: translateX(100%); transition: transform .2s; z-index: 60; overflow: auto; }
   #settings.on { transform: none; }
   #settings h2 { margin-bottom: 1rem; }
+  .fieldlist{display:flex;flex-wrap:wrap;gap:1vh 1.6vh;margin-top:2vh;max-height:22vh;overflow:hidden}
+  .fieldlist .fm{display:inline-flex;align-items:center;gap:.8vh;font-size:2.4vh;font-weight:700;background:rgba(255,255,255,.08);border-radius:3vh;padding:.5vh 1.4vh .5vh .6vh}
+  .mdot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:900;font-size:1.5vh;text-shadow:0 1px 2px #0008;box-shadow:0 .2vh .6vh #0005}
 </style>
 </head>
 <body>
@@ -196,7 +199,7 @@
     const mo = AUDIO.musicOptions(); $("#sMusic").innerHTML = `<option value="random">Random (pick one per night)</option>` + mo.map((k, i) => `<option value="${k}">Track ${i + 1}</option>`).join(""); $("#sMusic").value = AUDIO.musicChoice(); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
   async function closeSettings() {
     const picked = $$("#sRacers input:checked").map((cb) => cb.value);
-    if (picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
+    if ($("#sGame").value !== "barmarbles" && picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
     const rosterChanged = JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game));
     const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
     state.settings.racers = picked; state.settings.theme = $("#sTheme").value; if ($("#sMusic").value !== AUDIO.musicChoice()) AUDIO.setMusicChoice($("#sMusic").value);
@@ -211,11 +214,16 @@
   const stage = $("#stage");
   const ROSTER_SIZE = 4;
   function roster(game) {   // the ids in play for this game, always exactly ROSTER_SIZE when the game has that many
+    if (game.key === "barmarbles") return null; // every colour is always in play
     const ids = (game.options || []).map((o) => o.id);
     const chosen = (state.settings.racers || []).filter((id) => ids.includes(id));
     return chosen.length === Math.min(ROSTER_SIZE, ids.length) ? chosen : ids.slice(0, ROSTER_SIZE);
   }
-  const activeOptions = (game) => { const r = roster(game); return game.options.filter((o) => r.includes(o.id)); };
+  const activeOptions = (game) => { const r = roster(game); return r ? game.options.filter((o) => r.includes(o.id)) : game.options; };
+  const isMarbles = () => state.game && state.game.key === "barmarbles";
+  const hexOf = (pick) => { const o = (state.game.options || []).find((x) => x.id === pick); return (o && o.hex) || "#ffffff"; };
+  const tagOf = (n) => { const w = String(n || "").trim().split(/\s+/); return ((w[0] || "")[0] || "").toUpperCase() + ((w.length > 1 ? w[w.length - 1][0] : (w[0] || "")[1]) || "").toUpperCase(); };
+  const marbleDot = (hex, tag, px) => `<span class="mdot" style="width:${px};height:${px};background:radial-gradient(circle at 35% 30%, #fff8 0, ${esc(hex)} 45%, #0005 100%)">${esc(tag || "")}</span>`;
   function renderRacerPicker() {
     const g = state.games.find((x) => x.key === $("#sGame").value) || state.game || state.games[0]; if (!g) return;
     const cur = roster(g);
@@ -243,16 +251,17 @@
       <div class="cta">
         <div class="gamesel"><span class="arrows">▲▼</span>${esc(g.name.toUpperCase())}</div>
         <h1>WANNA PLAY <span>A GAME?</span></h1>
-        <p>Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.</p>
+        <p>${isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`}</p>
         <div class="row" style="gap:3vw;align-items:center">
           <div class="timer idle" id="timer"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="45"/><circle class="fg" cx="50" cy="50" r="45" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><div class="num" id="timerNum">${secs}s</div></div>
           <div><div class="code">CODE ${esc(state.round.code)}</div><div class="count" style="margin-top:1.5vh"><b id="stCount">0</b> players in</div></div>
         </div>
-        <div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>
+        ${isMarbles() ? `<div class="fieldlist" id="fieldList"></div>` : `<div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>`}
       </div></div>`;
     $("#stFootLeft").innerHTML = ""; keybar("landing");
     try { AUDIO.event("lobby"); } catch {}
-    const tick = async () => { try { const s = await api.roundStats(state.round.id); const c = $("#stCount"); if (c) c.textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0)); } catch {} };
+    const tick = async () => { try { const s = await api.roundStats(state.round.id); const c = $("#stCount"); if (c) c.textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0));
+      if (isMarbles()) { const f = await api.roundField(state.round.id); const el = $("#fieldList"); if (el) el.innerHTML = f.slice(-28).map((e) => `<span class="fm">${marbleDot(hexOf(e.pick), tagOf(e.name), "3.6vh")}${esc(firstLast(e.name))}</span>`).join("") + (f.length > 28 ? `<span class="fm">+${f.length - 28} more</span>` : ""); } } catch {} };
     tick(); state.poll = setInterval(tick, 2500);
   }
 
@@ -262,7 +271,7 @@
     state.phase = "signup"; keybar("signup"); try { AUDIO.event("clock"); } catch {}
     const secs = state.settings.countdown, C = 2 * Math.PI * 45, t0 = Date.now();
     $("#timer").classList.remove("idle"); $("#timerNum").textContent = secs;
-    $(".signup .cta p").innerHTML = `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.<br>The race starts when the clock runs out.`;
+    $(".signup .cta p").innerHTML = (isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`) + `<br>The race starts when the clock runs out.`;
     state.timer = setInterval(() => {
       const left = Math.max(0, secs - Math.round((Date.now() - t0) / 1000));
       const el = $("#timerNum"), fg = $("#timer .fg"); if (!el) return;
@@ -275,7 +284,7 @@
     if (state.phase !== "signup") return;
     clearInterval(state.timer); state.timer = null; state.phase = "landing"; keybar("landing");
     const t = $("#timer"); if (t) { t.classList.add("idle"); t.classList.remove("urgent"); $("#timerNum").textContent = state.settings.countdown + "s"; $("#timer .fg").style.strokeDashoffset = 0; }
-    const p = $(".signup .cta p"); if (p) p.innerHTML = `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`;
+    const p = $(".signup .cta p"); if (p) p.innerHTML = isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`;
   }
   async function abortRace() {
     clearTimers(); try { AUDIO.event("end"); } catch {}
@@ -302,11 +311,28 @@
     if (state.phase !== "signup" && state.phase !== "landing") return;
     state.phase = "running"; clearTimers(); stage.classList.remove("dark"); keybar("running");
     try { await api.setRoundStatus(state.round.id, "running"); } catch (e) { toast(e.message); }
+    if (isMarbles()) return startMarbles();
     const opts = activeOptions(state.game), winner = opts[Math.floor(Math.random() * opts.length)];
     $("#stFootLeft").innerHTML = "";
     $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     state.raceCtl = RACE.run($("#raceHost"), { racers: opts, winnerId: winner.id, venue: state.venue, theme: state.settings.theme,
       onDone: async () => { try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); } renderResults(winner); } });
+  }
+
+  // Bar Marbles: every entry is a marble. The engine runs the race and shows its own results screen; we record the places.
+  async function startMarbles() {
+    let field = []; try { field = await api.roundField(state.round.id); } catch (e) { toast(e.message); }
+    if (field.length < 2) { toast("Need at least 2 marbles in. Back to sign-up."); state.phase = "landing"; try { await api.setRoundStatus(state.round.id, "open"); } catch {} renderLanding(); return; }
+    const players = field.map((e) => ({ id: e.id, name: e.name, color: hexOf(e.pick), tag: tagOf(e.name) }));
+    $("#stFootLeft").innerHTML = ""; $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
+    const mod = await import("./barmarbles.js");
+    state.raceCtl = await mod.run($("#raceHost"), { players, venue: state.venue, course: "classic", placesToShow: 5,
+      onDone: async (results) => {
+        try { await api.finishRoundPlaces(state.round.id, results.slice(0, 10).map((p) => p.id)); } catch (e) { toast(e.message); }
+        state.phase = "results"; keybar("results"); try { AUDIO.event("results"); } catch {}
+        $("#stFootLeft").innerHTML = `<span class="count"><b>${players.length}</b> raced. Winner's prize: ${esc(prizeText())}, valid from tomorrow for 14 days at any LCTG bar.</span>`;
+        state.auto = setTimeout(renderBoard, 16000);
+      } });
   }
 
   async function renderResults(winner) {

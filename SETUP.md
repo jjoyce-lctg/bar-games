@@ -70,3 +70,13 @@ Managers log in at the portal and choose Prize Redemption (`staff.html`), pick t
 ## Track themes
 
 Settings (S) > Track theme: Stadium, Halloween, Thanksgiving, Christmas. Each theme is a folder under `site/stadium/` with the same six files as the stadium (far.jpg, wall.png, track-start.jpg, track.jpg, gantry.png, finish-strip.png) plus optional prop-1.png, prop-2.png, prop-3.png placed along the top of the barrier wall. A new theme from the same ChatGPT layout drops in with no engine changes; send the zip to Claude.
+
+## Bar Marbles (second game)
+
+Run `supabase/005_barmarbles.sql` once in Supabase > SQL Editor. It adds the game to the catalog, place/prediction columns on entries, the `finish_round_places`, `set_prediction` and `last_marble_pick` functions, and the new points formula.
+
+How it runs: in the Showrunner, use the up/down keys on the "Wanna play a game?" screen to switch to Bar Marbles. Guests scan, pick a marble colour (returning phone numbers get their last colour by default), enter name and phone, then optionally call the winner from the field. Each entry is a marble with the guest's two-letter tag on it. The race ends when the top 5 are in (or 20 s after the winner); places are recorded, the winner gets the prize exactly like the mascot race, and the results screen holds for 16 s before the leaderboard.
+
+Points: 1 for playing, +10 win, +5 second, +3 third, +4 for calling the winner. Need at least 2 marbles to start.
+
+Testing: `test/bmbatch.js` runs headless races and writes fairness stats; `test/bme2e.js` runs the whole sign-up to results flow in mock mode. Press D in `barmarbles-preview.html` for the performance overlay.

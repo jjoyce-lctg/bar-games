@@ -11,12 +11,14 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const fmtPhone = (d) => (d && d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d || "");
+  const shortName = (p) => { const w = String(p || "").trim().split(/\s+/); return w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0] || ""; };
   const normPhone = (s) => { let d = String(s || "").replace(/\D/g, ""); if (d.length === 11 && d[0] === "1") d = d.slice(1); return d; };
   const makeCode = () => { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)]; return s; };
   const entryUrl = (code) => { const u = new URL("entry.html", location.href); u.searchParams.set("c", code); if (MOCK) u.searchParams.set("mock", "1"); return u.toString(); };
   // A plain username becomes username@<USERNAME_DOMAIN>; a full email address is used as-is.
   // Built-in artwork per racer id. Admin uploads (sprite_url / image_url on the option) take priority over these.
   // scale: drawn size relative to the pack's standard characters; fix: per-state horizontal centring (512px frame units); extra: has idle/win/tired sheet
+  const MARBLE_COLORS = [["c0","Red","#ff4d4d"],["c1","Orange","#ff9a3c"],["c2","Gold","#ffd23c"],["c3","Lime","#b8f04a"],["c4","Green","#4de08a"],["c5","Teal","#3ddcc8"],["c6","Sky","#5ac8ff"],["c7","Blue","#4f7cff"],["c8","Violet","#9b6bff"],["c9","Purple","#c75cff"],["c10","Pink","#ff6ad5"],["c11","Rose","#ff5c8a"],["c12","White","#f4f4f8"],["c13","Black","#2b2f3a"]].map(([id, label, hex]) => ({ id, label, hex }));
   const BUILTIN_ART = {
     hotdog: { extra: true }, beer: { extra: true }, pretzel: { extra: true }, pizza: { extra: true },
     dino: { extra: true, scale: 1.45, fix: { run: 0, fall: 0, recover: 0, idle: 0, win: 0, tired: 0 } },
@@ -56,6 +58,7 @@
         options: [{ id: "hotdog", label: "Hot Dog", emoji: "🌭" }, { id: "beer", label: "Beer", emoji: "🍺" }, { id: "pretzel", label: "Pretzel", emoji: "🥨" }, { id: "pizza", label: "Pizza", emoji: "🍕" }, { id: "dino", label: "Dino", emoji: "🦖" }, { id: "skeleton", label: "Skeleton", emoji: "💀" }, { id: "santa", label: "Santa", emoji: "🎅" }, { id: "turkey", label: "Turkey", emoji: "🦃" }] }],
       rounds: [], entries: [],
     };
+    state.games.push({ key: "barmarbles", name: "Bar Marbles", description: "Every guest gets a marble. Pick your colour, watch the race, first to the line wins.", sort_order: 2, active: true, options: MARBLE_COLORS });
     const persist = () => save(state);
     // Other tabs (the guest phones in a preview) write to the same localStorage, so re-read before every call.
     const sync = () => { const s = load(); if (s) state = s; };
@@ -124,7 +127,8 @@
       async getRoundPublic(code) {
         const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return null;
         const v = state.venues.find((x) => x.id === r.venue_id); const g = state.games.find((x) => x.key === r.game_key);
-        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options } };
+        const field = r.game_key === "barmarbles" ? state.entries.filter((e) => e.round_id === r.id).map((e) => ({ id: e.id, name: shortName(e.name), pick: e.pick })) : [];
+        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options }, field };
       },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {
         await sleep(300);
@@ -140,6 +144,24 @@
         if (ex) { ex.pick = pick; ex.name = name.trim(); ex.sms_opt_in = ex.sms_opt_in || !!opt_in; }
         else state.entries.push({ id: uuid(), round_id: r.id, name: name.trim(), phone: digits, pick, sms_opt_in: !!opt_in, opt_in_text, is_winner: false, texted: false, notes: null, created_at: new Date().toISOString() });
         persist(); return { ok: true };
+      },
+      async lastMarblePick(phone) { const d = normPhone(phone); const e = [...state.entries].reverse().find((x) => x.phone === d && (state.rounds.find((r) => r.id === x.round_id) || {}).game_key === "barmarbles"); return e ? e.pick : null; },
+      async setPrediction({ code, phone, entry_id }) {
+        const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return { ok: false, error: "That game code was not found." };
+        if (r.status !== "open") return { ok: false, error: "The race has started." };
+        const me = state.entries.find((e) => e.round_id === r.id && e.phone === normPhone(phone)); if (!me) return { ok: false, error: "Enter the race first." };
+        if (me.id === entry_id) return { ok: false, error: "Pick someone other than yourself." };
+        if (!state.entries.some((e) => e.id === entry_id && e.round_id === r.id)) return { ok: false, error: "That marble is not in this race." };
+        me.predict_entry_id = entry_id; persist(); return { ok: true };
+      },
+      async roundField(round_id) { requireAuth(); return state.entries.filter((e) => e.round_id === round_id).map((e) => ({ id: e.id, name: e.name, pick: e.pick, created_at: e.created_at })); },
+      async finishRoundPlaces(id, places) {
+        requireAuth(); const r = round(id); r.status = "finished"; r.winning_pick = null; r.finished_at = new Date().toISOString();
+        state.entries.filter((e) => e.round_id === id).forEach((e) => { const i = places.indexOf(e.id); e.place = i >= 0 ? i + 1 : null; e.is_winner = i === 0; e.predict_ok = !!e.predict_entry_id && e.predict_entry_id === places[0]; });
+        state.prizes = state.prizes || []; const v = state.venues.find((x) => x.id === r.venue_id);
+        const d0 = new Date(); d0.setHours(0, 0, 0, 0); const from = new Date(d0.getTime() + 864e5), to = new Date(d0.getTime() + 15 * 864e5);
+        state.entries.filter((e) => e.round_id === id && e.is_winner).forEach((e) => { if (!state.prizes.some((p) => p.entry_id === e.id)) state.prizes.push({ id: uuid(), entry_id: e.id, round_id: r.id, won_venue_id: r.venue_id, phone: e.phone, name: e.name, prize: r.prize || v.default_prize || "a prize", issued_at: new Date().toISOString(), valid_from: from.toISOString(), expires_at: to.toISOString(), redeemed_at: null, voided_at: null }); });
+        persist();
       },
       // ----- admin -----
       async listEntries(f = {}) {
@@ -211,6 +233,10 @@
         return { count: rows.length, byPick, winners: rows.filter((e) => e.is_winner).map((e) => e.name) };
       },
       async getRoundPublic(code) { return throwIf(await sb.rpc("get_round_public", { p_code: code })); },
+      async lastMarblePick(phone) { return throwIf(await sb.rpc("last_marble_pick", { p_phone: phone })); },
+      async setPrediction({ code, phone, entry_id }) { return throwIf(await sb.rpc("set_prediction", { p_code: code, p_phone: phone, p_entry_id: entry_id })); },
+      async roundField(round_id) { return throwIf(await sb.from("entries_export").select("id,name,pick,created_at").eq("round_id", round_id).order("created_at", { ascending: true })); },
+      async finishRoundPlaces(id, places) { throwIf(await sb.rpc("finish_round_places", { p_round_id: id, p_places: places })); },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {
         return throwIf(await sb.rpc("submit_entry", { p_code: code, p_name: name, p_phone: phone, p_pick: pick, p_opt_in: !!opt_in, p_opt_in_text: opt_in_text, p_user_agent: navigator.userAgent }));
       },
@@ -267,5 +293,5 @@
   }
 
   const api = MOCK ? mockApi() : supabaseApi();
-  window.BG = { api, MOCK, CFG, $, $$, esc, sleep, fmtPhone, normPhone, entryUrl, decorateOptions };
+  window.BG = { api, MOCK, CFG, $, $$, esc, sleep, fmtPhone, normPhone, shortName, entryUrl, decorateOptions, MARBLE_COLORS };
 })();

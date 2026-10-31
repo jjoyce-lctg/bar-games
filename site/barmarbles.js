@@ -209,6 +209,17 @@ function buildTrack(course, accent) {
   return { parts, samples, tangents, frames, segOf, jumps, obstacles, banks, loose };
 }
 
+// Ball texture: the marble's colour with its two-letter tag printed twice around the equator, so it reads from most angles.
+const tagTexCache = new Map();
+function tagTexture(color, tag) {
+  const key = color + "|" + tag; if (tagTexCache.has(key)) return tagTexCache.get(key);
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 128; const g = cv.getContext("2d");
+  g.fillStyle = color; g.fillRect(0, 0, 256, 128);
+  const dark = (() => { const c = new THREE.Color(color); return c.r * 0.299 + c.g * 0.587 + c.b * 0.114 > 0.6; })();
+  g.fillStyle = dark ? "rgba(0,0,0,.78)" : "rgba(255,255,255,.92)"; g.font = "900 54px Inter, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(tag, 64, 66); g.fillText(tag, 192, 66);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; tagTexCache.set(key, t); return t;
+}
 function makeLabel(text, color) {
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 72; const g = cv.getContext("2d");
   g.font = "800 40px Inter, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
@@ -256,7 +267,7 @@ export async function run(container, opts) {
     scene.add(arch); }
 
   // ---- physics ----
-  const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
+  const world = new RAPIER.World({ x: 0, y: -36, z: 0 });
   track.parts.forEach((p) => { if (p.indices.length) world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); /* track bounce stays low even with lively marble-to-marble bounces */ (p.solids || []).forEach((so) => { const d = so.kind === "box" ? RAPIER.ColliderDesc.cuboid(...so.half) : RAPIER.ColliderDesc.cylinder(so.half, so.r); world.createCollider(d.setTranslation(...so.pos).setRotation({ x: so.q[0], y: so.q[1], z: so.q[2], w: so.q[3] }).setRestitution(so.restitution).setFriction(0.05)); }); });
   // funnels get a second collision skin a little below the surface so a marble dropping in fast can never tunnel through
   track.parts.filter((p) => p.funnel).forEach((p) => { world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -1.6, 0).setFriction(0.02).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.wallIndices).setFriction(0.2).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); });
@@ -309,7 +320,8 @@ export async function run(container, opts) {
     const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, Math.sqrt(Math.max(0, R0 * R0 - ((col - (perRow - 1) / 2) * BALL_R * 2.05) ** 2)) - BALL_R - 0.12).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.2 + (row % 3) * 0.1, (Math.random() - 0.5) * 0.08));
     const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.004).setAngularDamping(0.2).setCcdEnabled(true));
     world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.08).setRestitution(0.38), body);
-    const mesh = new THREE.Mesh(ballGeo, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 })); mesh.castShadow = true; scene.add(mesh);
+    const mat = p.tag ? new THREE.MeshPhysicalMaterial({ map: tagTexture(color, p.tag), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 }) : new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 });
+    const mesh = new THREE.Mesh(ballGeo, mat); mesh.castShadow = true; scene.add(mesh);
     const label = i < maxLabels ? makeLabel(first(p).slice(0, 10), color) : null; if (label) scene.add(label);
     return { player: { ...p, color }, slot: slots[i], colorIdx: i % PALETTE.length, body, mesh, label, hint: si, prog: si, finished: false, stillFor: 0 };
   });
