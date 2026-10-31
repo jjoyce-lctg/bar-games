@@ -263,11 +263,11 @@ export async function run(container, opts) {
   // start at 1920 wide (1280 in lite), then every second nudge the scale so the frame interval sits near 30 fps, never below 800 px wide. The HTML overlay stays sharp either way.
   const cssW = () => Math.max(1, canvas.clientWidth || window.innerWidth);
   let resScale = 1; const MIN_W = 800;
-  const capRatio = () => window.__ratio || Math.max(MIN_W / cssW(), Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1, (lite ? 1280 : 1920) / cssW()) * resScale);
+  const capRatio = () => window.__ratio || Math.max(MIN_W / cssW(), Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1, 1920 / cssW(), (lite ? 1280 : 1920) / cssW() * resScale));
   renderer.setPixelRatio(capRatio());
   const dyn = { ms: 0, n: 0, at: performance.now() };
   const tuneResolution = (rawMs) => { dyn.ms += rawMs; dyn.n++; const now = performance.now(); if (now - dyn.at < 1000 || dyn.n < 5) return; const avg = dyn.ms / dyn.n; dyn.ms = dyn.n = 0; dyn.at = now;
-    if (avg > 38) resScale = Math.max(0.3, resScale * 0.85); else if (avg < 24) resScale = Math.min(1, resScale * 1.08); };
+    if (avg > 38) resScale = Math.max(0.3, resScale * 0.85); else if (avg < 24) resScale = Math.min(lite ? 1.5 : 1, resScale * 1.08); };
   renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
   const applyLite = () => { if (applyLite.done) return; lite = true; applyLite.done = true; renderer.shadowMap.enabled = false; renderer.setPixelRatio(capRatio());
     scene.traverse((o) => { const m = o.material; if (!m || Array.isArray(m)) return; if (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) { const n = new THREE.MeshLambertMaterial({ color: m.color, map: m.map, transparent: m.transparent, opacity: m.opacity, side: m.side, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity }); o.material = n; m.dispose(); } });
@@ -275,15 +275,15 @@ export async function run(container, opts) {
   const scene = new THREE.Scene();
   const skyTop = new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#6fb6ff"), 0.55), skyBot = new THREE.Color("#e9f2ff");
   const dusk = !!WORLD.sky; // Chicago skyline at dusk wraps the whole scene when the art loaded
-  if (dusk) { const t = imgTexture("sky", { wrap: false }); t.mapping = THREE.EquirectangularReflectionMapping; scene.background = t; scene.backgroundIntensity = 1; scene.fog = new THREE.Fog(new THREE.Color("#2b3470"), 170, 360); }
+  if (dusk) { const t = imgTexture("sky", { wrap: false }); t.mapping = THREE.EquirectangularReflectionMapping; scene.background = t; scene.backgroundIntensity = 1; scene.fog = new THREE.Fog(new THREE.Color("#2a2230"), 220, 520); }
   else { const cv = document.createElement("canvas"); cv.width = 2; cv.height = 256; const g = cv.getContext("2d"); const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, "#" + skyTop.getHexString()); gr.addColorStop(1, "#" + skyBot.getHexString()); g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
     const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; scene.fog = new THREE.Fog(skyBot, 150, 320); }
   const camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.1, 600);
   scene.add(new THREE.HemisphereLight(dusk ? 0xdcd2ff : 0xffffff, dusk ? 0x5a3f2a : 0x8a9bb8, 1.3));
   const sun = new THREE.DirectionalLight(dusk ? 0xffd9b0 : 0xfff4e0, 2.6); sun.position.set(60, 120, 40); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 400 }); scene.add(sun);
-  const floorTex = imgTexture("floor", { repeat: [36, 36] });
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), floorTex ? new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.75, metalness: 0.05 }) : new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -108; ground.receiveShadow = true; scene.add(ground);
+  const floorTex = imgTexture("floor", { repeat: [1060, 1060] });
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(dusk ? 12000 : 400, 64), floorTex ? new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.75, metalness: 0.05 }) : new THREE.MeshStandardMaterial({ color: new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#8fa5c4"), 0.5), roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -108; ground.receiveShadow = true; scene.add(ground);
 
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
