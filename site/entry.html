@@ -35,6 +35,7 @@
   .swatches .opt.sw{padding:6px;display:flex;align-items:center;justify-content:center;border-radius:14px}
   .marble{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:900;text-shadow:0 1px 2px #0008;box-shadow:0 2px 6px #0004;letter-spacing:.02em}
   .preview{display:flex;align-items:center;gap:14px;margin:6px 0 10px}
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,205,0,.6); } 70% { box-shadow: 0 0 0 18px rgba(255,205,0,0); } 100% { box-shadow: 0 0 0 0 rgba(255,205,0,0); } }
 </style>
 </head>
 <body>
@@ -77,11 +78,13 @@
 
   let pick = null;
   try { const saved = JSON.parse(localStorage.getItem("bg.guest") || "null"); if (saved) { var savedName = saved.name, savedPhone = saved.phone; } } catch {}
-  const marbles = g.key === "barmarbles";
+  const marbles = g.key === "barmarbles", shell = g.key === "shellgame";
   if (marbles && savedPhone) { try { pick = await api.lastMarblePick(savedPhone); } catch {} }
 
   content.innerHTML = `
-    ${marbles
+    ${shell
+      ? `<div class="hero"><h1>GET <span>READY</span></h1><p>Three cups, one ball. Sign up, then <b>watch the TV</b>. When it says <b>NOW CHOOSE</b>, this screen lights up and you pick a cup. Get it right and you win <b>${esc(round.prize || "the prize")}</b>.</p></div>`
+      : marbles
       ? `<div class="hero"><h1>PICK YOUR <span>MARBLE</span></h1><p>Your marble races for you. First to the line wins <b>${esc(round.prize || "")}</b>.</p></div>
          <div class="swatches">${g.options.map((o) => `<button type="button" class="opt sw ${o.id === pick ? "sel" : ""}" data-id="${esc(o.id)}" title="${esc(o.label)}">${marble(o, 44)}</button>`).join("")}</div>
          <div class="preview" id="preview"></div>`
@@ -102,7 +105,7 @@
     const err = $("#err"); err.classList.add("hidden");
     const name = $("#name").value.trim(), phone = $("#phone").value, opt_in = $("#optin").checked;
     const show = (m) => { err.textContent = m; err.classList.remove("hidden"); err.scrollIntoView({ block: "center", behavior: "smooth" }); };
-    if (!pick) return show(marbles ? "Pick a colour first." : "Pick a racer first.");
+    if (!pick && !shell) return show(marbles ? "Pick a colour first." : "Pick a racer first.");
     if (name.length < 2) return show("Please enter your name.");
     if (normPhone(phone).length !== 10) return show("Please enter a valid 10-digit mobile number.");
     if (!opt_in) return show("Please check the box so we can text you if you win.");
@@ -112,10 +115,34 @@
       if (!res || !res.ok) { show((res && res.error) || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; return; }
       try { localStorage.setItem("bg.guest", JSON.stringify({ name, phone: normPhone(phone) })); } catch {}
       const o = g.options.find((x) => x.id === pick);
+      if (shell) return shellWait(name, normPhone(phone));
       if (marbles) { const myTag = tagOf(name); content.innerHTML = `<div class="done"><div class="e">${marble(o, 150, myTag)}</div><h2>YOU'RE IN!</h2><p>Your marble is <b>${esc(o.label)}</b>, tag <b>${esc(myTag)}</b>. Look for it on the TV. First to the line wins <b>${esc(round.prize || "the prize")}</b>, and we'll text you if it's you.</p><p class="mute">One entry per phone number per race. Must be 21+ to claim a prize.</p></div>`; return; }
       content.innerHTML = `<div class="done"><div class="e">${art(o, 150)}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
     } catch (e) { show(e.message || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; }
   };
+
+  // ---- shell game: wait for the TV, then choose live ----
+  function shellWait(name, phone) {
+    const prize = esc(round.prize || "the prize");
+    let myPick = null, closeMs = 0, skew = 0, state = "wait", timer = null, poll = null, chan = null;
+    const render = () => {
+      if (state === "wait") content.innerHTML = `<div class="done"><div class="e">👀</div><h2>YOU'RE IN, ${esc(name.split(" ")[0].toUpperCase())}!</h2><p><b>Eyes on the TV.</b> Watch the shuffle. When the screen says <b>NOW CHOOSE</b>, your buttons appear right here.</p><p class="muted" style="font-size:.9rem">Keep this page open. Get it right and you win <b>${prize}</b>.</p><div class="pulse" style="margin:1.2rem auto 0;width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 var(--accent);animation:pulse 1.6s infinite"></div></div>`;
+      if (state === "pick") content.innerHTML = `<div class="hero"><h1>NOW <span>CHOOSE</span></h1><p>Which cup is the ball under?</p></div>
+          <div class="cups" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem">${[1, 2, 3].map((n) => `<button type="button" class="opt cup ${myPick === "c" + n ? "sel" : ""}" data-id="c${n}" style="padding:1.2rem .4rem"><img src="shell/cup.png" alt="" style="height:84px;display:block;margin:0 auto .4rem"><span style="font-size:1.6rem;font-weight:900">${n}</span></button>`).join("")}</div>
+          <div class="count" id="count" style="text-align:center;font-size:3.2rem;font-weight:900;margin:.6rem 0 .2rem">10</div>
+          <p id="pickMsg" class="muted" style="text-align:center;margin:0">${myPick ? `Locked in: <b>Cup ${myPick.slice(1)}</b>. Tap another to change.` : "Tap a cup. You can change it until the timer ends."}</p>`;
+      if (state === "closed") content.innerHTML = `<div class="done"><div class="e">${myPick ? `<img src="shell/cup.png" alt="" style="height:120px">` : "⏱️"}</div><h2>${myPick ? `CUP ${myPick.slice(1)}` : "TIME'S UP"}</h2><p>${myPick ? "Locked in. Watch the TV for the reveal." : "You didn't pick in time. Watch the TV, and get in on the next one."}</p></div>`;
+      if (state === "result") { const won = myPick && myPick === round.winning_pick; content.innerHTML = `<div class="done"><div class="e">${won ? "🏆" : "🫠"}</div><h2>${won ? "YOU WON!" : "NOT THIS TIME"}</h2><p>The ball was under <b>Cup ${String(round.winning_pick || "?").slice(1)}</b>.${won ? ` We'll text you about <b>${prize}</b>. Valid from tomorrow for 14 days at any LCTG bar.` : " Stick around for the next game."}</p></div>`; }
+      $$(".opt.cup").forEach((b) => (b.onclick = async () => { const p = b.dataset.id; $$(".opt.cup").forEach((x) => x.classList.toggle("sel", x === b)); myPick = p; const m = $("#pickMsg"); if (m) m.innerHTML = `Locking in <b>Cup ${p.slice(1)}</b>...`;
+        try { const r = await api.shellPick(code, phone, p); if (m) m.innerHTML = r && r.ok ? `Locked in: <b>Cup ${p.slice(1)}</b>. Tap another to change.` : esc((r && r.error) || "Could not lock that in."); if (r && r.ok && navigator.vibrate) navigator.vibrate(30); } catch (e) { if (m) m.textContent = "Signal hiccup. Tap again."; } }));
+    };
+    const openPick = (closesAtIso) => { if (state !== "wait") return; closeMs = new Date(closesAtIso).getTime() - skew; state = "pick"; render(); if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+      clearInterval(timer); timer = setInterval(() => { const left = Math.max(0, Math.ceil((closeMs - Date.now()) / 1000)); const c = $("#count"); if (c) c.textContent = String(left); if (left <= 0) { clearInterval(timer); state = "closed"; render(); } }, 100); };
+    const check = async () => { try { const r = await api.getRoundPublic(code); if (!r) return; if (r.server_now) skew = new Date(r.server_now).getTime() - Date.now() - 150; round.winning_pick = r.winning_pick; if (r.status === "picking" && r.pick_closes_at) openPick(r.pick_closes_at); if (r.status === "finished") { state = "result"; render(); clearInterval(poll); if (chan) chan.close(); } if (r.status === "cancelled") { clearInterval(poll); if (chan) chan.close(); content.innerHTML = `<div class="done"><div class="e">🙃</div><h2>GAME CANCELLED</h2><p>The DJ reset this one. Scan again for the next game.</p></div>`; } } catch {} };
+    render();
+    try { chan = api.roundChannel(code); chan.on((m) => { if (m && m.t === "pick") openPick(m.closes); if (m && m.t === "finished") check(); }); } catch {}
+    check(); poll = setInterval(check, state === "wait" ? 1000 : 1000);
+  }
 
 })();
 </script>

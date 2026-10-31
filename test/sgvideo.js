@@ -7,7 +7,7 @@ const server = http.createServer((req, res) => { const p = path.join(root, decod
 (async () => {
   const dir = path.join(__dirname, 'sgframes'); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir);
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
-  await p.goto(`http://localhost:8781/shellgame-preview.html?manual=1&seed=${process.argv[2] || 7}`); await p.waitForTimeout(800);
+  await p.goto(`http://localhost:8781/shellgame-preview.html?manual=1&pick=3&seed=${process.argv[2] || 7}`); await p.waitForTimeout(800);
   const FPS = 30; let i = 0;
   while (i < FPS * 30) { await p.evaluate((dt) => window.__ctl.advance(dt), 1 / FPS); if (i % 1 === 0) await p.screenshot({ path: path.join(dir, `f${String(i).padStart(4, '0')}.png`) }); i++; if (await p.evaluate(() => !!window.__done)) { for (let k = 0; k < FPS; k++) { await p.evaluate((dt) => window.__ctl.advance(dt), 1 / FPS); await p.screenshot({ path: path.join(dir, `f${String(i++).padStart(4, '0')}.png`) }); } break; } }
   console.log('frames', i); await b.close(); server.close();

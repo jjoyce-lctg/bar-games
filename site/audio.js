@@ -152,6 +152,23 @@
       }
       return;
     }
+    if (game === "shellgame") {   // sg-* clips only; nothing from the mascot race
+      switch (name) {
+        case "lobby": setCrowd(0); setMusic(true); break;
+        case "clock": say("sg-welcome"); break;
+        case "marks": setMusic(false); setCrowd(0.25); say("sg-set"); break;
+        case "go": setCrowd(0.4); say("sg-watch"); break;
+        case "sg-shuffle": setCrowd(0.5); say("sg-shuffle"); break;
+        case "choose": beep(); crowdBurst(0.5, 1200); setCrowd(0.6); say("sg-choose"); break;
+        case "sg-reveal": setCrowd(0.7); say("sg-reveal"); break;
+        case "finish": roar(); crowdBurst(0.8, 2500); sting(); setTimeout(() => say("sg-wins"), 350); setTimeout(() => setCrowd(0.4), 5000); break;
+        case "results": setCrowd(0.35); break;
+        case "board": setCrowd(0); setMusic(true); break;
+        case "end": setCrowd(0); setMusic(false); break;
+        case "countbeep": beep(); break;
+      }
+      return;
+    }
     switch (name) {
       case "lobby": setCrowd(0); setMusic(true); break;
       case "clock": say("welcome"); break;

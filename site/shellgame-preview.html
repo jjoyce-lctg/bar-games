@@ -6,5 +6,5 @@
 <script type="module">
 import { run } from "./shellgame.js?v=__BUILD__";
 const q = new URLSearchParams(location.search);
-window.__ctl = await run(document.getElementById("c"), { manual: q.get("manual") === "1", seed: +(q.get("seed") || 7), swaps: +(q.get("swaps") || 11), pickSeconds: +(q.get("pick") || 0), onDone: (r) => { window.__done = r; }, onPhase: (p) => { window.__phase = p; } });
+window.__ctl = await run(document.getElementById("c"), { manual: q.get("manual") === "1", seed: +(q.get("seed") || 7), swaps: +(q.get("swaps") || 11), pickSeconds: +(q.get("pick") || 10), onDone: (r) => { window.__done = r; }, onPhase: (p) => { window.__phase = p; } });
 </script></body></html>

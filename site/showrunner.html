@@ -200,8 +200,9 @@
     const mo = AUDIO.musicOptions(); $("#sMusic").innerHTML = `<option value="random">Random (pick one per night)</option>` + mo.map((k, i) => `<option value="${k}">Track ${i + 1}</option>`).join(""); $("#sMusic").value = AUDIO.musicChoice(); $("#sMute").textContent = AUDIO.isMuted() ? "Unmute" : "Mute"; settings.classList.add("on"); $("#sPrize").focus(); }
   async function closeSettings() {
     const picked = $$("#sRacers input:checked").map((cb) => cb.value);
-    if ($("#sGame").value !== "barmarbles" && picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
-    const rosterChanged = $("#sGame").value !== "barmarbles" && JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game) || []);
+    const noRoster = ["barmarbles", "shellgame"].includes($("#sGame").value);
+    if (!noRoster && picked.length !== Math.min(ROSTER_SIZE, $$("#sRacers input").length)) { toast(`Pick exactly ${ROSTER_SIZE} racers.`); return; }
+    const rosterChanged = !noRoster && JSON.stringify(picked) !== JSON.stringify(roster(state.games.find((x) => x.key === $("#sGame").value) || state.game) || []);
     const venueChanged = $("#sVenue").value !== state.venue.id, gameChanged = $("#sGame").value !== state.settings.gameKey, prizeChanged = $("#sPrize").value.trim() !== state.settings.prize;
     state.settings.racers = picked; state.settings.theme = $("#sTheme").value; state.settings.graphics = $("#sGraphics").value; if ($("#sMusic").value !== AUDIO.musicChoice()) AUDIO.setMusicChoice($("#sMusic").value);
     state.settings.prize = $("#sPrize").value.trim(); state.settings.countdown = Math.max(20, Math.min(600, +$("#sCountdown").value || 120)); state.settings.gameKey = $("#sGame").value; saveSettings();
@@ -215,19 +216,21 @@
   const stage = $("#stage");
   const ROSTER_SIZE = 4;
   function roster(game) {   // the ids in play for this game, always exactly ROSTER_SIZE when the game has that many
-    if (game.key === "barmarbles") return null; // every colour is always in play
+    if (game.key === "barmarbles" || game.key === "shellgame") return null; // every colour / cup is always in play
     const ids = (game.options || []).map((o) => o.id);
     const chosen = (state.settings.racers || []).filter((id) => ids.includes(id));
     return chosen.length === Math.min(ROSTER_SIZE, ids.length) ? chosen : ids.slice(0, ROSTER_SIZE);
   }
   const activeOptions = (game) => { const r = roster(game); return r ? game.options.filter((o) => r.includes(o.id)) : game.options; };
   const isMarbles = () => state.game && state.game.key === "barmarbles";
+  const isShell = () => state.game && state.game.key === "shellgame";
+  const landingCopy = () => isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : isShell() ? `Scan the code and watch the shuffle. Pick the right cup on your phone and you win <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`;
   const hexOf = (pick) => { const o = (state.game.options || []).find((x) => x.id === pick); return (o && o.hex) || "#ffffff"; };
   const tagOf = (n) => { const w = String(n || "").trim().split(/\s+/); return ((w[0] || "")[0] || "").toUpperCase() + ((w.length > 1 ? w[w.length - 1][0] : (w[0] || "")[1]) || "").toUpperCase(); };
   const marbleDot = (hex, tag, px) => `<span class="mdot" style="width:${px};height:${px};background:radial-gradient(circle at 35% 30%, #fff8 0, ${esc(hex)} 45%, #0005 100%)">${esc(tag || "")}</span>`;
   function renderRacerPicker() {
     const g = state.games.find((x) => x.key === $("#sGame").value) || state.game || state.games[0]; if (!g) return;
-    const marbles = g.key === "barmarbles"; $("#sRacersRow").style.display = marbles ? "none" : ""; $("#sThemeRow").style.display = marbles ? "none" : ""; $("#sGraphicsRow").style.display = marbles ? "" : "none";
+    const marbles = g.key === "barmarbles", noRoster = marbles || g.key === "shellgame"; $("#sRacersRow").style.display = noRoster ? "none" : ""; $("#sThemeRow").style.display = noRoster ? "none" : ""; $("#sGraphicsRow").style.display = marbles ? "" : "none";
     const cur = roster(g) || [];
     $("#sRacers").innerHTML = g.options.map((o) => `<label style="display:flex;align-items:center;gap:.6rem;margin:0;color:var(--text)"><input type="checkbox" value="${esc(o.id)}" ${cur.includes(o.id) ? "checked" : ""}> ${art(o, 34)} ${esc(o.label)}</label>`).join("");
     $$("#sRacers input").forEach((cb) => (cb.onchange = () => { const on = $$("#sRacers input:checked"); if (on.length > ROSTER_SIZE) { cb.checked = false; toast(`Pick ${ROSTER_SIZE} racers.`); } }));
@@ -254,17 +257,18 @@
       <div class="cta">
         <div class="gamesel"><span class="arrows">▲▼</span>${esc(g.name.toUpperCase())}</div>
         <h1>WANNA PLAY <span>A GAME?</span></h1>
-        <p>${isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`}</p>
+        <p>${landingCopy()}</p>
         <div class="row" style="gap:3vw;align-items:center">
           <div class="timer idle" id="timer"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="45"/><circle class="fg" cx="50" cy="50" r="45" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><div class="num" id="timerNum">${secs}s</div></div>
           <div><div class="code">CODE ${esc(state.round.code)}</div><div class="count" style="margin-top:1.5vh"><b id="stCount">0</b> players in</div></div>
         </div>
-        ${isMarbles() ? `<div class="fieldlist" id="fieldList"></div>` : `<div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>`}
+        ${isMarbles() || isShell() ? `<div class="fieldlist" id="fieldList"></div>` : `<div class="picks">${g.options.map((o) => `<div class="pick"><span class="e">${art(o, 60)}</span>${esc(o.label)}<span class="n" data-pick="${esc(o.id)}">0</span></div>`).join("")}</div>`}
       </div></div>`;
     $("#stFootLeft").innerHTML = ""; keybar("landing");
     try { AUDIO.event("lobby"); } catch {}
     const tick = async () => { try { const s = await api.roundStats(state.round.id); const c = $("#stCount"); if (c) c.textContent = s.count; $$("[data-pick]").forEach((el) => (el.textContent = s.byPick[el.dataset.pick] || 0));
-      if (isMarbles()) { const f = await api.roundField(state.round.id); const el = $("#fieldList"); if (el) el.innerHTML = f.slice(-28).map((e) => `<span class="fm">${marbleDot(hexOf(e.pick), tagOf(e.name), "3.6vh")}${esc(firstLast(e.name))}</span>`).join("") + (f.length > 28 ? `<span class="fm">+${f.length - 28} more</span>` : ""); } } catch {} };
+      if (isMarbles()) { const f = await api.roundField(state.round.id); const el = $("#fieldList"); if (el) el.innerHTML = f.slice(-28).map((e) => `<span class="fm">${marbleDot(hexOf(e.pick), tagOf(e.name), "3.6vh")}${esc(firstLast(e.name))}</span>`).join("") + (f.length > 28 ? `<span class="fm">+${f.length - 28} more</span>` : ""); }
+      if (isShell()) { const f = await api.roundField(state.round.id); const el = $("#fieldList"); if (el) el.innerHTML = f.slice(-28).map((e) => `<span class="fm">${esc(firstLast(e.name))}</span>`).join("") + (f.length > 28 ? `<span class="fm">+${f.length - 28} more</span>` : ""); } } catch {} };
     tick(); state.poll = setInterval(tick, 2500);
   }
 
@@ -274,7 +278,7 @@
     state.phase = "signup"; keybar("signup"); try { AUDIO.event("clock"); } catch {}
     const secs = state.settings.countdown, C = 2 * Math.PI * 45, t0 = Date.now();
     $("#timer").classList.remove("idle"); $("#timerNum").textContent = secs;
-    $(".signup .cta p").innerHTML = (isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`) + `<br>The race starts when the clock runs out.`;
+    $(".signup .cta p").innerHTML = landingCopy() + `<br>The ${isShell() ? "game" : "race"} starts when the clock runs out.`;
     state.timer = setInterval(() => {
       const left = Math.max(0, secs - Math.round((Date.now() - t0) / 1000));
       const el = $("#timerNum"), fg = $("#timer .fg"); if (!el) return;
@@ -287,7 +291,7 @@
     if (state.phase !== "signup") return;
     clearInterval(state.timer); state.timer = null; state.phase = "landing"; keybar("landing");
     const t = $("#timer"); if (t) { t.classList.add("idle"); t.classList.remove("urgent"); $("#timerNum").textContent = state.settings.countdown + "s"; $("#timer .fg").style.strokeDashoffset = 0; }
-    const p = $(".signup .cta p"); if (p) p.innerHTML = isMarbles() ? `Scan the code. Pick your marble. First to the line wins <b>${esc(prizeText())}</b>.` : `Scan the code. Pick your racer. If it wins, you win <b>${esc(prizeText())}</b>.`;
+    const p = $(".signup .cta p"); if (p) p.innerHTML = landingCopy();
   }
   async function abortRace() {
     clearTimers(); try { AUDIO.event("end"); } catch {}
@@ -315,11 +319,24 @@
     state.phase = "running"; clearTimers(); stage.classList.remove("dark"); keybar("running");
     try { await api.setRoundStatus(state.round.id, "running"); } catch (e) { toast(e.message); }
     if (isMarbles()) return startMarbles();
+    if (isShell()) return startShell();
     const opts = activeOptions(state.game), winner = opts[Math.floor(Math.random() * opts.length)];
     $("#stFootLeft").innerHTML = "";
     $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     state.raceCtl = RACE.run($("#raceHost"), { racers: opts, winnerId: winner.id, venue: state.venue, theme: state.settings.theme,
       onDone: async () => { try { await api.finishRound(state.round.id, winner.id); } catch (e) { toast(e.message); } renderResults(winner); } });
+  }
+
+  // Shell game: the engine runs the show; when the hands withdraw we open the pick window in the database and tell the phones over the realtime channel.
+  async function startShell() {
+    let players = 0; try { players = (await api.roundStats(state.round.id)).count; } catch {}
+    if (players < 1) { toast("Nobody's in yet. Back to sign-up."); state.phase = "landing"; try { await api.setRoundStatus(state.round.id, "open"); } catch {} renderLanding(); return; }
+    $("#stFootLeft").innerHTML = ""; $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
+    const mod = await import("./shellgame.js?v=__BUILD__");
+    const chan = api.roundChannel(state.round.code); const round = state.round;
+    state.raceCtl = await mod.run($("#raceHost"), { pickSeconds: 10, swaps: 20,
+      onPickOpen: async (secs) => { let closes = null; try { closes = await api.openPicks(round.id, secs); } catch (e) { toast(e.message); } if (!closes) closes = new Date(Date.now() + secs * 1000).toISOString(); chan.send({ t: "pick", closes }); try { AUDIO.event("choose"); } catch {} return closes; },
+      onDone: async ({ ballSlot }) => { const winner = { id: "c" + (ballSlot + 1), label: "Cup " + (ballSlot + 1), image_url: "shell/cup.png" }; try { await api.finishRound(round.id, winner.id); } catch (e) { toast(e.message); } chan.send({ t: "finished" }); setTimeout(() => chan.close(), 3000); renderResults(winner); } });
   }
 
   // Bar Marbles: every entry is a marble. The engine runs the race and shows its own results screen; we record the places.

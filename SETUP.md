@@ -85,6 +85,14 @@ Graphics: Settings (S) has a Graphics choice for Bar Marbles, saved per laptop. 
 
 Testing: `test/bmbatch.js` runs headless races and writes fairness stats; `test/bme2e.js` runs the whole sign-up to results flow in mock mode. Press D in `barmarbles-preview.html` for the performance overlay.
 
+## Shell Game (third game)
+
+Migration: run `supabase/006_shellgame.sql` in the SQL Editor (safe to re-run). It adds the game, a `picking` round status with `pick_closes_at`, lets the shell game sign up without a pick, and adds `open_picks` (TV), `shell_pick` (phone) and `pick_counts`.
+
+Flow: guests scan and sign up with name and phone only; their page says to watch the TV and stays open. The DJ presses Enter: the gloves place the ball and shuffle (20 swaps, quick by the sixth, with feints). When the gloves withdraw the TV calls `open_picks` (10 seconds, server clock) and broadcasts "pick" on the round's realtime channel; the TV shows NOW CHOOSE with a phone icon and a countdown, and every open phone shows cup buttons 1, 2, 3 with the same countdown (realtime first, 1 second polling as the fallback, countdown aligned to the server clock). Taps go to `shell_pick`; last tap wins; the server accepts 2 seconds past the close. The TV then waits about 1.5 seconds more, lifts a decoy cup, then the winning cup. `finish_round` with `c1`/`c2`/`c3` tags everyone who picked right as winners, prizes work as for the mascot race, and each phone shows won / not this time. Preview the animation alone at `shellgame-preview.html` (`?seed=`, `?swaps=`, `?pick=`).
+
+Sounds still to make for the Shell Game (`announcer/` clip keys): sg-welcome, sg-set, sg-watch, sg-shuffle, sg-choose, sg-reveal, sg-wins.
+
 ## Sounds still to make for Bar Marbles
 
 Same voice (ElevenLabs "David - Sports Arena Announcer"). Until these exist the marbles race plays crowd and SFX only; it never falls back to the mascot-race lines. Keys go in `site/announcer/` and the manifest like the others.

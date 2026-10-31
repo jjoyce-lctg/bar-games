@@ -59,6 +59,7 @@
       rounds: [], entries: [],
     };
     state.games.push({ key: "barmarbles", name: "Bar Marbles", description: "Every guest gets a marble. Pick your colour, watch the race, first to the line wins.", sort_order: 2, active: true, options: MARBLE_COLORS });
+    if (!state.games.some((g) => g.key === "shellgame")) state.games.push({ key: "shellgame", name: "Shell Game", description: "Three cups, one ball. Follow the shuffle, then pick a cup on your phone. Everyone who is right wins.", sort_order: 3, active: true, options: [{ id: "c1", label: "Cup 1", image_url: "shell/cup.png" }, { id: "c2", label: "Cup 2", image_url: "shell/cup.png" }, { id: "c3", label: "Cup 3", image_url: "shell/cup.png" }] });
     const persist = () => save(state);
     // Other tabs (the guest phones in a preview) write to the same localStorage, so re-read before every call.
     const sync = () => { const s = load(); if (s) state = s; };
@@ -127,8 +128,18 @@
       async getRoundPublic(code) {
         const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return null;
         const v = state.venues.find((x) => x.id === r.venue_id); const g = state.games.find((x) => x.key === r.game_key);
-        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options } };
+        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, pick_closes_at: r.pick_closes_at || null, winning_pick: r.status === "finished" ? r.winning_pick : null, server_now: new Date().toISOString(), venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options } };
       },
+      async openPicks(id, seconds = 10) { requireAuth(); const r = round(id); r.status = "picking"; r.pick_closes_at = new Date(Date.now() + seconds * 1000).toISOString(); persist(); return r.pick_closes_at; },
+      async shellPick(code, phone, pick) {
+        const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return { ok: false, error: "Game not found." };
+        if (r.status !== "picking") return { ok: false, error: "Picks are not open right now." };
+        if (Date.now() > new Date(r.pick_closes_at).getTime() + 2000) return { ok: false, error: "Too late, the picks are closed." };
+        const e = state.entries.find((x) => x.round_id === r.id && x.phone === normPhone(phone)); if (!e) return { ok: false, error: "You are not signed up for this game." };
+        e.pick = pick; persist(); return { ok: true, pick };
+      },
+      async pickCounts(id) { const es = state.entries.filter((e) => e.round_id === id); return { total: es.length, picked: es.filter((e) => e.pick).length, c1: es.filter((e) => e.pick === "c1").length, c2: es.filter((e) => e.pick === "c2").length, c3: es.filter((e) => e.pick === "c3").length }; },
+      roundChannel(code) { const bc = new BroadcastChannel("lctg-round-" + String(code).toUpperCase()); return { send(msg) { bc.postMessage(msg); }, on(fn) { bc.onmessage = (e) => fn(e.data); }, close() { bc.close(); } }; },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {
         await sleep(300);
         const r = state.rounds.find((x) => x.code === String(code).toUpperCase());
@@ -138,7 +149,8 @@
         if (digits.length !== 10) return { ok: false, error: "Please enter a valid 10-digit US phone number." };
         if (String(name || "").trim().length < 2) return { ok: false, error: "Please enter your name." };
         const g = state.games.find((x) => x.key === r.game_key);
-        if (!g.options.some((o) => o.id === pick) || (r.racers && !r.racers.includes(pick))) return { ok: false, error: "Please pick one of the options." };
+        if (r.game_key === "shellgame") pick = null;
+        else if (!g.options.some((o) => o.id === pick) || (r.racers && !r.racers.includes(pick))) return { ok: false, error: "Please pick one of the options." };
         const ex = state.entries.find((e) => e.round_id === r.id && e.phone === digits);
         if (ex) { ex.pick = pick; ex.name = name.trim(); ex.sms_opt_in = ex.sms_opt_in || !!opt_in; }
         else state.entries.push({ id: uuid(), round_id: r.id, name: name.trim(), phone: digits, pick, sms_opt_in: !!opt_in, opt_in_text, is_winner: false, texted: false, notes: null, created_at: new Date().toISOString() });
@@ -224,6 +236,15 @@
         return { count: rows.length, byPick, winners: rows.filter((e) => e.is_winner).map((e) => e.name) };
       },
       async getRoundPublic(code) { return throwIf(await sb.rpc("get_round_public", { p_code: code })); },
+      async openPicks(id, seconds = 10) { return throwIf(await sb.rpc("open_picks", { p_round_id: id, p_seconds: seconds })); },
+      async shellPick(code, phone, pick) { return throwIf(await sb.rpc("shell_pick", { p_code: code, p_phone: phone, p_pick: pick })); },
+      async pickCounts(id) { return throwIf(await sb.rpc("pick_counts", { p_round_id: id })); },
+      // Realtime broadcast between the TV and the phones in a round: instant "now choose" signal; the database state is the fallback and the authority.
+      roundChannel(code) {
+        const ch = sb.channel("lctg-round-" + String(code).toUpperCase(), { config: { broadcast: { self: false } } }); let handler = null; let ready = false; const queue = [];
+        ch.on("broadcast", { event: "msg" }, (p) => { if (handler) handler(p.payload); }).subscribe((st) => { if (st === "SUBSCRIBED") { ready = true; queue.splice(0).forEach((m) => ch.send({ type: "broadcast", event: "msg", payload: m })); } });
+        return { send(msg) { if (ready) ch.send({ type: "broadcast", event: "msg", payload: msg }); else queue.push(msg); }, on(fn) { handler = fn; }, close() { try { sb.removeChannel(ch); } catch {} } };
+      },
       async lastMarblePick(phone) { return throwIf(await sb.rpc("last_marble_pick", { p_phone: phone })); },
       async roundField(round_id) { return throwIf(await sb.from("entries_export").select("id,name,pick,created_at").eq("round_id", round_id).order("created_at", { ascending: true })); },
       async finishRoundPlaces(id, places) { throwIf(await sb.rpc("finish_round_places", { p_round_id: id, p_places: places })); },

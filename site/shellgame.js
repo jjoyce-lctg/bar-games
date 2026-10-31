@@ -26,14 +26,16 @@ function loadArt() {
 }
 
 export async function run(container, opts = {}) {
-  const { onDone = () => {}, onPhase = () => {}, swaps = 20, pickSeconds = 0, seed = Date.now() % 1e9, manual = false } = opts;
+  // onPickOpen(seconds) may return the closing time (ms epoch, server-aligned) so the countdown matches the phones; otherwise the engine times it locally.
+  const { onDone = () => {}, onPhase = () => {}, onPickOpen = null, swaps = 20, pickSeconds = 10, seed = Date.now() % 1e9, manual = false } = opts;
   const rnd = mulberry32(seed);
   const IMG = await loadArt();
 
-  container.innerHTML = `<div class="sg-wrap" style="position:relative;width:100%;height:100%;background:#000;overflow:hidden"><canvas style="position:absolute;inset:0;width:100%;height:100%"></canvas><div class="sg-cap" style="position:absolute;left:0;right:0;top:6%;text-align:center;font:800 4vh/1.2 Inter,system-ui,sans-serif;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.9);opacity:0;transition:opacity .35s;letter-spacing:.01em"></div></div>`;
-  const canvas = container.querySelector("canvas"), cap = container.querySelector(".sg-cap");
+  container.innerHTML = `<div class="sg-wrap" style="position:relative;width:100%;height:100%;background:#000;overflow:hidden"><canvas style="position:absolute;inset:0;width:100%;height:100%"></canvas><div class="sg-cap" style="position:absolute;left:0;right:0;top:6%;text-align:center;font:800 4vh/1.2 Inter,system-ui,sans-serif;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.9);opacity:0;transition:opacity .35s;letter-spacing:.01em"></div><div class="sg-choose" style="position:absolute;left:0;right:0;top:4%;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none"><div style="font:900 9vh/1 'Bebas Neue',Inter,system-ui,sans-serif;letter-spacing:.06em;color:#fff;text-shadow:0 4px 24px rgba(0,0,0,.9)">NOW CHOOSE <span style="font-size:7vh;vertical-align:middle">📱</span></div><div style="font:600 2.6vh/1.3 Inter,system-ui,sans-serif;color:#ffd96a;margin-top:.6vh;text-shadow:0 2px 10px rgba(0,0,0,.9)">Pick cup 1, 2 or 3 on your phone</div></div><div class="sg-count" style="position:absolute;right:5%;top:34%;width:16vh;height:16vh;border-radius:50%;border:.9vh solid #ffcd00;display:flex;align-items:center;justify-content:center;font:900 10vh/1 'Bebas Neue',Inter,system-ui,sans-serif;color:#ffcd00;background:rgba(0,0,0,.55);box-shadow:0 0 40px rgba(0,0,0,.8);opacity:0;transition:opacity .3s">10</div></div>`;
+  const canvas = container.querySelector("canvas"), cap = container.querySelector(".sg-cap"), choose = container.querySelector(".sg-choose"), countEl = container.querySelector(".sg-count");
   const ctx = canvas.getContext("2d");
   const say = (t) => { cap.textContent = t; cap.style.opacity = t ? 1 : 0; };
+  const audio = (n) => { try { if (window.AUDIO) window.AUDIO.event(n); } catch {} };
 
   // ---- scene state ----
   const cups = SPOTS.map((x, i) => ({ x, y: TABLE_Y, lift: 0, tilt: 0, sx: 1, sy: 1, ds: 1, slot: i }));
@@ -131,7 +133,7 @@ export async function run(container, opts = {}) {
     phase = "intro"; onPhase(phase);
     await wait(600);
     const L = hands[0], R = hands[1], mid = bySlot(1);
-    say("Watch the ball.");
+    say("Watch the ball."); audio("go");
     // left glove lifts the middle cup; right glove brings the ball in and sets it down
     await Promise.all([handToCup(L, mid, 700), (async () => { setPose(R, "reach"); await moveHand(R, { x: SPOTS[1] + 150, y: TABLE_Y - 380 }, 750); })()]);
     await liftCup(mid, L, LIFT, 480);
@@ -143,7 +145,7 @@ export async function run(container, opts = {}) {
     await wait(400);
 
     // shuffle: slow first swaps, quick by the sixth, feints once it is quick
-    phase = "shuffle"; onPhase(phase); say("Follow the cup.");
+    phase = "shuffle"; onPhase(phase); say("Follow the cup."); audio("sg-shuffle");
     await handToCup(R, bySlot(2), 420);
     let last = -1, dur = 720, feint = false;
     for (let i = 0; i < swaps; i++) {
@@ -167,19 +169,24 @@ export async function run(container, opts = {}) {
     // gloves back to hovering at the sides
     phase = "pick"; onPhase(phase);
     await Promise.all([restHand(L, 650), restHand(R, 650)]);
-    say(pickSeconds ? "Which cup? Lock in your pick." : "Which cup?");
-    await wait(pickSeconds ? pickSeconds * 1000 : 1800);
+    // open the window (the host records it and tells the phones), then count down against the same closing time
+    let closesAt = null; try { if (onPickOpen) closesAt = await onPickOpen(pickSeconds); } catch {}
+    const t0 = manual ? simTime * 1000 : Date.now(); const closeMs = closesAt ? (manual ? t0 + pickSeconds * 1000 : new Date(closesAt).getTime()) : t0 + pickSeconds * 1000;
+    say(""); choose.style.opacity = 1; countEl.style.opacity = 1; countEl.textContent = String(pickSeconds);
+    await new Promise((res) => { const tw = { t: 0, ms: 1e9, ease: (t) => t, res, fn: () => { const now = manual ? simTime * 1000 : Date.now(); const left = Math.max(0, Math.ceil((closeMs - now) / 1000)); const txt = String(left); if (countEl.textContent !== txt) { countEl.textContent = txt; countEl.style.transition = "transform .12s"; countEl.style.transform = "scale(1.18)"; setTimeout(() => (countEl.style.transform = ""), 120); } if (now >= closeMs) { tweens.delete(tw); res(); } } }; tweens.add(tw); });
+    countEl.textContent = "0"; await wait(400); choose.style.opacity = 0; countEl.style.opacity = 0; say("Picks are in!"); await wait(1200); // grace so the last taps land before the reveal
 
     // reveal: one empty cup first, then the ball
     phase = "reveal"; onPhase(phase); say("");
+    cap.style.transition = "opacity .35s";
     const ballSlot = cups[ballCup].slot;
     const others = [0, 1, 2].filter((s) => s !== ballSlot); const decoy = bySlot(others[Math.floor(rnd() * 2)]);
-    const hD = decoy.x < SPOTS[1] ? L : R;
+    const hD = decoy.x < SPOTS[1] ? L : R; audio("sg-reveal");
     await handToCup(hD, decoy, 600); await liftCup(decoy, hD, LIFT, 440); await wait(750); await liftCup(decoy, hD, 0, 340, easeIn); land(decoy);
     const winner = bySlot(ballSlot), hW = hD === L ? R : L;
     await Promise.all([handToCup(hW, winner, 560), restHand(hD, 560)]); await wait(250);
     ball.visible = true; ball.x = winner.x; ball.y = TABLE_Y; ball.z = 0;
-    await liftCup(winner, hW, LIFT, 560, easeOutBack); ball.sparkle = 2.6; say(`Cup ${ballSlot + 1}!`);
+    await liftCup(winner, hW, LIFT, 560, easeOutBack); ball.sparkle = 2.6; say(`CUP ${ballSlot + 1}!`); audio("finish");
     await wait(2600);
     phase = "done"; onPhase(phase);
     onDone({ coinSlot: ballSlot, ballSlot, seed });
