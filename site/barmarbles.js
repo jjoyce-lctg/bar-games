@@ -253,7 +253,9 @@ export async function run(container, opts) {
 
   // ---- three ----
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const capRatio = () => Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1, 1920 / Math.max(1, canvas.clientWidth || window.innerWidth)); // never render wider than 1920: the TVs are 1080p and ultrawides would otherwise pay for 3440 px of fill
+  renderer.setPixelRatio(capRatio());
+  let gpuName = "?"; try { const gl = renderer.getContext(), ext = gl.getExtension("WEBGL_debug_renderer_info"); gpuName = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch {} renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   const skyTop = new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#6fb6ff"), 0.55), skyBot = new THREE.Color("#e9f2ff");
   const dusk = !!WORLD.sky; // Chicago skyline at dusk wraps the whole scene when the art loaded
@@ -490,10 +492,10 @@ export async function run(container, opts) {
       if (camPos.y < GROUND_Y + 2.5) camPos.y = GROUND_Y + 2.5; if (window.__cam) { camPos.set(...window.__cam.pos); camLook.set(...window.__cam.look); } camera.position.copy(camPos); camera.lookAt(camLook);
     }
     // render
-    const W = canvas.clientWidth, H = canvas.clientHeight; if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
+    const W = canvas.clientWidth, H = canvas.clientHeight; if (Math.abs(renderer.getPixelRatio() - capRatio()) > 0.01) renderer.setPixelRatio(capRatio()); if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
     if (render) { for (const sp of neons) { const k = 1 + 0.05 * Math.sin(simTime * 2.1 + sp.userData.phase); sp.scale.set(sp.userData.size * k, sp.userData.size * k, 1); } const tR = performance.now(); renderer.render(scene, camera); perf.renderMs += performance.now() - tR; }
     perf.jsMs += performance.now() - tStart;
-    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} @${renderer.getPixelRatio()}  marbles live ${live}  sim ${simTime.toFixed(1)}s`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
+    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} @${renderer.getPixelRatio()}  marbles live ${live}  sim ${simTime.toFixed(1)}s\ngpu ${gpuName}`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
     // HUD
     const liveSorted = marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog);
     const list = [...order, ...liveSorted].slice(0, placesToShow);
