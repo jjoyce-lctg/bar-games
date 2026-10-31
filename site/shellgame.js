@@ -17,7 +17,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function mulberry32(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 export async function run(container, opts = {}) {
-  const { onDone = () => {}, onPhase = () => {}, swaps = 11, pickSeconds = 0, seed = Date.now() % 1e9, manual = false, venue = {} } = opts;
+  const { onDone = () => {}, onPhase = () => {}, swaps = 20, pickSeconds = 0, assets = {}, seed = Date.now() % 1e9, manual = false, venue = {} } = opts;
   const rnd = mulberry32(seed);
   const accent = venue.color_accent || "#ffcd00";
 
@@ -26,6 +26,8 @@ export async function run(container, opts = {}) {
   const ctx = canvas.getContext("2d");
   const say = (t) => { cap.textContent = t; cap.style.opacity = t ? 1 : 0; };
 
+  // optional illustrated assets: { cup, coin, handOpen, handGrip } as URLs. Each replaces the drawn version when it loads; the drawn version stays as the fallback.
+  const IMG = {}; await Promise.all(Object.entries(assets).map(([k, src]) => new Promise((res) => { if (!src) return res(); const im = new Image(); im.onload = () => { IMG[k] = im; res(); }; im.onerror = () => res(); im.src = src; })));
   // ---- scene state ----
   const cups = SPOTS.map((x, i) => ({ x, y: TABLE_Y, lift: 0, tilt: 0, sx: 1, sy: 1, slot: i, hasCoin: false }));
   const coin = { x: SPOTS[1], y: TABLE_Y, z: 0, spin: 0, visible: false, sparkle: 0 };
@@ -88,18 +90,21 @@ export async function run(container, opts = {}) {
     const y = c.y - c.z; drawShadow(c.x, c.y, 50, c.z);
     ctx.save(); ctx.translate(c.x, y);
     const flip = Math.abs(Math.cos(c.spin)); ctx.scale(1, 0.42 * (0.35 + 0.65 * flip));
+    if (IMG.coin) { ctx.drawImage(IMG.coin, -66, -66, 132, 132); ctx.restore(); if (c.sparkle <= 0) return; }
+    else {
     const g = ctx.createRadialGradient(-14, -14, 6, 0, 0, 66); g.addColorStop(0, "#fff3b0"); g.addColorStop(0.5, "#f5c518"); g.addColorStop(1, "#b8860b");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 62, 0, Math.PI * 2); ctx.fill();
     ctx.lineWidth = 5; ctx.strokeStyle = "#8a6508"; ctx.stroke();
     ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 48, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = "#8a6508"; ctx.font = "900 54px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("LC", 0, 3);
-    ctx.restore();
+    ctx.restore(); }
     if (c.sparkle > 0) { const n = 6; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + simTime * 3, r = 90 + 30 * Math.sin(simTime * 9 + i), k = c.sparkle; ctx.save(); ctx.translate(c.x + Math.cos(a) * r, y + Math.sin(a) * r * 0.5); ctx.rotate(simTime * 4 + i); ctx.fillStyle = `rgba(255,250,200,${0.9 * Math.min(1, k)})`; ctx.beginPath(); for (let j = 0; j < 8; j++) { const rr = j % 2 ? 4 : 14; ctx.lineTo(Math.cos(j * Math.PI / 4) * rr, Math.sin(j * Math.PI / 4) * rr); } ctx.closePath(); ctx.fill(); ctx.restore(); } }
   }
   function drawCup(c) {
     const y = c.y - c.lift;
     drawShadow(c.x, c.y, CUP_RIM, c.lift);
     ctx.save(); ctx.translate(c.x, y); ctx.rotate(c.tilt); ctx.scale(c.sx * (c.ds || 1), c.sy * (c.ds || 1));
+    if (IMG.cup) { const im = IMG.cup, w = CUP_RIM * 2 + 24, hh = w * im.height / im.width; ctx.drawImage(im, -w / 2, -hh + CUP_RIM * 0.3 + 4, w, hh); ctx.restore(); return; }
     const rim = CUP_RIM, top = CUP_TOP, h = CUP_H, ry = 0.3;
     // body (upside-down cup: wide rim at the table, narrow base up top)
     const body = ctx.createLinearGradient(-rim, 0, rim, 0); body.addColorStop(0, "#8f1118"); body.addColorStop(0.28, "#e0262e"); body.addColorStop(0.5, "#f04a50"); body.addColorStop(0.72, "#d81f27"); body.addColorStop(1, "#7a0f15");
@@ -123,6 +128,7 @@ export async function run(container, opts = {}) {
     if (!hd.visible) return;
     const { x, y, grip, pinch, side } = hd;
     ctx.save(); ctx.translate(x, y);
+    if (IMG.handOpen) { const im = grip > 0.5 && IMG.handGrip ? IMG.handGrip : IMG.handOpen, w = 260, hh = w * im.height / im.width; if (side > 0) { ctx.scale(-1, 1); } ctx.drawImage(im, -w / 2, -hh * 0.78, w, hh); ctx.restore(); return; }
     // sleeve up into the darkness
     const sl = ctx.createLinearGradient(0, 0, side * 120, -900); sl.addColorStop(0, "#15161c"); sl.addColorStop(0.55, "#0c0d12"); sl.addColorStop(1, "rgba(5,6,10,0)");
     ctx.fillStyle = sl; ctx.beginPath(); ctx.moveTo(-60, -60); ctx.lineTo(60, -60); ctx.lineTo(60 + side * 140, -980); ctx.lineTo(-60 + side * 140, -980); ctx.closePath(); ctx.fill();
@@ -200,22 +206,25 @@ export async function run(container, opts = {}) {
     // shuffle
     phase = "shuffle"; onPhase(phase); say("Follow the cup.");
     await moveHand(R, { x: bySlot(2).x, y: TABLE_Y + gripOffset.dy, grip: 1 }, 380);
-    let last = -1, dur = 700;
+    let last = -1, dur = 700, feint = false;
     for (let i = 0; i < swaps; i++) {
-      // pick a pair of slots, never the same pair twice in a row; the middle is involved more often so the eye has to work
-      let pair; do { const r = rnd(); pair = r < 0.4 ? [0, 1] : r < 0.8 ? [1, 2] : [0, 2]; } while ((pair[0] * 3 + pair[1]) === last); last = pair[0] * 3 + pair[1];
+      // pick a pair of slots; normally never the same pair twice in a row, but once it is quick, one swap in four is a feint: the same pair straight back
+      let pair;
+      if (feint) { pair = [Math.floor(last / 3), last % 3]; feint = false; }
+      else { do { const r = rnd(); pair = r < 0.4 ? [0, 1] : r < 0.8 ? [1, 2] : [0, 2]; } while ((pair[0] * 3 + pair[1]) === last); feint = i >= 5 && i < swaps - 1 && rnd() < 0.25; }
+      last = pair[0] * 3 + pair[1];
       const ca = bySlot(pair[0]), cb = bySlot(pair[1]);
       // hands: whichever hand is nearer takes each cup; a quick reach if it has to change cups
       const ia = cups.indexOf(ca), ib = cups.indexOf(cb);
       const dl = Math.abs(L.x - ca.x) + Math.abs(R.x - cb.x), dr = Math.abs(L.x - cb.x) + Math.abs(R.x - ca.x);
       const [hA, hB] = dl <= dr ? [L, R] : [R, L];
       const reach = Math.max(hA.x !== ca.x ? 1 : 0, hB.x !== cb.x ? 1 : 0);
-      if (reach) await Promise.all([handToCup(hA, ca, Math.max(140, dur * 0.35)), handToCup(hB, cb, Math.max(140, dur * 0.35))]);
+      if (reach) await Promise.all([handToCup(hA, ca, Math.max(110, dur * 0.3)), handToCup(hB, cb, Math.max(110, dur * 0.3))]);
       // the hand that is further left takes the front lane so arms do not cross awkwardly
       const frontFirst = hA.x <= hB.x;
       await swap(frontFirst ? ia : ib, frontFirst ? ib : ia, dur, frontFirst ? hA : hB, frontFirst ? hB : hA);
-      dur = Math.max(230, dur * (i < 3 ? 0.84 : 0.9));
-      await wait(Math.max(40, 110 - i * 8));
+      dur = Math.max(200, dur * 0.78);
+      await wait(feint ? 20 : Math.max(25, 90 - i * 12));
     }
     await wait(300);
 
