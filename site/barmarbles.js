@@ -243,7 +243,7 @@ export async function run(container, opts) {
   injectCss();
   await RAPIER.init();
   await Promise.race([worldReady, new Promise((r) => setTimeout(r, 4000))]); // art is nice to have, never a reason to hold the race
-  const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 4, render = true, turbo = false, stats = false } = opts;
+  const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 8, render = true, turbo = false, stats = false } = opts;
   let simTime = 0;
   const accent = venue.color_accent || "#ffcd00";
   container.innerHTML = `<div class="bm-wrap" style="--accent:${accent}"><canvas></canvas><div class="bm-hud"><div class="bm-comm"></div><div class="bm-board"><h3>Bar Marbles</h3><div class="rows"></div><div class="prog"><i></i></div></div><div class="bm-count"><b id="bmLeft">0</b> still rolling</div><div class="bm-big"></div><div class="bm-fade"></div><div class="bm-final"></div><div class="bm-stats"></div></div></div>`;
@@ -252,10 +252,26 @@ export async function run(container, opts) {
   let commTimer = null; const say = (t, ms = 2200) => { comm.textContent = t; comm.classList.add("on"); clearTimeout(commTimer); commTimer = setTimeout(() => comm.classList.remove("on"), ms); };
 
   // ---- three ----
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  const capRatio = () => Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1, 1920 / Math.max(1, canvas.clientWidth || window.innerWidth)); // never render wider than 1920: the TVs are 1080p and ultrawides would otherwise pay for 3440 px of fill
+  // Quality tiers. Venue laptops are whatever the VJ brings, often with Chrome on Windows' software renderer, so the scene has to run there untouched.
+  // "lite" = no antialias, no shadows, Lambert shading, canvas capped at 1280 wide. Chosen up front when the renderer is software, and engaged at runtime if frames stay slow.
+  let gpuName = "?"; { try { const c = document.createElement("canvas"), gl = c.getContext("webgl2") || c.getContext("webgl"); const ext = gl && gl.getExtension("WEBGL_debug_renderer_info"); if (gl) gpuName = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch {} }
+  const softwareGpu = /basic render driver|swiftshader|llvmpipe|software|mesa offscreen/i.test(gpuName);
+  const q = new URLSearchParams(location.search).get("quality");
+  let lite = q ? q === "lite" : softwareGpu;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lite, powerPreference: "high-performance" });
+  // Dynamic resolution. Software renderers pay per pixel whatever is drawn, so the render size is the one dial that always works:
+  // start at 1920 wide (1280 in lite), then every second nudge the scale so the frame interval sits near 30 fps, never below 800 px wide. The HTML overlay stays sharp either way.
+  const cssW = () => Math.max(1, canvas.clientWidth || window.innerWidth);
+  let resScale = 1; const MIN_W = 800;
+  const capRatio = () => window.__ratio || Math.max(MIN_W / cssW(), Math.min(window.innerHeight > 1100 ? 1 : 1.5, window.devicePixelRatio || 1, (lite ? 1280 : 1920) / cssW()) * resScale);
   renderer.setPixelRatio(capRatio());
-  let gpuName = "?"; try { const gl = renderer.getContext(), ext = gl.getExtension("WEBGL_debug_renderer_info"); gpuName = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); } catch {} renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const dyn = { ms: 0, n: 0, at: performance.now() };
+  const tuneResolution = (rawMs) => { dyn.ms += rawMs; dyn.n++; const now = performance.now(); if (now - dyn.at < 1000 || dyn.n < 5) return; const avg = dyn.ms / dyn.n; dyn.ms = dyn.n = 0; dyn.at = now;
+    if (avg > 38) resScale = Math.max(0.3, resScale * 0.85); else if (avg < 24) resScale = Math.min(1, resScale * 1.08); };
+  renderer.shadowMap.enabled = !lite; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const applyLite = () => { if (applyLite.done) return; lite = true; applyLite.done = true; renderer.shadowMap.enabled = false; renderer.setPixelRatio(capRatio());
+    scene.traverse((o) => { const m = o.material; if (!m || Array.isArray(m)) return; if (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) { const n = new THREE.MeshLambertMaterial({ color: m.color, map: m.map, transparent: m.transparent, opacity: m.opacity, side: m.side, emissive: m.emissive, emissiveMap: m.emissiveMap, emissiveIntensity: m.emissiveIntensity }); o.material = n; m.dispose(); } });
+    scene.traverse((o) => { if (o.isMesh) { o.castShadow = false; } }); };
   const scene = new THREE.Scene();
   const skyTop = new THREE.Color(venue.color_primary || "#0f2a3a").lerp(new THREE.Color("#6fb6ff"), 0.55), skyBot = new THREE.Color("#e9f2ff");
   const dusk = !!WORLD.sky; // Chicago skyline at dusk wraps the whole scene when the art loaded
@@ -301,11 +317,15 @@ export async function run(container, opts) {
       panel(fp.clone().addScaledVector(ft, -28).addScaledVector(ff.side, -36).add(new THREE.Vector3(0, 2, 0)), fp.clone().addScaledVector(ft, -28).addScaledVector(ff.side, 30).add(new THREE.Vector3(0, 2, 0)), 60);
     } }
 
+  if (lite) setTimeout(applyLite, 0); // after the obstacles and marbles are built too
+  let slowFrames = 0; // runtime safety net: a full-quality machine that cannot hold ~25 fps drops to lite
   // ---- physics ----
   const world = new RAPIER.World({ x: 0, y: -36, z: 0 });
-  track.parts.forEach((p) => { if (p.indices.length) world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); /* track bounce stays low even with lively marble-to-marble bounces */ (p.solids || []).forEach((so) => { const d = so.kind === "box" ? RAPIER.ColliderDesc.cuboid(...so.half) : RAPIER.ColliderDesc.cylinder(so.half, so.r); world.createCollider(d.setTranslation(...so.pos).setRotation({ x: so.q[0], y: so.q[1], z: so.q[2], w: so.q[3] }).setRestitution(so.restitution).setFriction(0.05)); }); });
+  // 120 Hz without CCD: a marble moves under its own radius per step even at top speed, so nothing tunnels, and it costs ~2% of what CCD did when the field bunches up
+  const HZ = 120, STEP = 1 / HZ; world.integrationParameters.dt = STEP;
+  const CD = (window.__colliders = { part: [], skin: [], wall: [] }); track.parts.forEach((p) => { if (p.indices.length) CD.part.push(world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min))); /* track bounce stays low even with lively marble-to-marble bounces */ (p.solids || []).forEach((so) => { const d = so.kind === "box" ? RAPIER.ColliderDesc.cuboid(...so.half) : RAPIER.ColliderDesc.cylinder(so.half, so.r); world.createCollider(d.setTranslation(...so.pos).setRotation({ x: so.q[0], y: so.q[1], z: so.q[2], w: so.q[3] }).setRestitution(so.restitution).setFriction(0.05)); }); });
   // funnels get a second collision skin a little below the surface so a marble dropping in fast can never tunnel through
-  track.parts.filter((p) => p.funnel).forEach((p) => { world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -1.6, 0).setFriction(0.02).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.wallIndices).setFriction(0.2).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); });
+  track.parts.filter((p) => p.funnel).forEach((p) => { CD.skin.push(world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -1.6, 0).setFriction(0.02).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min))); CD.wall.push(world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.wallIndices).setFriction(0.2).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min))); });
   world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -109, 0));
   // ---- obstacles: pegs (bouncy posts), bumpers (big pinball pads) and spinners (kinematic rotating bars) ----
   const spinners = []; const pillarLikeMat = new THREE.MeshStandardMaterial({ color: 0x9fb0cc, roughness: 0.9 }); const obsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 }), bumpMat = new THREE.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.3, emissive: 0x3a0010 });
@@ -353,7 +373,7 @@ export async function run(container, opts) {
     const perRow = 4, row = Math.floor(slots[i] / perRow), col = slots[i] % perRow;
     const si = Math.max(2, gateI - 3 - row * 3), c = track.samples[si], fr = track.frames[si];
     const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, Math.sqrt(Math.max(0, R0 * R0 - ((col - (perRow - 1) / 2) * BALL_R * 2.05) ** 2)) - BALL_R - 0.12).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.2 + (row % 3) * 0.1, (Math.random() - 0.5) * 0.08));
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.004).setAngularDamping(0.2).setCcdEnabled(true));
+    const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.004).setAngularDamping(0.2));
     world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.08).setRestitution(0.38), body);
     const mat = p.tag ? new THREE.MeshPhysicalMaterial({ map: tagTexture(color, p.tag), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 }) : new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 });
     const mesh = new THREE.Mesh(ballGeo, mat); mesh.castShadow = true; scene.add(mesh);
@@ -445,12 +465,12 @@ export async function run(container, opts) {
   function step(now) {
     if (stopped) return;
     if (ending) return; // simulation and rendering stop once the results are up
-    const tStart = performance.now(); if (perf.lastNow) perf.rawMs += now - perf.lastNow; perf.lastNow = now;
+    const tStart = performance.now(); if (perf.lastNow) { const raw = now - perf.lastNow; perf.rawMs += raw; if (render && !turbo) { tuneResolution(raw); if (!lite) { slowFrames = raw > 40 ? slowFrames + 1 : Math.max(0, slowFrames - 2); if (slowFrames > 60) applyLite(); } } } perf.lastNow = now;
     let dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
-    if (turbo) { acc = maxStepsPerFrame / 60; dt = acc; } // batch mode: a fixed number of physics steps per frame, clocks run on sim time
+    if (turbo) { acc = maxStepsPerFrame * STEP; dt = acc; } // batch mode: a fixed number of physics steps per frame, clocks run on sim time
     if (!started && simTime >= releaseAt) release();
     const tPhys = performance.now();
-    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { let q; if (sp.kind === "hammer") { const th = sp.amp * Math.sin(sp.omega * simTime + sp.phase); q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), th)); } else { sp.angle += sp.rate / 60; q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); } sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; if (turbo && steps % 6 === 0) tick(0.1); } if (acc > 0.25) acc = 0;
+    let steps = 0; while (acc >= STEP && steps < maxStepsPerFrame) { for (const sp of spinners) { let q; if (sp.kind === "hammer") { const th = sp.amp * Math.sin(sp.omega * simTime + sp.phase); q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), th)); } else { sp.angle += sp.rate * STEP; q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); } sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= STEP; simTime += STEP; steps++; if (turbo && steps % 12 === 0) tick(0.1); } if (acc > 0.25) acc = 0;
     perf.phys += performance.now() - tPhys; perf.steps += steps; perf.frames++; perf.frameMs += dt * 1000;
     tick(turbo ? 0.001 : dt);
     const { leader, leadProg, live } = tk;
@@ -495,7 +515,7 @@ export async function run(container, opts) {
     const W = canvas.clientWidth, H = canvas.clientHeight; if (Math.abs(renderer.getPixelRatio() - capRatio()) > 0.01) renderer.setPixelRatio(capRatio()); if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
     if (render) { for (const sp of neons) { const k = 1 + 0.05 * Math.sin(simTime * 2.1 + sp.userData.phase); sp.scale.set(sp.userData.size * k, sp.userData.size * k, 1); } const tR = performance.now(); renderer.render(scene, camera); perf.renderMs += performance.now() - tR; }
     perf.jsMs += performance.now() - tStart;
-    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} @${renderer.getPixelRatio()}  marbles live ${live}  sim ${simTime.toFixed(1)}s\ngpu ${gpuName}`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
+    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); const raw = perf.rawMs / f; window.__fps = { fps: 1000 / raw, frame: raw, js: perf.jsMs / f, phys: perf.phys / f, lite }; statsEl.textContent = `fps ${(1000 / raw).toFixed(0)}  frame ${raw.toFixed(1)} ms  js ${(perf.jsMs / f).toFixed(1)} ms (physics ${(perf.phys / f).toFixed(1)}, render call ${(perf.renderMs / f).toFixed(1)})  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  canvas ${canvas.width}x${canvas.height} (scale ${resScale.toFixed(2)})  marbles live ${live}  sim ${simTime.toFixed(1)}s\ngpu ${gpuName}  quality ${lite ? "lite" : "full"}`; perf.phys = perf.steps = perf.frames = perf.frameMs = perf.rawMs = perf.jsMs = perf.renderMs = 0; perf.last = performance.now(); }
     // HUD
     const liveSorted = marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog);
     const list = [...order, ...liveSorted].slice(0, placesToShow);
@@ -503,7 +523,7 @@ export async function run(container, opts) {
     prog.style.width = `${Math.min(100, 100 * leadProg / (C.finishT * N)).toFixed(1)}%`; left.textContent = live;
     raf = requestAnimationFrame(step);
   }
-  window.__track = track; window.__marbles = marbles; window.__world = world; window.__shot = () => shot.name; window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), jumpResets: marbles.reduce((a, m) => a + (m.jumpResets || 0), 0), started, N, finishAt: Math.round(C.finishT * N), parts: track.parts.map((p) => p.samples.length), simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
+  window.__THREE = THREE; window.__scene = scene; window.__camera = camera; window.__ground = ground; window.__renderer = renderer; window.__track = track; window.__marbles = marbles; window.__world = world; window.__shot = () => shot.name; window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), jumpResets: marbles.reduce((a, m) => a + (m.jumpResets || 0), 0), started, N, finishAt: Math.round(C.finishT * N), parts: track.parts.map((p) => p.samples.length), simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
   let lastDt = 1 / 60;
   raf = requestAnimationFrame(step);
   return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); try { renderer.dispose(); } catch {} }, order: () => order.map((m) => m.player), toggleStats() { statsOn = !statsOn; statsEl.classList.toggle("on", statsOn); } };
