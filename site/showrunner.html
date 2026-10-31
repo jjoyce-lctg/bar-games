@@ -233,8 +233,8 @@
   const prizeText = () => state.settings.prize || state.venue.default_prize || "";
   function qrSvg(text) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
 
-  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["S", "Settings"], ["M", "Mute"], ["ESC", "Menu"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [["ESC", "Abort race"]] };
-  const keybar = (phase) => { $("#stHint").innerHTML = `<div class="keys">${(KEYS[phase] || []).map(([k, l]) => `<span><b>${k}</b>${l}</span>`).join("")}</div>`; };
+  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["T", "Demo race"], ["S", "Settings"], ["M", "Mute"], ["ESC", "Menu"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [["ESC", "Abort race"]] };
+  const keybar = (phase) => { $("#stHint").innerHTML = `<div class="keys">${(KEYS[phase] || []).filter(([k]) => k !== "T" || isMarbles()).map(([k, l]) => `<span><b>${k}</b>${l}</span>`).join("")}</div>`; };
 
   // LANDING: "Wanna play a game?" with the QR live; the clock starts on Enter
   async function renderLanding(opts = {}) {
@@ -242,6 +242,7 @@
     try { AUDIO.event("end"); } catch {}
     $("#stPrize").textContent = prizeText();
     state.game = state.games.find((x) => x.key === state.settings.gameKey) || state.games[0];
+    try { AUDIO.setGame(state.game.key); } catch {}
     if (!state.round || opts.fresh) {
       try { state.round = await api.createRound({ venue_id: state.venue.id, game_key: state.game.key, prize: state.settings.prize, racers: roster(state.game) }); } catch (e) { toast(e.message); return; }
     }
@@ -320,17 +321,26 @@
   }
 
   // Bar Marbles: every entry is a marble. The engine runs the race and shows its own results screen; we record the places.
-  async function startMarbles() {
-    let field = []; try { field = await api.roundField(state.round.id); } catch (e) { toast(e.message); }
+  const DEMO_NAMES = ["Marcus Lee", "Dana Ortiz", "Sam Patel", "Kelly Nguyen", "Jordan Fox", "Alex Kim", "Taylor Reed", "Chris Bell", "Morgan Diaz", "Riley Shaw", "Jamie Cole", "Casey Park", "Drew Hart", "Avery Lane", "Quinn Moss", "Reese Ward", "Skyler Dean", "Parker Lowe", "Rowan Gray", "Blake Hale"];
+  // T on the landing screen: a demo race with 24 made-up marbles (plus anyone really signed up). Nothing is recorded.
+  async function demoMarbles() {
+    if (state.phase !== "landing" || !isMarbles()) return;
+    state.phase = "running"; clearTimers(); stage.classList.remove("dark"); keybar("running");
+    let field = []; try { field = await api.roundField(state.round.id); } catch {}
+    const bots = DEMO_NAMES.slice(0, 24).map((n, i) => ({ id: "demo" + i, name: n, pick: (state.game.options[i % state.game.options.length] || {}).id }));
+    startMarbles([...field, ...bots], { demo: true });
+  }
+  async function startMarbles(fieldIn, { demo = false } = {}) {
+    let field = fieldIn; if (!field) { try { field = await api.roundField(state.round.id); } catch (e) { toast(e.message); field = []; } }
     if (field.length < 2) { toast("Need at least 2 marbles in. Back to sign-up."); state.phase = "landing"; try { await api.setRoundStatus(state.round.id, "open"); } catch {} renderLanding(); return; }
     const players = field.map((e) => ({ id: e.id, name: e.name, color: hexOf(e.pick), tag: tagOf(e.name) }));
     $("#stFootLeft").innerHTML = ""; $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     const mod = await import("./barmarbles.js");
     state.raceCtl = await mod.run($("#raceHost"), { players, venue: state.venue, course: "classic", placesToShow: 5,
       onDone: async (results) => {
-        try { await api.finishRoundPlaces(state.round.id, results.slice(0, 10).map((p) => p.id)); } catch (e) { toast(e.message); }
+        if (!demo) { try { await api.finishRoundPlaces(state.round.id, results.slice(0, 10).map((p) => p.id)); } catch (e) { toast(e.message); } }
         state.phase = "results"; keybar("results"); try { AUDIO.event("results"); } catch {}
-        $("#stFootLeft").innerHTML = `<span class="count"><b>${players.length}</b> raced. Winner's prize: ${esc(prizeText())}, valid from tomorrow for 14 days at any LCTG bar.</span>`;
+        $("#stFootLeft").innerHTML = demo ? `<span class="count">Demo race. Nothing recorded, no prize.</span>` : `<span class="count"><b>${players.length}</b> raced. Winner's prize: ${esc(prizeText())}, valid from tomorrow for 14 days at any LCTG bar.</span>`;
         state.auto = setTimeout(renderBoard, 16000);
       } });
   }
@@ -393,6 +403,8 @@
     if (typing || state.phase === "console") return;
     if (e.key.toLowerCase() === "f") { toggleFullscreen(); return; }
     if (e.key.toLowerCase() === "s") { e.preventDefault(); openSettings(); return; }
+    if (e.key.toLowerCase() === "t") { e.preventDefault(); demoMarbles(); return; }
+    if (e.key.toLowerCase() === "d" && state.raceCtl && state.raceCtl.toggleStats) { state.raceCtl.toggleStats(); return; }
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advance(); }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); cycleGame(e.key === "ArrowUp" ? -1 : 1); }
     if (e.key === "Escape") {

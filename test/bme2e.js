@@ -20,17 +20,16 @@ const server = http.createServer((req, res) => { const p = path.join(root, decod
     const g = await ctx.newPage(); g.on('pageerror', e => errs.push('ENTRY ' + e.message));
     await g.goto(`http://localhost:8797/entry.html?mock=1&c=${code}`); await g.waitForTimeout(700);
     await g.click(`.opt[data-id="${pick}"]`); await g.fill('#name', name); await g.fill('#phone', phone); await g.check('#optin'); await g.click('#submit'); await g.waitForTimeout(900);
-    const preds = await g.$$('.pred'); if (preds.length) { await preds[0].click(); await g.waitForTimeout(500); }
     console.log(name, '->', (await g.textContent('#content')).replace(/\s+/g, ' ').slice(0, 160));
     await g.screenshot({ path: `shots/e2e-entry-${pick}.png` }); await g.close();
   }
   await sr.waitForTimeout(3000); await sr.screenshot({ path: 'shots/e2e-landing.png' });
   console.log('field on TV:', (await sr.textContent('#fieldList')).replace(/\s+/g, ' '));
   await sr.keyboard.press('Enter'); await sr.waitForTimeout(500); await sr.keyboard.press('Enter'); // start clock, then race now
-  for (let i = 0; i < 400; i++) { await sr.waitForTimeout(2000); if (await sr.$(".bm-final.on")) break; }
+  for (let i = 0; i < 20; i++) { await sr.waitForTimeout(2000); if (await sr.$(".bm-final.on")) break; }
   await sr.waitForTimeout(1500); await sr.screenshot({ path: 'shots/e2e-final.png' });
   console.log('final:', (await sr.textContent('.bm-final')).replace(/\s+/g, ' '));
-  const st = await sr.evaluate(() => { const s = JSON.parse(localStorage.getItem('barGamesMock')); const r = s.rounds[s.rounds.length - 1]; return { status: r.status, entries: s.entries.filter(e => e.round_id === r.id).map(e => [e.name, e.pick, e.place, e.is_winner, e.predict_ok]), prizes: (s.prizes || []).map(p => p.name) }; });
+  const st = await sr.evaluate(() => { const s = JSON.parse(localStorage.getItem('barGamesMock')); const r = s.rounds[s.rounds.length - 1]; return { status: r.status, entries: s.entries.filter(e => e.round_id === r.id).map(e => [e.name, e.pick, e.place, e.is_winner]), prizes: (s.prizes || []).map(p => p.name) }; });
   console.log(JSON.stringify(st)); console.log('errors', errs);
   await b.close(); server.close();
 })();

@@ -73,10 +73,28 @@ Settings (S) > Track theme: Stadium, Halloween, Thanksgiving, Christmas. Each th
 
 ## Bar Marbles (second game)
 
-Run `supabase/005_barmarbles.sql` once in Supabase > SQL Editor. It adds the game to the catalog, place/prediction columns on entries, the `finish_round_places`, `set_prediction` and `last_marble_pick` functions, and the new points formula.
+Run `supabase/005_barmarbles.sql` once in Supabase > SQL Editor. It adds the game to the catalog, a place column on entries, the `finish_round_places` and `last_marble_pick` functions, and the new points formula.
 
-How it runs: in the Showrunner, use the up/down keys on the "Wanna play a game?" screen to switch to Bar Marbles. Guests scan, pick a marble colour (returning phone numbers get their last colour by default), enter name and phone, then optionally call the winner from the field. Each entry is a marble with the guest's two-letter tag on it. The race ends when the top 5 are in (or 20 s after the winner); places are recorded, the winner gets the prize exactly like the mascot race, and the results screen holds for 16 s before the leaderboard.
+How it runs: in the Showrunner, use the up/down keys on the "Wanna play a game?" screen to switch to Bar Marbles. Guests scan, pick a marble colour (returning phone numbers get their last colour by default), enter name and phone. Each entry is a marble with the guest's two-letter tag on it. The race ends when the top 5 are in (or 20 s after the winner); places are recorded, the winner gets the prize exactly like the mascot race, and the results screen holds for 16 s before the leaderboard.
 
-Points: 1 for playing, +10 win, +5 second, +3 third, +4 for calling the winner. Need at least 2 marbles to start.
+Points: 1 for playing, +10 win, +5 second, +3 third. Need at least 2 marbles to start. Press T on the Bar Marbles landing screen for a demo race with made-up marbles (nothing recorded); D during a race shows the performance overlay.
 
 Testing: `test/bmbatch.js` runs headless races and writes fairness stats; `test/bme2e.js` runs the whole sign-up to results flow in mock mode. Press D in `barmarbles-preview.html` for the performance overlay.
+
+## Sounds still to make for Bar Marbles
+
+Same voice (ElevenLabs "David - Sports Arena Announcer"). Until these exist the marbles race plays crowd and SFX only; it never falls back to the mascot-race lines. Keys go in `site/announcer/` and the manifest like the others.
+
+| Key | Line |
+|---|---|
+| bm-welcome | Welcome to Bar Marbles! Scan the code, pick your marble, and get ready to roll! |
+| bm-set | Marbles are set. Gate opens in three... |
+| bm-go | And away they go! |
+| bm-tornado | Into the tornado! Everybody's back in it! |
+| bm-plinko | Into the plinko board! Anyone's race now! |
+| bm-ledge | The Ledge! Hold on! |
+| bm-off | Oh! That one's off the track! |
+| bm-stretch | Down the final straight! |
+| bm-wins | We have a winner! |
+
+SFX wanted (short, one-shot, no voice): peg tick, bumper thunk, spinner whirr (loop), hammer whoosh and hit, marble-in-funnel roll (loop), gate clack, marble drop into the trough. Current files: `site/sfx/` and the manifest.

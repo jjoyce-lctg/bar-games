@@ -129,9 +129,29 @@
 
   // ---- events from the race engine ----
   const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  let game = "race";   // which game's announcer lines to use; Bar Marbles has its own bm-* clips and never falls back to mascot lines
   function event(name, d = {}) {
     if (!ctx) return;
     const who = slug(d.racerId || d.racer);
+    if (game === "barmarbles") {
+      switch (name) {
+        case "lobby": setCrowd(0); setMusic(true); break;
+        case "clock": say("bm-welcome"); break;
+        case "marks": setMusic(false); setCrowd(0.3); say("bm-set"); break;
+        case "go": horn(); cheer(0.7); crowdBurst(0.6, 1500); setCrowd(0.55); say("bm-go"); break;
+        case "bm-tornado": cheer(0.5); crowdBurst(0.4, 1200); say("bm-tornado"); break;
+        case "bm-plinko": crowdBurst(0.4, 1000); say("bm-plinko"); break;
+        case "bm-ledge": setCrowd(0.8); say("bm-ledge"); break;
+        case "bm-off": ooh(); say("bm-off"); break;
+        case "stretch": setCrowd(0.8); say("bm-stretch"); break;
+        case "finish": roar(); crowdBurst(0.8, 3000); setCrowd(0.9); sting(); setTimeout(() => say("bm-wins"), 350); setTimeout(() => setCrowd(0.4), 5000); break;
+        case "results": setCrowd(0.35); break;
+        case "board": setCrowd(0); setMusic(true); break;
+        case "end": setCrowd(0); setMusic(false); break;
+        case "countbeep": beep(); break;
+      }
+      return;
+    }
     switch (name) {
       case "lobby": setCrowd(0); setMusic(true); break;
       case "clock": say("welcome"); break;
@@ -152,5 +172,5 @@
   function setMuted(m) { muted = m; try { localStorage.setItem("lctg.muted", m ? "1" : "0"); } catch {} if (master) master.gain.setTargetAtTime(m ? 0 : volume, ctx.currentTime, 0.05); if (m && current) current.pause(); Object.values(sfxCache).forEach((a) => { if (m) a.volume = 0; }); }
   document.addEventListener("keydown", (e) => { if ((e.key === "m" || e.key === "M") && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) setMuted(!muted); });
 
-  window.AUDIO = { unlock, event, say, preload, setMuted, isMuted: () => muted, setCrowd, setMusic, setMusicChoice, musicChoice: () => music.choice, musicOptions, ready: () => !!ctx };
+  window.AUDIO = { unlock, event, say, setGame: (g) => { game = g || "race"; }, game: () => game, preload, setMuted, isMuted: () => muted, setCrowd, setMusic, setMusicChoice, musicChoice: () => music.choice, musicOptions, ready: () => !!ctx };
 })();

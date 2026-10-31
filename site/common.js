@@ -127,8 +127,7 @@
       async getRoundPublic(code) {
         const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return null;
         const v = state.venues.find((x) => x.id === r.venue_id); const g = state.games.find((x) => x.key === r.game_key);
-        const field = r.game_key === "barmarbles" ? state.entries.filter((e) => e.round_id === r.id).map((e) => ({ id: e.id, name: shortName(e.name), pick: e.pick })) : [];
-        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options }, field };
+        return { code: r.code, status: r.status, prize: r.prize || v.default_prize, venue: v, game: { ...g, options: r.racers ? g.options.filter((o) => r.racers.includes(o.id)) : g.options } };
       },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {
         await sleep(300);
@@ -146,18 +145,10 @@
         persist(); return { ok: true };
       },
       async lastMarblePick(phone) { const d = normPhone(phone); const e = [...state.entries].reverse().find((x) => x.phone === d && (state.rounds.find((r) => r.id === x.round_id) || {}).game_key === "barmarbles"); return e ? e.pick : null; },
-      async setPrediction({ code, phone, entry_id }) {
-        const r = state.rounds.find((x) => x.code === String(code).toUpperCase()); if (!r) return { ok: false, error: "That game code was not found." };
-        if (r.status !== "open") return { ok: false, error: "The race has started." };
-        const me = state.entries.find((e) => e.round_id === r.id && e.phone === normPhone(phone)); if (!me) return { ok: false, error: "Enter the race first." };
-        if (me.id === entry_id) return { ok: false, error: "Pick someone other than yourself." };
-        if (!state.entries.some((e) => e.id === entry_id && e.round_id === r.id)) return { ok: false, error: "That marble is not in this race." };
-        me.predict_entry_id = entry_id; persist(); return { ok: true };
-      },
       async roundField(round_id) { requireAuth(); return state.entries.filter((e) => e.round_id === round_id).map((e) => ({ id: e.id, name: e.name, pick: e.pick, created_at: e.created_at })); },
       async finishRoundPlaces(id, places) {
         requireAuth(); const r = round(id); r.status = "finished"; r.winning_pick = null; r.finished_at = new Date().toISOString();
-        state.entries.filter((e) => e.round_id === id).forEach((e) => { const i = places.indexOf(e.id); e.place = i >= 0 ? i + 1 : null; e.is_winner = i === 0; e.predict_ok = !!e.predict_entry_id && e.predict_entry_id === places[0]; });
+        state.entries.filter((e) => e.round_id === id).forEach((e) => { const i = places.indexOf(e.id); e.place = i >= 0 ? i + 1 : null; e.is_winner = i === 0; });
         state.prizes = state.prizes || []; const v = state.venues.find((x) => x.id === r.venue_id);
         const d0 = new Date(); d0.setHours(0, 0, 0, 0); const from = new Date(d0.getTime() + 864e5), to = new Date(d0.getTime() + 15 * 864e5);
         state.entries.filter((e) => e.round_id === id && e.is_winner).forEach((e) => { if (!state.prizes.some((p) => p.entry_id === e.id)) state.prizes.push({ id: uuid(), entry_id: e.id, round_id: r.id, won_venue_id: r.venue_id, phone: e.phone, name: e.name, prize: r.prize || v.default_prize || "a prize", issued_at: new Date().toISOString(), valid_from: from.toISOString(), expires_at: to.toISOString(), redeemed_at: null, voided_at: null }); });
@@ -234,7 +225,6 @@
       },
       async getRoundPublic(code) { return throwIf(await sb.rpc("get_round_public", { p_code: code })); },
       async lastMarblePick(phone) { return throwIf(await sb.rpc("last_marble_pick", { p_phone: phone })); },
-      async setPrediction({ code, phone, entry_id }) { return throwIf(await sb.rpc("set_prediction", { p_code: code, p_phone: phone, p_entry_id: entry_id })); },
       async roundField(round_id) { return throwIf(await sb.from("entries_export").select("id,name,pick,created_at").eq("round_id", round_id).order("created_at", { ascending: true })); },
       async finishRoundPlaces(id, places) { throwIf(await sb.rpc("finish_round_places", { p_round_id: id, p_places: places })); },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {

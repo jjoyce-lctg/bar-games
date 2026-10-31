@@ -35,10 +35,6 @@
   .swatches .opt.sw{padding:6px;display:flex;align-items:center;justify-content:center;border-radius:14px}
   .marble{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:900;text-shadow:0 1px 2px #0008;box-shadow:0 2px 6px #0004;letter-spacing:.02em}
   .preview{display:flex;align-items:center;gap:14px;margin:6px 0 10px}
-  .field{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .pred{display:flex;align-items:center;gap:10px;padding:8px 10px;border:2px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.06);color:#fff;font:inherit;font-weight:700;text-align:left;cursor:pointer}
-  .pred.sel{border-color:var(--accent);background:rgba(255,205,0,.15)}
-  .pred:disabled{opacity:.7}
 </style>
 </head>
 <body>
@@ -116,32 +112,11 @@
       if (!res || !res.ok) { show((res && res.error) || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; return; }
       try { localStorage.setItem("bg.guest", JSON.stringify({ name, phone: normPhone(phone) })); } catch {}
       const o = g.options.find((x) => x.id === pick);
-      if (marbles) return predictStep(o, name, phone);
+      if (marbles) { const myTag = tagOf(name); content.innerHTML = `<div class="done"><div class="e">${marble(o, 150, myTag)}</div><h2>YOU'RE IN!</h2><p>Your marble is <b>${esc(o.label)}</b>, tag <b>${esc(myTag)}</b>. Look for it on the TV. First to the line wins <b>${esc(round.prize || "the prize")}</b>, and we'll text you if it's you.</p><p class="mute">One entry per phone number per race. Must be 21+ to claim a prize.</p></div>`; return; }
       content.innerHTML = `<div class="done"><div class="e">${art(o, 150)}</div><h2>YOU'RE IN!</h2><p>You picked <b>${esc(o.label)}</b>. Eyes on the TV. If ${esc(o.label)} wins, we'll text you about <b>${esc(round.prize || "your prize")}</b>.</p><p class="muted" style="font-size:.85rem">Want to switch? Just scan again and pick another racer before the race starts.</p></div>`;
     } catch (e) { show(e.message || "Something went wrong. Try again."); $("#submit").disabled = false; $("#submit").textContent = "I'm in!"; }
   };
 
-  // Bar Marbles step 2: who wins? (anyone in the field but you). Optional; correct picks earn bonus points on the leaderboard.
-  async function predictStep(o, name, phone) {
-    const myTag = tagOf(name);
-    let field = []; try { field = (await api.getRoundPublic(code)).field || []; } catch {}
-    const mine = field.find((f) => shortName(name) === f.name && f.pick === o.id);
-    const others = field.filter((f) => !mine || f.id !== mine.id);
-    const row = (f) => { const c = g.options.find((x) => x.id === f.pick) || o; return `<button type="button" class="pred" data-id="${esc(f.id)}">${marble(c, 34)}<span>${esc(f.name)}</span></button>`; };
-    content.innerHTML = `<div class="done"><div class="e">${marble(o, 130, myTag)}</div><h2>YOU'RE IN!</h2><p>Your marble is <b>${esc(o.label)}</b>, tag <b>${esc(myTag)}</b>. Eyes on the TV.</p></div>
-      <div class="hero" style="margin-top:8px"><h1>WHO <span>WINS?</span></h1><p>Call it. Pick any marble but your own. If you're right, you get bonus points on the leaderboard.</p></div>
-      <div id="err" class="error hidden"></div>
-      <div class="field" id="field">${others.length ? others.map(row).join("") : `<p class="mute">Nobody else is in yet. Come back to this page in a minute, or just watch the TV.</p>`}</div>
-      <p class="mute" style="text-align:center">Skip this if you like. Your marble is already in the race.</p>`;
-    $$(".pred").forEach((b) => (b.onclick = async () => {
-      $$(".pred").forEach((x) => (x.disabled = true));
-      try { const res = await api.setPrediction({ code, phone, entry_id: b.dataset.id });
-        if (!res || !res.ok) { const err = $("#err"); err.textContent = (res && res.error) || "Couldn't save that pick."; err.classList.remove("hidden"); $$(".pred").forEach((x) => (x.disabled = false)); return; }
-        $$(".pred").forEach((x) => x.classList.toggle("sel", x === b));
-        $("#field").insertAdjacentHTML("afterend", `<p class="done" style="padding:10px 0"><b>Locked in.</b> You called ${esc(b.textContent.trim().replace(/\.$/, ""))}. Good luck to both of you.</p>`);
-      } catch (e) { const err = $("#err"); err.textContent = e.message || "Couldn't save that pick."; err.classList.remove("hidden"); $$(".pred").forEach((x) => (x.disabled = false)); }
-    }));
-  }
 })();
 </script>
 </body>

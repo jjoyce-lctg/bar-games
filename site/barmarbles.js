@@ -386,14 +386,14 @@ export async function run(container, opts) {
         const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, (offLedge || viaTornado) ? 0 : PIPE_R - BALL_R - 0.3);
         m.body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = si; m.prog = si;
         m.resets = (m.resets || 0) + 1; m.offLedge = (m.offLedge || 0) + (offLedge ? 1 : 0);
-        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back to the plinko board.` : viaTornado ? `${first(m.player)} is out of the pipe! Back through the tornado.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
+        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back to the plinko board.` : viaTornado ? `${first(m.player)} is out of the pipe! Back through the tornado.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("bm-off"); lastOffAt = simTime; }
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
       if (started && sp < 0.3) { m.stillFor += dt; if (m.stillFor > 1.2) { const tg = track.tangents[m.prog]; const loose = track.loose.some(([a, b]) => m.prog >= a && m.prog <= b); if (loose) m.body.applyImpulse({ x: (Math.random() - 0.5) * 2.4, y: 0.9, z: (Math.random() - 0.5) * 0.4 }, true); else m.body.applyImpulse({ x: tg.x * 1.2, y: 0.3, z: tg.z * 1.2 }, true); m.stillFor = 0; } } else m.stillFor = 0;
       if (m.prog >= C.finishT * N) {
         m.finished = true; m.finishAt = simTime; order.push(m); if (firstFinishAt < 0) firstFinishAt = simTime; if (m.label) m.label.visible = false;
-        if (order.length === 1) { say(`${first(m.player)} takes it!`, 3500); audio("finish", { racer: "marble" }); onFinish(order.map((x) => x.player)); big.innerHTML = `<div class="t">${esc(first(m.player).toUpperCase())} WINS!</div><div class="s">${esc(m.player.name)}</div>`; }
+        if (order.length === 1) { say(`${first(m.player)} takes it!`, 3500); audio("finish"); onFinish(order.map((x) => x.player)); big.innerHTML = `<div class="t">${esc(first(m.player).toUpperCase())} WINS!</div><div class="s">${esc(m.player.name)}</div>`; }
         else if (order.length <= 3) say(`${first(m.player)} in ${["", "", "second", "third"][order.length]}!`);
       }
     }
@@ -410,9 +410,9 @@ export async function run(container, opts) {
     perf.phys += performance.now() - tPhys; perf.steps += steps; perf.frames++; perf.frameMs += dt * 1000;
     tick(turbo ? 0.001 : dt);
     const { leader, leadProg, live } = tk;
-    C.funnels.forEach((f, k) => { if (!f.called && leadProg >= f.entry) { f.called = true; say(k === 0 ? "Into the tornado! Everybody back in it." : "Into the funnel! Anyone's race now.", 2800); audio("stretch", { racer: "marble" }); } });
-    if (!calledLedge && C.ledgeFrom && leadProg >= C.ledgeFrom) { calledLedge = true; say("The Ledge. Hold on!", 2200); }
-    if (!calledPlinko && C.plinkoFrom && leadProg >= C.plinkoFrom) { calledPlinko = true; say("Into the plinko board!", 2400); audio("stumble", { racer: "marble" }); }
+    C.funnels.forEach((f, k) => { if (!f.called && leadProg >= f.entry) { f.called = true; say(k === 0 ? "Into the tornado! Everybody back in it." : "Into the funnel! Anyone's race now.", 2800); audio("bm-tornado"); } });
+    if (!calledLedge && C.ledgeFrom && leadProg >= C.ledgeFrom) { calledLedge = true; say("The Ledge. Hold on!", 2200); audio("bm-ledge"); }
+    if (!calledPlinko && C.plinkoFrom && leadProg >= C.plinkoFrom) { calledPlinko = true; say("Into the plinko board!", 2400); audio("bm-plinko"); }
     // race over once the top places are in (or everyone is): fade out, stop simulating, show the results
     const want = Math.min(placesToShow, marbles.length);
     if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 20))) {
