@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Shell game preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#000}#c{position:fixed;inset:0}</style></head>
+<body><div id="c"></div>
+<script type="module">
+import { run } from "./shellgame.js?v=__BUILD__";
+const q = new URLSearchParams(location.search);
+window.__ctl = await run(document.getElementById("c"), { manual: q.get("manual") === "1", seed: +(q.get("seed") || 7), swaps: +(q.get("swaps") || 11), pickSeconds: +(q.get("pick") || 0), onDone: (r) => { window.__done = r; }, onPhase: (p) => { window.__phase = p; } });
+</script></body></html>
