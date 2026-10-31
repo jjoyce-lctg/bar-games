@@ -30,6 +30,8 @@ const CSS = `
   .bm-big .t{font-family:"Bebas Neue",Impact,sans-serif;font-size:20vh;line-height:1;color:var(--accent,#ffcd00);text-shadow:0 1vh 4vh rgba(0,0,0,.7);animation:bmpop .5s cubic-bezier(.2,1.4,.4,1) both;text-align:center;max-width:90vw}
   .bm-big .s{font-size:4.5vh;font-weight:800;color:#fff;text-shadow:0 .5vh 2vh rgba(0,0,0,.7);margin-top:1vh}
   @keyframes bmpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  .bm-stats{position:absolute;left:3vw;top:14vh;display:none;background:rgba(0,0,0,.7);color:#9fe;font:1.6vh/1.5 ui-monospace,Menlo,monospace;padding:1vh 1.4vh;border-radius:.8vh;white-space:pre}
+  .bm-stats.on{display:block}
   .bm-fade{position:absolute;inset:0;background:#0b0f14;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
   .bm-fade.on{opacity:1}
   .bm-final{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2vh;color:#fff;opacity:0;transition:opacity .8s ease}
@@ -216,11 +218,11 @@ function makeLabel(text, color) {
 export async function run(container, opts) {
   injectCss();
   await RAPIER.init();
-  const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 4, render = true } = opts;
+  const { players = [], venue = {}, course = "classic", onFinish = () => {}, onDone = () => {}, placesToShow = 5, maxLabels = 160, maxStepsPerFrame = 4, render = true, turbo = false, stats = false } = opts;
   let simTime = 0;
   const accent = venue.color_accent || "#ffcd00";
-  container.innerHTML = `<div class="bm-wrap" style="--accent:${accent}"><canvas></canvas><div class="bm-hud"><div class="bm-comm"></div><div class="bm-board"><h3>Bar Marbles</h3><div class="rows"></div><div class="prog"><i></i></div></div><div class="bm-count"><b id="bmLeft">0</b> still rolling</div><div class="bm-big"></div><div class="bm-fade"></div><div class="bm-final"></div></div></div>`;
-  const canvas = container.querySelector("canvas"), comm = container.querySelector(".bm-comm"), rows = container.querySelector(".bm-board .rows"), prog = container.querySelector(".bm-board .prog i"), big = container.querySelector(".bm-big"), fade = container.querySelector(".bm-fade"), finalEl = container.querySelector(".bm-final"), left = container.querySelector("#bmLeft");
+  container.innerHTML = `<div class="bm-wrap" style="--accent:${accent}"><canvas></canvas><div class="bm-hud"><div class="bm-comm"></div><div class="bm-board"><h3>Bar Marbles</h3><div class="rows"></div><div class="prog"><i></i></div></div><div class="bm-count"><b id="bmLeft">0</b> still rolling</div><div class="bm-big"></div><div class="bm-fade"></div><div class="bm-final"></div><div class="bm-stats"></div></div></div>`;
+  const canvas = container.querySelector("canvas"), comm = container.querySelector(".bm-comm"), rows = container.querySelector(".bm-board .rows"), prog = container.querySelector(".bm-board .prog i"), big = container.querySelector(".bm-big"), fade = container.querySelector(".bm-fade"), finalEl = container.querySelector(".bm-final"), statsEl = container.querySelector(".bm-stats"), left = container.querySelector("#bmLeft");
   const audio = (n, d) => { try { if (window.AUDIO) window.AUDIO.event(n, d); } catch {} };
   let commTimer = null; const say = (t, ms = 2200) => { comm.textContent = t; comm.classList.add("on"); clearTimeout(commTimer); commTimer = setTimeout(() => comm.classList.remove("on"), ms); };
 
@@ -241,7 +243,7 @@ export async function run(container, opts) {
   const C = (COURSES[course] || COURSES.classic)();
   const track = buildTrack(C, accent); track.parts.forEach((p) => { scene.add(p.mesh); scene.add(p.shell); });
   C.finishT = 0.97;
-  C.funnels = []; C.respawnAt = 0; { let acc = 0; track.parts.forEach((p, i) => { if (p.plinko) { C.respawnAt = acc + 1; C.plinkoFrom = acc; C.plinkoCenter = p.center; } if (p.funnel) { if (!C.respawnAt) C.respawnAt = acc + 2; C.funnels.push({ entry: acc + 2, from: acc, to: acc + p.samples.length - 3, dampTo: acc + p.samples.length + (track.parts[i + 1] ? track.parts[i + 1].samples.length : 0), center: C.segments[i].funnel.center }); C.funnelEntry = acc + 2; } if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
+  C.funnels = []; C.respawnAt = 0; { let acc = 0; track.parts.forEach((p, i) => { if (p.plinko) { C.respawnAt = acc + 1; C.plinkoFrom = acc; C.plinkoTo = acc + p.samples.length + 10; C.plinkoCenter = p.center; } if (p.funnel) { if (!C.respawnAt) C.respawnAt = acc + 2; C.funnels.push({ entry: acc + 2, from: acc, to: acc + p.samples.length - 3, dampTo: acc + p.samples.length + (track.parts[i + 1] ? track.parts[i + 1].samples.length : 0), center: C.segments[i].funnel.center }); C.funnelEntry = acc + 2; } if (C.segments[i].open) C.ledgeFrom = acc; acc += p.samples.length; }); }
   const GROUND_Y = -108;
   // finish arch + checkered band
   const fi = Math.floor(C.finishT * (track.samples.length - 1)), fp = track.samples[fi], ft = track.tangents[fi], ff = track.frames[fi];
@@ -295,10 +297,11 @@ export async function run(container, opts) {
     world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.08).setRestitution(0.25), body);
     const mesh = new THREE.Mesh(ballGeo, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 })); mesh.castShadow = true; scene.add(mesh);
     const label = i < maxLabels ? makeLabel(first(p).slice(0, 10), color) : null; if (label) scene.add(label);
-    return { player: { ...p, color }, body, mesh, label, hint: si, prog: si, finished: false, stillFor: 0 };
+    return { player: { ...p, color }, slot: slots[i], colorIdx: i % PALETTE.length, body, mesh, label, hint: si, prog: si, finished: false, stillFor: 0 };
   });
 
   // ---- state ----
+  const perf = { phys: 0, steps: 0, frames: 0, frameMs: 0, last: performance.now() }; let statsOn = !!stats; if (stats) setTimeout(() => statsEl.classList.add("on"), 0);
   const order = []; let calledFunnel = false, calledLedge = false, calledPlinko = false, firstFinishAt = -1, ending = false, lastOffAt = -9, started = false, stopped = false, finishedFlag = false, raf, last = performance.now(), acc = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let camInit = false;
   // Camera director. Shots: chase (default), tracksidePan (fixed point beside the track, pans as the pack passes),
@@ -332,12 +335,9 @@ export async function run(container, opts) {
     finalEl.innerHTML = `<h2>Bar Marbles</h2><div class="win">${esc(first(results[0]).toUpperCase())} WINS!</div><div class="pl">${results.slice(0, placesToShow).map((p, i) => `<div style="animation-delay:${0.15 + i * 0.12}s"><span class="pos">${i + 1}</span><span class="dot" style="background:${p.color}"></span><span>${esc(p.name)}</span></div>`).join("")}</div>`;
     finalEl.classList.add("on");
   }
-  function step(now) {
-    if (stopped) return;
-    if (ending) return; // simulation and rendering stop once the results are up
-    const dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
-    if (!started && simTime >= releaseAt) release();
-    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { sp.angle += sp.rate / 60; const q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; } if (acc > 0.25) acc = 0;
+  // per-marble bookkeeping: positions, progress, funnel damping, off-course resets, stall nudges, finishes. Runs once a frame, or every 0.1 s of sim time in turbo mode.
+  let tk = { leader: null, leadProg: -1, live: 0 };
+  function tick(dt) {
     let leader = null, leadProg = -1, live = 0;
     for (const m of marbles) {
       const t = m.body.translation(); m.mesh.position.set(t.x, t.y, t.z); const r = m.body.rotation(); m.mesh.quaternion.set(r.x, r.y, r.z, r.w);
@@ -346,6 +346,7 @@ export async function run(container, opts) {
       live++;
       m.prog = progressOf(m);
       if (m.prog > leadProg) { leadProg = m.prog; leader = m; }
+      if (C.plinkoFrom) { if (m.plinkoIn === undefined && m.prog >= C.plinkoFrom) m.plinkoIn = simTime; if (m.plinkoIn !== undefined && m.plinkoOut === undefined && m.prog >= C.plinkoTo) m.plinkoOut = simTime; }
       // rolling resistance in the funnels (otherwise a marble can orbit the bowl forever): extra damping while inside one
       { const fi = C.funnels.findIndex((f) => m.prog >= f.from && m.prog <= f.to), inF = fi >= 0, damp = C.funnels.some((f) => m.prog >= f.from && m.prog <= f.dampTo); if (damp !== m.damped) { m.damped = damp; m.body.setLinearDamping(damp ? 0.15 : 0.004); } if (inF !== m.inFunnel) { m.inFunnel = inF; if (inF) { if (m.fIdx !== fi) { m.fEnter = simTime; m.fIdx = fi; m.fAng = 0; } m.fPrev = null; } else { const D = (window.__dwell = window.__dwell || {}); (D[m.fIdx] = D[m.fIdx] || {})[m.player.id || m.player.name] = [+(simTime - m.fEnter).toFixed(1), +(m.fAng / (2 * Math.PI)).toFixed(2)]; } }
         if (inF) { const c = C.funnels[fi].center, a = Math.atan2(t.z - c.z, t.x - c.x); if (m.fPrev !== null) { let d = a - m.fPrev; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; m.fAng += d; } m.fPrev = a; } }
@@ -364,11 +365,24 @@ export async function run(container, opts) {
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
       if (started && sp < 0.3) { m.stillFor += dt; if (m.stillFor > 1.2) { const tg = track.tangents[m.prog]; const loose = track.loose.some(([a, b]) => m.prog >= a && m.prog <= b); if (loose) m.body.applyImpulse({ x: (Math.random() - 0.5) * 2.4, y: 0.9, z: (Math.random() - 0.5) * 0.4 }, true); else m.body.applyImpulse({ x: tg.x * 1.2, y: 0.3, z: tg.z * 1.2 }, true); m.stillFor = 0; } } else m.stillFor = 0;
       if (m.prog >= C.finishT * N) {
-        m.finished = true; order.push(m); if (m.label) m.label.visible = false;
+        m.finished = true; m.finishAt = simTime; order.push(m); if (firstFinishAt < 0) firstFinishAt = simTime; if (m.label) m.label.visible = false;
         if (order.length === 1) { say(`${first(m.player)} takes it!`, 3500); audio("finish", { racer: "marble" }); onFinish(order.map((x) => x.player)); big.innerHTML = `<div class="t">${esc(first(m.player).toUpperCase())} WINS!</div><div class="s">${esc(m.player.name)}</div>`; }
         else if (order.length <= 3) say(`${first(m.player)} in ${["", "", "second", "third"][order.length]}!`);
       }
     }
+    tk = { leader, leadProg, live };
+  }
+  function step(now) {
+    if (stopped) return;
+    if (ending) return; // simulation and rendering stop once the results are up
+    let dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt; lastDt = dt || lastDt;
+    if (turbo) { acc = maxStepsPerFrame / 60; dt = acc; } // batch mode: a fixed number of physics steps per frame, clocks run on sim time
+    if (!started && simTime >= releaseAt) release();
+    const tPhys = performance.now();
+    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { sp.angle += sp.rate / 60; const q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; if (turbo && steps % 6 === 0) tick(0.1); } if (acc > 0.25) acc = 0;
+    perf.phys += performance.now() - tPhys; perf.steps += steps; perf.frames++; perf.frameMs += dt * 1000;
+    tick(turbo ? 0.001 : dt);
+    const { leader, leadProg, live } = tk;
     C.funnels.forEach((f, k) => { if (!f.called && leadProg >= f.entry) { f.called = true; say(k === 0 ? "Into the tornado! Everybody back in it." : "Into the funnel! Anyone's race now.", 2800); audio("stretch", { racer: "marble" }); } });
     if (!calledLedge && C.ledgeFrom && leadProg >= C.ledgeFrom) { calledLedge = true; say("The Ledge. Hold on!", 2200); }
     if (!calledPlinko && C.plinkoFrom && leadProg >= C.plinkoFrom) { calledPlinko = true; say("Into the plinko board!", 2400); audio("stumble", { racer: "marble" }); }
@@ -376,6 +390,7 @@ export async function run(container, opts) {
     const want = Math.min(placesToShow, marbles.length);
     if (!finishedFlag && (order.length >= want || (order.length >= 1 && live === 0) || (firstFinishAt >= 0 && simTime - firstFinishAt > 20))) {
       finishedFlag = true; const results = [...order, ...marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog)].map((x) => x.player);
+      window.__result = { n: marbles.length, simTime: +simTime.toFixed(1), winnerTime: +order[0].finishAt.toFixed(1), finishTimes: order.map((m) => +m.finishAt.toFixed(1)), order: order.map((m) => ({ id: m.player.id, slot: m.slot, colorIdx: m.colorIdx })), resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), offLedge: marbles.reduce((a, m) => a + (m.offLedge || 0), 0), plinko: marbles.filter((m) => m.plinkoIn !== undefined && m.plinkoOut !== undefined).map((m) => [m.plinkoIn, m.plinkoOut]) };
       setTimeout(() => { if (stopped) return; fade.classList.add("on"); setTimeout(() => { if (stopped) return; ending = true; big.innerHTML = ""; showFinal(results); onDone(results); }, 1300); }, 1800);
     }
     if (order.length >= 1 && firstFinishAt < 0) firstFinishAt = simTime;
@@ -408,6 +423,7 @@ export async function run(container, opts) {
     // render
     const W = canvas.clientWidth, H = canvas.clientHeight; if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); }
     if (render) renderer.render(scene, camera);
+    if (statsOn && performance.now() - perf.last > 500) { const f = Math.max(1, perf.frames); statsEl.textContent = `fps ${(1000 / (perf.frameMs / f)).toFixed(0)}  frame ${(perf.frameMs / f).toFixed(1)} ms  physics ${(perf.phys / f).toFixed(1)} ms  steps/frame ${(perf.steps / f).toFixed(1)}\ndraw calls ${renderer.info.render.calls}  tris ${(renderer.info.render.triangles / 1000).toFixed(0)}k  marbles live ${live}  sim ${simTime.toFixed(1)}s`; perf.phys = perf.steps = perf.frames = perf.frameMs = 0; perf.last = performance.now(); }
     // HUD
     const liveSorted = marbles.filter((m) => !m.finished).sort((a, b) => b.prog - a.prog);
     const list = [...order, ...liveSorted].slice(0, placesToShow);
@@ -418,5 +434,5 @@ export async function run(container, opts) {
   window.__track = track; window.__marbles = marbles; window.__world = world; window.__shot = () => shot.name; window.__dbg = () => { const ps = marbles.map((m) => m.prog).sort((a, b) => b - a); const v = marbles[0].body.linvel(); const t = marbles[0].body.translation(); return { resets: marbles.reduce((a, m) => a + (m.resets || 0), 0), jumpResets: marbles.reduce((a, m) => a + (m.jumpResets || 0), 0), started, N, finishAt: Math.round(C.finishT * N), parts: track.parts.map((p) => p.samples.length), simTime: +simTime.toFixed(1), lead: ps[0], median: ps[Math.floor(ps.length / 2)], v0: [v.x, v.y, v.z].map((x) => +x.toFixed(2)), p0: [t.x, t.y, t.z].map((x) => +x.toFixed(1)), fps: Math.round(1 / lastDt) }; };
   let lastDt = 1 / 60;
   raf = requestAnimationFrame(step);
-  return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); try { renderer.dispose(); } catch {} }, order: () => order.map((m) => m.player) };
+  return { stop() { stopped = true; cancelAnimationFrame(raf); clearTimeout(commTimer); try { renderer.dispose(); } catch {} }, order: () => order.map((m) => m.player), toggleStats() { statsOn = !statsOn; statsEl.classList.toggle("on", statsOn); } };
 }

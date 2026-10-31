@@ -10,6 +10,7 @@ const NAMES=["Marcus Lee","Dana Ortiz","Sam Patel","Kelly Nguyen","Jordan Fox","
 let ctl=null;
 async function go(){ if(ctl) ctl.stop(); const n=+(new URLSearchParams(location.search).get('n')||document.getElementById('n').value)||60; const players=Array.from({length:n},(_,i)=>({id:'p'+i,name:NAMES[i%NAMES.length]+(i>=NAMES.length?' '+(Math.floor(i/NAMES.length)+1):'')}));
   const t0=performance.now(); document.getElementById('res').textContent=''; window.__done=false;
-  ctl=await run(document.getElementById('c'),{players,maxStepsPerFrame:+(new URLSearchParams(location.search).get('steps')||4),render:new URLSearchParams(location.search).get('render')!=='0',venue:{color_accent:'#ffcd00',color_primary:'#0f2a3a'},onFinish:(o)=>{document.getElementById('res').textContent=`Winner: ${o[0].name} in ${((performance.now()-t0)/1000).toFixed(1)}s`;window.__done=true;}}); }
+  ctl=await run(document.getElementById('c'),{players,maxStepsPerFrame:+(new URLSearchParams(location.search).get('steps')||4),render:new URLSearchParams(location.search).get('render')!=='0',turbo:new URLSearchParams(location.search).get('turbo')==='1',stats:new URLSearchParams(location.search).get('stats')==='1',venue:{color_accent:'#ffcd00',color_primary:'#0f2a3a'},onFinish:(o)=>{document.getElementById('res').textContent=`Winner: ${o[0].name} in ${((performance.now()-t0)/1000).toFixed(1)}s`;window.__done=true;}}); }
 document.getElementById('go').onclick=go; go();
+window.addEventListener('keydown',(e)=>{ if((e.key==='d'||e.key==='D')&&ctl) ctl.toggleStats(); });
 </script></body></html>
