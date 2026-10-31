@@ -1,0 +1,259 @@
+{
+ "summary": {
+  "races": 8,
+  "marbles": 3,
+  "winnerTime": {
+   "min": 62.8,
+   "p25": 71.2,
+   "median": 72.6,
+   "p75": 76.8,
+   "max": 4705.3
+  },
+  "fifthTime": {
+   "median": 96,
+   "max": 4728
+  },
+  "resetsPerRace": {
+   "median": 0,
+   "max": 1
+  },
+  "ledgeKnockoffsPerRace": {
+   "median": 0,
+   "max": 0
+  },
+  "plinkoOrderRho": {},
+  "winsByRow": "8",
+  "winsByCol": "2 4 2 0",
+  "winsByColor": "5 1 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
+  "winsBySlot": "2 4 2",
+  "chiRow": 0,
+  "chiCol": 4,
+  "chiSlot": 1
+ },
+ "races": [
+  {
+   "n": 3,
+   "simTime": 136,
+   "winnerTime": 113.7,
+   "finishTimes": [
+    113.7
+   ],
+   "order": [
+    {
+     "id": "p0",
+     "slot": 1,
+     "colorIdx": 0
+    }
+   ],
+   "resets": 1,
+   "offLedge": 0,
+   "plinko": [
+    [
+     101.39999999999553,
+     104.69999999999534
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 96,
+   "winnerTime": 72.3,
+   "finishTimes": [
+    72.3
+   ],
+   "order": [
+    {
+     "id": "p0",
+     "slot": 0,
+     "colorIdx": 0
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     57.49999999999802,
+     63.49999999999768
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 84,
+   "winnerTime": 62.8,
+   "finishTimes": [
+    62.8,
+    68
+   ],
+   "order": [
+    {
+     "id": "p2",
+     "slot": 0,
+     "colorIdx": 2
+    },
+    {
+     "id": "p1",
+     "slot": 1,
+     "colorIdx": 1
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     53.89999999999822,
+     57.49999999999802
+    ],
+    [
+     50.89999999999839,
+     52.99999999999827
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 80,
+   "winnerTime": 72.6,
+   "finishTimes": [
+    72.6,
+    73.4,
+    77.8
+   ],
+   "order": [
+    {
+     "id": "p0",
+     "slot": 1,
+     "colorIdx": 0
+    },
+    {
+     "id": "p1",
+     "slot": 0,
+     "colorIdx": 1
+    },
+    {
+     "id": "p2",
+     "slot": 2,
+     "colorIdx": 2
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     55.89999999999811,
+     64.69999999999762
+    ],
+    [
+     59.09999999999793,
+     65.49999999999757
+    ],
+    [
+     61.19999999999781,
+     67.79999999999744
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 4728,
+   "winnerTime": 4705.3,
+   "finishTimes": [
+    4705.3
+   ],
+   "order": [
+    {
+     "id": "p2",
+     "slot": 1,
+     "colorIdx": 2
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     4689.2000000159105,
+     4693.400000015849
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 100,
+   "winnerTime": 76.8,
+   "finishTimes": [
+    76.8
+   ],
+   "order": [
+    {
+     "id": "p0",
+     "slot": 1,
+     "colorIdx": 0
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     60.29999999999786,
+     65.89999999999755
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 96,
+   "winnerTime": 75.6,
+   "finishTimes": [
+    75.6
+   ],
+   "order": [
+    {
+     "id": "p0",
+     "slot": 2,
+     "colorIdx": 0
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     58.599999999997955,
+     66.59999999999751
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "simTime": 92,
+   "winnerTime": 71.2,
+   "finishTimes": [
+    71.2,
+    72.2
+   ],
+   "order": [
+    {
+     "id": "p1",
+     "slot": 2,
+     "colorIdx": 1
+    },
+    {
+     "id": "p2",
+     "slot": 0,
+     "colorIdx": 2
+    }
+   ],
+   "resets": 0,
+   "offLedge": 0,
+   "plinko": [
+    [
+     56.999999999998046,
+     61.69999999999778
+    ],
+    [
+     59.79999999999789,
+     64.49999999999763
+    ]
+   ]
+  }
+ ]
+}
