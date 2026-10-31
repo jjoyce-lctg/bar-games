@@ -85,6 +85,10 @@ Graphics: Settings (S) has a Graphics choice for Bar Marbles, saved per laptop. 
 
 Testing: `test/bmbatch.js` runs headless races and writes fairness stats; `test/bme2e.js` runs the whole sign-up to results flow in mock mode. Press D in `barmarbles-preview.html` for the performance overlay.
 
+## Express entry
+
+A phone that signed up (and ticked the text consent) in the last 6 hours skips the form for the rest of the night: the shell game enters the guest the moment the page opens, the mascot race and Bar Marbles enter on the first tap of a racer or colour. A "Playing as Name, number. Not you?" line brings the full form back (it adds `&edit=1` to the link). Stored in the phone's browser only (`bg.guest`); the consent timestamp is what opens the window.
+
 ## Shell Game (third game)
 
 Migration: run `supabase/006_shellgame.sql` in the SQL Editor (safe to re-run). It adds the game, a `picking` round status with `pick_closes_at`, lets the shell game sign up without a pick, and adds `open_picks` (TV), `shell_pick` (phone) and `pick_counts`.
