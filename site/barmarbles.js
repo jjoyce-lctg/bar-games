@@ -60,9 +60,10 @@ const COURSES = {
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
     const segs = [];
     // 1. opening run with two bends, ending in a kick (jump 1)
-    segs.push({ points: [V(0, 96, 0), V(0, 94, 10), V(1, 89, 24), V(8, 83, 38), V(24, 79, 48), V(42, 76, 44), V(52, 71, 30), V(51, 67.5, 20), V(50, 64.5, 12)], kick: true });
+    segs.push({ points: [V(0, 96, 0), V(0, 94, 10), V(1, 89, 24), V(5, 85, 33), V(10, 82.6, 39)] }); // start pen // wide start pen: 7 across, fewer rows
+    segs.push({ points: [V(16, 81, 45), V(24, 79, 48), V(42, 76, 44), V(52, 71, 30), V(51, 67.5, 20), V(50, 64.5, 12)], kick: true });
     // 2. landing bowl (wider), into the spiral: enters heading -x at (10,57,0), exits heading +z at (26,30,-16)
-    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 58.5, -5), V(43.5, 56.5, -11), V(38, 54.5, -13), V(29.3, 52, -11), V(24.2, 49.8, -7.8)], wide: true, r: 1.55 });
+    segs.push({ points: [V(50, 62, 10.5), V(49.3, 60.5, 3), V(47.5, 58.5, -5), V(43.5, 56.5, -11), V(38, 54.5, -13), V(29.3, 52, -11), V(24.2, 49.8, -7.8)], wide: true, r: 1.9 });
     // narrow chute that fires the marbles along the tornado's wall
     segs.push({ points: [V(19.1, 48.3, -4.6), V(14, 47.7, -1.5)], wide: true, r: 0.9 });
     // 2b. the tornado: a wide hyperbolic funnel right above the spiral. The whole field swirls here and the start grid stops mattering.
@@ -75,11 +76,11 @@ const COURSES = {
     // 3. twist: a closed tube that rolls two full turns while dropping down a straight
     segs.push({ points: [V(22, -8.1, -12), V(22, -10.3, -6), V(22, -14.3, 1), V(22, -17.8, 7), V(22, -19, 10)], tube: true, roll: 2 });
     // 4. big sweep back across the course, ending in a kick (jump 2)
-    segs.push({ points: [V(21.6, -19.9, 13), V(20, -21.3, 20), V(8, -23.8, 32), V(-16, -26.8, 36), V(-40, -29.8, 28), V(-62, -33.3, 6), V(-66, -35.8, -8), V(-64, -38.3, -18), V(-61, -40.8, -26)], kick: true, spinners: [0.55] });
+    segs.push({ points: [V(21.6, -19.9, 13), V(20, -21.3, 20), V(8, -23.8, 32), V(-16, -26.8, 36), V(-40, -29.8, 28), V(-62, -33.3, 6), V(-66, -35.8, -8), V(-64, -38.3, -18), V(-61, -40.8, -26)], kick: true, rise: 1.1, spinners: [0.55], hammers: [0.3] });
     // 5. landing, chicane and finish straight
     segs.push({ points: [V(-59.7, -43.8, -29.4), V(-57, -46.3, -37), V(-50, -48.8, -44), V(-37, -50.3, -46), V(-27, -51.4, -40.5), V(-19, -52, -38.2), V(-12, -52.6, -38)], wide: true, r: 1.55, pegs: [0.3, 0.55] });
     // 6. the plinko board: a vertical slot full of bouncy pegs. The field rains down through it, nobody knows where they'll come out.
-    segs.push({ plinko: { origin: V(-11, -60, -38), width: 16, height: 14, slot: 1.4, hopper: 3, pegRows: 6, pegGap: 2.2, pegR: 0.35 } });
+    segs.push({ plinko: { origin: V(-11, -60, -38), width: 16, height: 14, slot: 1.4, hopper: 3, pegRows: 8, pegGap: 2.2, pegR: 0.45 } });
     // 7. collecting trough under the board, sloping into the ledge
     segs.push({ points: [V(-15, -76.2, -38), V(-6, -77.2, -38), V(4, -78.4, -38), V(12, -80.4, -38.5), V(17, -83, -39.5), V(19, -84.3, -40)], wide: true, r: 1.6 });
     // 8. the ledge: an open, low-rimmed shelf with a spinner and bumpers. Knocked off here = back to the top of the plinko board.
@@ -160,7 +161,7 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
   const MIN_DROP = 0.035, kickFrom = seg.kick ? Math.floor(N * 0.9) : N + 1;
   for (let i = 1; i <= N; i++) { if (i < kickFrom && samples[i].y > samples[i - 1].y - MIN_DROP) samples[i].y = samples[i - 1].y - MIN_DROP; }
   for (let k = 0; k < 3; k++) for (let i = 1; i < Math.min(N, kickFrom); i++) samples[i].y = Math.min(samples[i].y, (samples[i - 1].y + samples[i].y + samples[i + 1].y) / 3);
-  if (seg.kick) { const base = samples[kickFrom - 1].y; for (let i = kickFrom; i <= N; i++) { const t = (i - kickFrom + 1) / (N - kickFrom + 1); samples[i].y = base + t * t * 0.6; } }
+  if (seg.kick) { const base = samples[kickFrom - 1].y; for (let i = kickFrom; i <= N; i++) { const t = (i - kickFrom + 1) / (N - kickFrom + 1); samples[i].y = base + t * t * (seg.rise || 0.6); } }
   const up = new THREE.Vector3(0, 1, 0);
   for (let i = 0; i <= N; i++) {
     const a = samples[Math.max(0, i - 1)], b = samples[Math.min(N, i + 1)];
@@ -197,6 +198,7 @@ function buildSegment(seg, accent, segIndex, prevR, prevBank = 0, prevArc = PIPE
   const obstacles = []; // {kind, i, off} in sample index + side offset (world placement happens in run())
   (seg.pegs || []).forEach((t) => { const i0 = Math.round(t * N); [[0, -0.42], [8, 0.42], [16, -0.42]].forEach(([di, o]) => obstacles.push({ kind: "peg", i: Math.min(N, i0 + di), off: o * R })); });
   (seg.spinners || []).forEach((t) => obstacles.push({ kind: "spinner", i: Math.round(t * N), off: 0 }));
+  (seg.hammers || []).forEach((t) => obstacles.push({ kind: "hammer", i: Math.round(t * N), off: 0 }));
   (seg.bumpers || []).forEach((t) => { const i0 = Math.round(t * N); obstacles.push({ kind: "bumper", i: i0, off: -0.5 * R }); obstacles.push({ kind: "bumper", i: Math.min(N, i0 + 6), off: 0.5 * R }); });
   return { samples, tangents, frames, mesh, shell, obstacles, arcDeg, bank, vertices: new Float32Array(pos), indices: new Uint32Array(idx), R, endBank: Math.atan2(Math.sin(bank[N]), Math.cos(bank[N])), segIndex, kick: !!seg.kick };
 }
@@ -255,12 +257,12 @@ export async function run(container, opts) {
 
   // ---- physics ----
   const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
-  track.parts.forEach((p) => { if (p.indices.length) world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1)); (p.solids || []).forEach((so) => { const d = so.kind === "box" ? RAPIER.ColliderDesc.cuboid(...so.half) : RAPIER.ColliderDesc.cylinder(so.half, so.r); world.createCollider(d.setTranslation(...so.pos).setRotation({ x: so.q[0], y: so.q[1], z: so.q[2], w: so.q[3] }).setRestitution(so.restitution).setFriction(0.05)); }); });
+  track.parts.forEach((p) => { if (p.indices.length) world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setFriction(p.funnel ? 0.02 : 0.08).setRestitution(p.funnel ? 0.05 : 0.1).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); /* track bounce stays low even with lively marble-to-marble bounces */ (p.solids || []).forEach((so) => { const d = so.kind === "box" ? RAPIER.ColliderDesc.cuboid(...so.half) : RAPIER.ColliderDesc.cylinder(so.half, so.r); world.createCollider(d.setTranslation(...so.pos).setRotation({ x: so.q[0], y: so.q[1], z: so.q[2], w: so.q[3] }).setRestitution(so.restitution).setFriction(0.05)); }); });
   // funnels get a second collision skin a little below the surface so a marble dropping in fast can never tunnel through
-  track.parts.filter((p) => p.funnel).forEach((p) => { world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -1.6, 0).setFriction(0.02).setRestitution(0.05)); world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.wallIndices).setFriction(0.3).setRestitution(0.05)); });
+  track.parts.filter((p) => p.funnel).forEach((p) => { world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.indices).setTranslation(0, -1.6, 0).setFriction(0.02).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); world.createCollider(RAPIER.ColliderDesc.trimesh(p.vertices, p.wallIndices).setFriction(0.2).setRestitution(0.05).setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)); });
   world.createCollider(RAPIER.ColliderDesc.cuboid(400, 1, 400).setTranslation(0, -109, 0));
   // ---- obstacles: pegs (bouncy posts), bumpers (big pinball pads) and spinners (kinematic rotating bars) ----
-  const spinners = []; const obsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 }), bumpMat = new THREE.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.3, emissive: 0x3a0010 });
+  const spinners = []; const pillarLikeMat = new THREE.MeshStandardMaterial({ color: 0x9fb0cc, roughness: 0.9 }); const obsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(accent), roughness: 0.35, metalness: 0.2 }), bumpMat = new THREE.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.3, emissive: 0x3a0010 });
   const floorPoint = (i, off) => { const c = track.samples[i], fr = track.frames[i], R = track.parts[track.segOf[i]].R, b = track.banks[i] || 0; const q = new THREE.Quaternion().setFromAxisAngle(track.tangents[i], b); const S = fr.side.clone().applyQuaternion(q), D = fr.down.clone().applyQuaternion(q); const th = Math.asin(THREE.MathUtils.clamp(off / R, -0.95, 0.95)); return { p: c.clone().addScaledVector(S, Math.sin(th) * R).addScaledVector(D, Math.cos(th) * R), up: D.clone().negate() }; };
   const upQuat = (up) => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), up);
   track.obstacles.forEach((o) => {
@@ -269,6 +271,18 @@ export async function run(container, opts) {
       const r = o.kind === "peg" ? 0.38 : 0.9, h = o.kind === "peg" ? 1.5 : 1.1, q = upQuat(up), c = p.clone().addScaledVector(up, h / 2 - 0.15);
       world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, r).setTranslation(c.x, c.y, c.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setRestitution(o.kind === "peg" ? 0.9 : 0.9).setFriction(0.05));
       const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.08, h, 14), o.kind === "peg" ? obsMat : bumpMat); m.position.copy(c); m.quaternion.copy(q); m.castShadow = true; scene.add(m);
+    } else if (o.kind === "hammer") {
+      // a pendulum hammer hanging over the pipe: pivot above the centreline, head swings across the floor. Only the head collides.
+      const Rp = track.parts[track.segOf[o.i]].R, tg = track.tangents[o.i], pivot = track.samples[o.i].clone().addScaledVector(up, Rp * 0.2);
+      const L = Rp * 1.2 - 0.7, side = new THREE.Vector3().crossVectors(up, tg).normalize();
+      const base = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, up, tg));
+      const body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pivot.x, pivot.y, pivot.z).setRotation({ x: base.x, y: base.y, z: base.z, w: base.w }));
+      world.createCollider(RAPIER.ColliderDesc.cuboid(0.55, 0.5, 0.45).setTranslation(0, -L, 0).setRestitution(0.7).setFriction(0.1), body);
+      const g = new THREE.Group(); g.position.copy(pivot); g.quaternion.copy(base);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, L, 8), pillarLikeMat); arm.position.set(0, -L / 2, 0); g.add(arm);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.0, 0.9), bumpMat); head.position.set(0, -L, 0); head.castShadow = true; g.add(head);
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(Rp * 2.6, 0.3, 0.3), pillarLikeMat); g.add(beam); scene.add(g);
+      spinners.push({ body, group: g, base, kind: "hammer", amp: 0.62, omega: 2 * Math.PI / 2.4, phase: spinners.length * 1.3, angle: 0 });
     } else if (o.kind === "spinner") {
       const q = upQuat(up), c = p.clone().addScaledVector(up, 0.55), R = track.parts[track.segOf[o.i]].R, armLen = R * (track.parts[track.segOf[o.i]].arcDeg < 70 ? 1.15 : 1.7);
       const body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(c.x, c.y, c.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }));
@@ -281,9 +295,9 @@ export async function run(container, opts) {
     }
   });
   // start pen: marbles stacked in the pipe behind a gate
-  const gateI = 60, gp = track.samples[gateI], gt = track.tangents[gateI];
-  const gate = world.createCollider(RAPIER.ColliderDesc.cuboid(PIPE_R + 0.5, PIPE_R, 0.25).setTranslation(gp.x, gp.y, gp.z).setRotation(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt)));
-  const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(2 * PIPE_R + 1, 2 * PIPE_R, 0.5), new THREE.MeshStandardMaterial({ color: 0xff4d4d })); gateMesh.position.copy(gp); gateMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt); scene.add(gateMesh);
+  const gateI = track.parts[0].samples.length + 10, gp = track.samples[gateI], gt = track.tangents[gateI], R0 = track.parts[1].R; // gate a little way into the opening run
+  const gate = world.createCollider(RAPIER.ColliderDesc.cuboid(R0 + 0.5, R0, 0.25).setTranslation(gp.x, gp.y, gp.z).setRotation(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt)));
+  const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(2 * R0 + 1, 2 * R0, 0.5), new THREE.MeshStandardMaterial({ color: 0xff4d4d })); gateMesh.position.copy(gp); gateMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), gt); scene.add(gateMesh);
 
   const ballGeo = new THREE.SphereGeometry(BALL_R, 20, 14);
   // random start slots + a little jitter so no slot (and no sign-up order) has an edge night after night
@@ -292,9 +306,9 @@ export async function run(container, opts) {
     const color = p.color || PALETTE[i % PALETTE.length];
     const perRow = 4, row = Math.floor(slots[i] / perRow), col = slots[i] % perRow;
     const si = Math.max(2, gateI - 3 - row * 3), c = track.samples[si], fr = track.frames[si];
-    const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, PIPE_R - BALL_R - 0.15).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.2 + (row % 3) * 0.1, (Math.random() - 0.5) * 0.08));
+    const pos = c.clone().addScaledVector(fr.side, (col - (perRow - 1) / 2) * (BALL_R * 2.05)).addScaledVector(fr.down, Math.sqrt(Math.max(0, R0 * R0 - ((col - (perRow - 1) / 2) * BALL_R * 2.05) ** 2)) - BALL_R - 0.12).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, 0.2 + (row % 3) * 0.1, (Math.random() - 0.5) * 0.08));
     const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setLinearDamping(0.004).setAngularDamping(0.2).setCcdEnabled(true));
-    world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.08).setRestitution(0.25), body);
+    world.createCollider(RAPIER.ColliderDesc.ball(BALL_R).setDensity(1.2).setFriction(0.08).setRestitution(0.38), body);
     const mesh = new THREE.Mesh(ballGeo, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color), roughness: 0.2, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.1 })); mesh.castShadow = true; scene.add(mesh);
     const label = i < maxLabels ? makeLabel(first(p).slice(0, 10), color) : null; if (label) scene.add(label);
     return { player: { ...p, color }, slot: slots[i], colorIdx: i % PALETTE.length, body, mesh, label, hint: si, prog: si, finished: false, stillFor: 0 };
@@ -354,12 +368,13 @@ export async function run(container, opts) {
       const nearJump = track.jumps.some((j) => m.prog > j - 30 && m.prog < j + 60) || track.loose.some(([a, b]) => m.prog >= a && m.prog <= b);
       if (t.y < GROUND_Y + 1.5 || (started && !nearJump && (() => { const s = track.samples[m.prog]; return (s.x - t.x) ** 2 + (s.y - t.y) ** 2 + (s.z - t.z) ** 2 > 36; })())) {
         (window.__rs = window.__rs || []).push([m.prog, +t.x.toFixed(1), +t.y.toFixed(1), +t.z.toFixed(1)]);
-        const offLedge = m.prog >= (C.plinkoFrom || C.ledgeFrom) - 5; // anything lost from the plinko board onward respawns at the top of the board instead of the top of the course
-        const si = offLedge ? C.respawnAt : 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
-        const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, offLedge ? 0 : PIPE_R - BALL_R - 0.3);
+        const offLedge = m.prog >= (C.plinkoFrom || C.ledgeFrom) - 5; // lost from the plinko board onward: back to the top of the board
+        const viaTornado = !offLedge && C.funnels.length && m.prog >= C.funnels[0].to; // lost between the tornado and the board: back through the tornado
+        const si = offLedge ? C.respawnAt : viaTornado ? C.funnels[0].entry : 6 + Math.floor(Math.random() * 20), s = track.samples[si], fr = track.frames[si];
+        const pos = s.clone().addScaledVector(fr.side, (Math.random() - 0.5) * PIPE_R).addScaledVector(fr.down, (offLedge || viaTornado) ? 0 : PIPE_R - BALL_R - 0.3);
         m.body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true); m.body.setLinvel({ x: 0, y: 0, z: 0 }, true); m.body.setAngvel({ x: 0, y: 0, z: 0 }, true); m.hint = si; m.prog = si;
         m.resets = (m.resets || 0) + 1; m.offLedge = (m.offLedge || 0) + (offLedge ? 1 : 0);
-        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back to the plinko board.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
+        if (simTime - lastOffAt > 1.2) { say(offLedge ? `${first(m.player)} is off the ledge! Back to the plinko board.` : viaTornado ? `${first(m.player)} is out of the pipe! Back through the tornado.` : `${first(m.player)} is off the track! Back to the top.`, 2600); audio("stumble", { racer: "marble" }); lastOffAt = simTime; }
       }
       // stalled: nudge
       const v = m.body.linvel(); const sp = Math.hypot(v.x, v.y, v.z);
@@ -379,7 +394,7 @@ export async function run(container, opts) {
     if (turbo) { acc = maxStepsPerFrame / 60; dt = acc; } // batch mode: a fixed number of physics steps per frame, clocks run on sim time
     if (!started && simTime >= releaseAt) release();
     const tPhys = performance.now();
-    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { sp.angle += sp.rate / 60; const q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; if (turbo && steps % 6 === 0) tick(0.1); } if (acc > 0.25) acc = 0;
+    let steps = 0; while (acc >= 1 / 60 && steps < maxStepsPerFrame) { for (const sp of spinners) { let q; if (sp.kind === "hammer") { const th = sp.amp * Math.sin(sp.omega * simTime + sp.phase); q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), th)); } else { sp.angle += sp.rate / 60; q = sp.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sp.angle)); } sp.body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w }); sp.group.quaternion.copy(q); } world.step(); acc -= 1 / 60; simTime += 1 / 60; steps++; if (turbo && steps % 6 === 0) tick(0.1); } if (acc > 0.25) acc = 0;
     perf.phys += performance.now() - tPhys; perf.steps += steps; perf.frames++; perf.frameMs += dt * 1000;
     tick(turbo ? 0.001 : dt);
     const { leader, leadProg, live } = tk;
