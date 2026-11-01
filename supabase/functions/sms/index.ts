@@ -49,18 +49,24 @@ async function sendOne(m: { id: string; phone: string; body: string }) {
   return false;
 }
 
-async function drain(): Promise<{ sent: number; failed: number; left: number }> {
-  let sent = 0, failed = 0; const t0 = Date.now();
-  if (!SID || !TOKEN || !FROM) return { sent, failed, left: -1 };   // not configured yet: leave everything queued
+async function drain(): Promise<{ sent: number; failed: number; skipped: number; left: number }> {
+  let sent = 0, failed = 0, skipped = 0; const t0 = Date.now();
+  if (!SID || !TOKEN || !FROM) return { sent, failed, skipped, left: -1 };   // not configured yet: leave everything queued
+  // test mode: only the listed numbers receive anything; everything else is marked skipped so a mistake cannot reach guests
+  const testMode = (await setting("sms_test_mode")) === "true";
+  const testNumbers = new Set((await setting("sms_test_numbers")).split(/[^0-9]+/).filter((x) => x.length === 10));
   while (Date.now() - t0 < 45_000) {
     const { data: batch, error } = await db.rpc("sms_claim_batch", { p_limit: 20 });
     if (error) throw error;
     if (!batch || batch.length === 0) break;
-    for (const m of batch) { try { (await sendOne(m)) ? sent++ : failed++; } catch (e) { failed++; await db.rpc("sms_mark", { p_id: m.id, p_status: "failed", p_sid: null, p_error: String(e).slice(0, 300), p_segments: null }); } }
+    for (const m of batch) {
+      if (testMode && !testNumbers.has(m.phone)) { skipped++; await db.rpc("sms_mark", { p_id: m.id, p_status: "skipped", p_sid: null, p_error: "test mode", p_segments: null }); continue; }
+      try { (await sendOne(m)) ? sent++ : failed++; } catch (e) { failed++; await db.rpc("sms_mark", { p_id: m.id, p_status: "failed", p_sid: null, p_error: String(e).slice(0, 300), p_segments: null }); }
+    }
   }
   await db.rpc("sms_after_drain");
   const { count } = await db.from("messages").select("id", { count: "exact", head: true }).eq("status", "queued");
-  return { sent, failed, left: count ?? 0 };
+  return { sent, failed, skipped, left: count ?? 0 };
 }
 
 Deno.serve(async (req: Request) => {
