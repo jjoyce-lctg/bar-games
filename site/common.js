@@ -139,6 +139,11 @@
         e.pick = pick; persist(); return { ok: true, pick };
       },
       async pickCounts(id) { const es = state.entries.filter((e) => e.round_id === id); return { total: es.length, picked: es.filter((e) => e.pick).length, c1: es.filter((e) => e.pick === "c1").length, c2: es.filter((e) => e.pick === "c2").length, c3: es.filter((e) => e.pick === "c3").length }; },
+      // wallet (mock: codes are always 1234, tokens are the phone itself)
+      async walletByToken(token) { const ph = String(token || "").replace(/^w/, ""); const c = state.entries.find((e) => e.phone === ph); if (!c) return { ok: false, error: "This link has expired. Enter your number below to get a new one." }; return { ok: true, name: c.name, phone: ph, prizes: this._wallet(ph) }; },
+      async walletRequestCode(phone) { return { ok: true }; },
+      async walletVerify(phone, code) { if (String(code) !== "1234") return { ok: false, error: "That code is not right." }; return { ok: true, token: "w" + normPhone(phone) }; },
+      _wallet(ph) { const now = Date.now(); return state.prizes.filter((p) => p.phone === ph).map((p) => { const st = p.voided_at ? "voided" : p.redeemed_at ? "redeemed" : now < Date.parse(p.valid_from) ? "not_yet" : now > Date.parse(p.expires_at) ? "expired" : "active"; const v = state.venues.find((x) => x.id === p.won_venue_id); return { id: p.id, prize: p.prize, venue: v ? v.name : "", won_at: p.issued_at, valid_from: p.valid_from, expires_at: p.expires_at, status: st, redeemed_at: p.redeemed_at, redeemed_venue: null, rank: (st === "active" || st === "not_yet") ? 0 : 1 }; }).sort((a, b) => a.rank - b.rank || Date.parse(b.won_at) - Date.parse(a.won_at)); },
       roundChannel(code) { const bc = new BroadcastChannel("lctg-round-" + String(code).toUpperCase()); return { send(msg) { bc.postMessage(msg); }, on(fn) { bc.onmessage = (e) => fn(e.data); }, close() { bc.close(); } }; },
       async submitEntry({ code, name, phone, pick, opt_in, opt_in_text }) {
         await sleep(300);
@@ -236,6 +241,16 @@
         return { count: rows.length, byPick, winners: rows.filter((e) => e.is_winner).map((e) => e.name) };
       },
       async getRoundPublic(code) { return throwIf(await sb.rpc("get_round_public", { p_code: code })); },
+      async walletByToken(token) { return throwIf(await sb.rpc("wallet_by_token", { p_token: token })); },
+      async walletRequestCode(phone) { return throwIf(await sb.rpc("wallet_request_code", { p_phone: phone })); },
+      async walletVerify(phone, code) { return throwIf(await sb.rpc("wallet_verify", { p_phone: phone, p_code: code })); },
+      async contactDetail(phone) { return throwIf(await sb.rpc("contact_detail", { p_phone: phone })); },
+      async contactsSearch(filter, limit = 500) { return throwIf(await sb.rpc("contacts_search", { p_filter: filter || {}, p_limit: limit })); },
+      async campaignPreview(filter) { return throwIf(await sb.rpc("campaign_preview", { p_filter: filter || {} })); },
+      async listCampaigns() { return throwIf(await sb.from("campaigns").select("*").order("created_at", { ascending: false }).limit(200)); },
+      async saveCampaign(c) { return c.id ? throwIf(await sb.from("campaigns").update({ name: c.name, body: c.body, filter: c.filter }).eq("id", c.id).select().single()) : throwIf(await sb.from("campaigns").insert({ name: c.name, body: c.body, filter: c.filter, created_by: (await this.me()).id }).select().single()); },
+      async sendCampaign(id, when) { return throwIf(await sb.rpc("campaign_send", { p_campaign_id: id, p_when: when || null })); },
+      async listMessages(f = {}) { let q = sb.from("messages").select("*").order("created_at", { ascending: false }).limit(500); if (f.phone) q = q.eq("phone", f.phone); if (f.campaign_id) q = q.eq("campaign_id", f.campaign_id); if (f.purpose) q = q.eq("purpose", f.purpose); return throwIf(await q); },
       async openPicks(id, seconds = 10) { return throwIf(await sb.rpc("open_picks", { p_round_id: id, p_seconds: seconds })); },
       async shellPick(code, phone, pick) { return throwIf(await sb.rpc("shell_pick", { p_code: code, p_phone: phone, p_pick: pick })); },
       async pickCounts(id) { return throwIf(await sb.rpc("pick_counts", { p_round_id: id })); },

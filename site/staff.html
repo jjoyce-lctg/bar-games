@@ -90,6 +90,7 @@
     const d = normPhone($("#phone").value);
     if (d.length !== 10) { err.textContent = "Enter the full 10-digit number."; err.classList.remove("hidden"); return; }
     let rows = []; try { rows = await api.lookupPrizes(d); } catch (e) { err.textContent = e.message; err.classList.remove("hidden"); return; }
+    rows = [...rows].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || Date.parse(b.won_at) - Date.parse(a.won_at)); // redeemable first, newest first; then the rest, newest first
     if (!rows.length) { $("#results").innerHTML = `<div class="card"><b>No prizes for ${fmtPhone(d)}.</b><p class="muted" style="margin:.4rem 0 0">Check the number against the guest's text. Prizes appear only for winners.</p></div>`; return; }
     $("#results").innerHTML = rows.map((p) => `<div class="prize ${p.status}" data-id="${p.id}">
       <div class="row"><span class="status ${p.status}">${LABEL[p.status] || p.status}</span><div class="grow"></div><span class="muted">${esc(p.won_venue)}, ${fmtDay(p.won_at)}</span></div>
