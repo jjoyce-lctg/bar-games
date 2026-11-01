@@ -298,7 +298,7 @@
     return new Promise((res) => o.toBlob(res, "image/png"));
   }
   function renderRacers() {
-    $("#racersBody").innerHTML = games.map((g) => decorateOptions(g.options).map((o, i) => `<div class="card stack" style="width:210px;text-align:center" data-game="${esc(g.key)}" data-i="${i}">
+    $("#racersBody").innerHTML = games.filter((g) => !["barmarbles", "shellgame"].includes(g.key)).map((g) => decorateOptions(g.options).map((o, i) => `<div class="card stack" style="width:210px;text-align:center" data-game="${esc(g.key)}" data-i="${i}">
       <div style="height:150px;display:flex;align-items:flex-end;justify-content:center">${o.icon_url ? `<img src="${esc(o.icon_url)}" style="max-height:150px;max-width:100%">` : o.image_url ? `<img src="${esc(o.image_url)}" style="max-height:150px;max-width:100%">` : MASCOTS.standalone(o.id, 140, { emoji: o.emoji })}</div>
       <div class="muted" style="font-size:.78rem">${g.options[i].sprite_url ? "Custom sprite sheet" : g.options[i].image_url ? "Custom still image" : "Built-in artwork"}</div>
       <input class="oLabel" value="${esc(o.label)}" style="text-align:center">
