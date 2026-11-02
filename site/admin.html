@@ -7,25 +7,42 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=__BUILD__">
 <style>
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
-  .topbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .topbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
   .brand { font-family: var(--display); font-size: 1.6rem; letter-spacing: .04em; } .brand span { color: var(--accent); }
-  .tabs { display: flex; gap: .4rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
-  .tabs button { background: none; border: none; color: var(--muted); font: inherit; font-weight: 600; padding: .7rem 1rem; cursor: pointer; border-bottom: 3px solid transparent; }
+  .tabs { display: flex; gap: .2rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tabs button { background: none; border: none; color: var(--muted); font: inherit; font-weight: 600; padding: .7rem .9rem; cursor: pointer; border-bottom: 3px solid transparent; position: relative; }
   .tabs button.on { color: var(--text); border-color: var(--accent); }
+  .tabs button .pill { position: absolute; top: .3rem; right: .1rem; background: #e5484d; color: #fff; border-radius: 999px; font-size: .65rem; padding: 0 .35rem; }
+  .subtabs { display: flex; gap: .4rem; } .subtabs button { background: var(--panel2); border: 1px solid var(--line); color: var(--muted); font: inherit; font-size: .85rem; font-weight: 600; padding: .4rem .8rem; border-radius: 999px; cursor: pointer; } .subtabs button.on { color: var(--text); border-color: var(--accent); }
   .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .7rem; align-items: end; }
   .filters .checks { display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap; grid-column: 1 / -1; }
   .filters .row { grid-column: 1 / -1; }
-  .filters .checks label { display: flex; gap: .4rem; align-items: center; margin: 0; color: var(--text); font-size: .9rem; }
+  .filters .checks label, label.chk { display: flex; gap: .4rem; align-items: center; margin: 0; color: var(--text); font-size: .9rem; }
   .tablewrap { max-height: 65vh; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table tr.click { cursor: pointer; } table tr.click:hover td { background: rgba(255,255,255,.04); }
   .stats { display: flex; gap: 1rem; flex-wrap: wrap; }
-  .stat { background: var(--panel2); border-radius: 10px; padding: .7rem 1rem; } .stat b { display: block; font-family: var(--display); font-size: 1.8rem; color: var(--accent); }
-  .venue-row { display: grid; grid-template-columns: 56px 1.6fr 1fr 1fr 1.4fr 1.4fr auto; gap: .6rem; align-items: center; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+  .stat { background: var(--panel2); border-radius: 10px; padding: .7rem 1rem; min-width: 120px; } .stat b { display: block; font-family: var(--display); font-size: 1.8rem; color: var(--accent); } .stat small { color: var(--muted); }
+  .venue-row { display: grid; grid-template-columns: 56px 1.4fr 1fr 1fr 1.3fr 1.3fr 1.6fr auto; gap: .6rem; align-items: center; padding: .7rem 0; border-bottom: 1px solid var(--line); }
   .venue-row .logo { width: 56px; height: 56px; border-radius: 8px; background: var(--panel2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .venue-row .logo img { max-width: 100%; max-height: 100%; }
   .swatch { display: flex; gap: .4rem; align-items: center; } .swatch input[type=color] { width: 2.6rem; height: 2.4rem; padding: 0; border: none; background: none; }
   .notes { width: 100%; min-width: 120px; padding: .35rem .5rem; font-size: .85rem; }
   .login-box { max-width: 420px; margin: 10vh auto 0; }
+  .banner { background: rgba(255,205,0,.12); border: 1px solid rgba(255,205,0,.4); color: var(--accent); padding: .6rem 1rem; border-radius: 10px; font-size: .9rem; }
+  .banner.red { background: rgba(229,72,77,.12); border-color: rgba(229,72,77,.5); color: #ff8a8e; }
+  textarea { width: 100%; min-height: 90px; font: inherit; padding: .6rem .7rem; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); resize: vertical; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; } @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+  .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 50; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 100vw); background: var(--panel); border-left: 1px solid var(--line); z-index: 51; overflow: auto; padding: 1.2rem 1.4rem 3rem; }
+  .drawer h2 { margin: 0; font-family: var(--display); font-size: 2rem; letter-spacing: .03em; }
+  .msg { padding: .5rem .7rem; border-radius: 10px; background: var(--panel2); margin: .35rem 0; font-size: .9rem; } .msg.in { background: rgba(0,76,84,.35); } .msg .meta { color: var(--muted); font-size: .75rem; margin-top: .2rem; }
+  .kv { display: grid; grid-template-columns: 160px 1fr; gap: .4rem .8rem; font-size: .9rem; } .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  .tags input { width: 100%; }
+  .sm { font-size: .85rem; color: var(--muted); }
+  .count { font-family: var(--display); font-size: 2.4rem; color: var(--accent); line-height: 1; }
+  .set-row { display: grid; grid-template-columns: 1fr 220px; gap: .8rem; align-items: center; padding: .6rem 0; border-bottom: 1px solid var(--line); } .set-row small { display: block; color: var(--muted); }
+  .game-card { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start; }
 </style>
 </head>
 <body>
@@ -33,7 +50,7 @@
   <div class="topbar">
     <div class="brand">LAST CALL <span>TAVERN GAMES</span> · ADMIN</div>
     <div class="grow"></div>
-    <a href="portal.html" class="btn small">Portal</a><a href="showrunner.html" class="btn small">Showrunner</a>
+    <a href="portal.html" class="btn small">Portal</a><a href="showrunner.html" class="btn small">Showrunner</a><a href="staff.html" class="btn small">Redemption</a>
     <button id="btnLogout" class="btn small hidden">Log out</button>
   </div>
 
@@ -46,56 +63,178 @@
   </section>
 
   <section id="viewAdmin" class="hidden">
-    <div class="tabs">
-      <button data-tab="entries" class="on">Entries</button>
-      <button data-tab="contacts">SMS list</button>
-      <button data-tab="rounds">Rounds</button>
-      <button data-tab="venues">Bars</button>
-      <button data-tab="racers">Racers</button>
+    <div id="testBanner" class="banner hidden">SMS <b>test mode</b> is on: texts are only delivered to the test numbers in Settings. Everyone else's texts are held and marked skipped. Turn it off in Settings once Twilio is connected.</div>
+    <div class="tabs" style="margin-top:.8rem">
+      <button data-tab="dash" class="on">Dashboard</button>
+      <button data-tab="contacts">Contacts</button>
+      <button data-tab="campaigns">Campaigns</button>
+      <button data-tab="messages">Messages<span id="inboxPill" class="pill hidden"></span></button>
       <button data-tab="prizes">Prizes</button>
-      <button data-tab="board">Leaderboard</button>
+      <button data-tab="games">Games</button>
+      <button data-tab="venues">Bars</button>
+      <button data-tab="settings">Settings</button>
       <button data-tab="users">Logins</button>
     </div>
 
-    <!-- ENTRIES -->
-    <div id="tab-entries" class="stack">
-      <div class="card filters">
-        <div><label>Bar</label><select id="fVenue"><option value="">All bars</option></select></div>
-        <div><label>Game</label><select id="fGame"><option value="">All games</option></select></div>
-        <div><label>From</label><input id="fFrom" type="date"></div>
-        <div><label>To</label><input id="fTo" type="date"></div>
-        <div class="checks">
-          <label><input id="fWinners" type="checkbox"> Winners only</label>
-          <label><input id="fOptIn" type="checkbox"> Opted in</label>
-          <label><input id="fUntexted" type="checkbox"> Not yet texted</label>
-        </div>
-        <div class="row"><button id="btnFilter" class="btn primary">Apply</button><button id="btnExportEntries" class="btn">Export CSV</button></div>
+    <!-- DASHBOARD -->
+    <div id="tab-dash" class="stack">
+      <div class="row" style="align-items:center"><div class="subtabs" id="dashDays"><button data-d="1">Last night</button><button data-d="7" class="on">7 days</button><button data-d="30">30 days</button><button data-d="90">90 days</button></div><div class="grow"></div><button id="btnDash" class="btn small">Refresh</button></div>
+      <div class="stats" id="dashStats"></div>
+      <div class="two">
+        <div class="card"><h3>By bar</h3><table><thead><tr><th>Bar</th><th>Rounds</th><th>Players</th><th>Prizes</th><th>Redeemed</th><th>Opted in</th></tr></thead><tbody id="dashVenues"></tbody></table></div>
+        <div class="card"><h3>Recent rounds</h3><table><thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Players</th><th>Winners</th><th>Prize</th></tr></thead><tbody id="dashRounds"></tbody></table></div>
       </div>
-      <div class="stats" id="entryStats"></div>
-      <div class="tablewrap"><table>
-        <thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Code</th><th>Name</th><th>Phone</th><th>Pick</th><th>Opt-in</th><th>Winner</th><th>Prize</th><th>Texted</th><th>Notes</th><th></th></tr></thead>
-        <tbody id="entriesBody"></tbody></table></div>
-      <p class="muted" style="font-size:.85rem">Tip: filter to <b>Winners only</b> + <b>Not yet texted</b>, export, send the prize texts from your SMS tool, then come back and tick <b>Texted</b>.</p>
+      <div class="card"><h3>Text queue</h3><div class="stats" id="dashQueue"></div></div>
     </div>
 
     <!-- CONTACTS -->
     <div id="tab-contacts" class="stack hidden">
-      <div class="card row">
-        <label style="display:flex;gap:.4rem;align-items:center;margin:0;color:var(--text)"><input id="cOptIn" type="checkbox" checked> Opted-in numbers only</label>
-        <div class="grow"></div>
-        <button id="btnLoadContacts" class="btn primary">Refresh</button>
-        <button id="btnExportContacts" class="btn">Export CSV</button>
+      <div class="row" style="align-items:center"><div class="subtabs" id="contactSub"><button data-s="people" class="on">People</button><button data-s="entries">Raw entries</button></div></div>
+      <div id="contactsPeople" class="stack">
+        <div class="card filters">
+          <div style="grid-column:span 2"><label>Search name or phone</label><input id="cQ" placeholder="e.g. Marcus or 312"></div>
+          <div><label>Bar</label><select id="cVenue"><option value="">Any bar</option></select></div>
+          <div><label>Game played</label><select id="cGame"><option value="">Any game</option></select></div>
+          <div><label>Visited within (days)</label><input id="cWithin" type="number" min="1" placeholder="e.g. 30"></div>
+          <div><label>Lapsed (no visit in days)</label><input id="cLapsed" type="number" min="1" placeholder="e.g. 45"></div>
+          <div><label>Min visits</label><input id="cMin" type="number" min="1"></div>
+          <div><label>Max visits</label><input id="cMax" type="number" min="1"></div>
+          <div><label>Birthday month</label><select id="cBday"><option value="">Any</option></select></div>
+          <div><label>Not texted in (days)</label><input id="cNotTexted" type="number" min="1"></div>
+          <div><label>Tag</label><input id="cTag" placeholder="e.g. vip"></div>
+          <div class="checks">
+            <label><input id="cOptIn" type="checkbox"> Opted in only</label>
+            <label><input id="cFirst" type="checkbox"> First-time visitors</label>
+            <label><input id="cPrize" type="checkbox"> Has an unredeemed prize</label>
+          </div>
+          <div class="row"><button id="btnContacts" class="btn primary">Apply</button><button id="btnClearContacts" class="btn">Clear</button><button id="btnExportContacts" class="btn">Export CSV</button><button id="btnContactsToCampaign" class="btn">Text this list</button></div>
+        </div>
+        <div class="stats" id="contactStats"></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Name</th><th>Phone</th><th>Opt-in</th><th>Visits</th><th>Games</th><th>Wins</th><th>Tags</th><th>First seen</th><th>Last seen</th></tr></thead>
+          <tbody id="contactsBody"></tbody></table></div>
+        <p class="sm">Click a person to open their profile: visits by bar, prizes, every text they've received and why, consent record, notes and tags.</p>
       </div>
-      <div class="stats" id="contactStats"></div>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Phone</th><th>Name</th><th>Opt-in</th><th>Entries</th><th>Wins</th><th>Bars</th><th>First seen</th><th>Last seen</th></tr></thead>
-        <tbody id="contactsBody"></tbody></table></div>
-      <p class="muted" style="font-size:.85rem">One row per phone number, de-duplicated across every game and bar. This is the clean list to load into your SMS platform.</p>
+      <div id="contactsEntries" class="stack hidden">
+        <div class="card filters">
+          <div><label>Bar</label><select id="fVenue"><option value="">All bars</option></select></div>
+          <div><label>Game</label><select id="fGame"><option value="">All games</option></select></div>
+          <div><label>From</label><input id="fFrom" type="date"></div>
+          <div><label>To</label><input id="fTo" type="date"></div>
+          <div class="checks">
+            <label><input id="fWinners" type="checkbox"> Winners only</label>
+            <label><input id="fOptIn" type="checkbox"> Opted in</label>
+          </div>
+          <div class="row"><button id="btnFilter" class="btn primary">Apply</button><button id="btnExportEntries" class="btn">Export CSV</button></div>
+        </div>
+        <div class="stats" id="entryStats"></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Code</th><th>Name</th><th>Phone</th><th>Pick</th><th>Opt-in</th><th>Winner</th><th>Prize</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="entriesBody"></tbody></table></div>
+        <p class="sm">One row per game entry. Prize texts go out automatically when a round finishes, so there is nothing to tick here any more.</p>
+      </div>
     </div>
 
-    <!-- ROUNDS -->
-    <div id="tab-rounds" class="stack hidden">
-      <div class="tablewrap"><table>
+    <!-- CAMPAIGNS -->
+    <div id="tab-campaigns" class="stack hidden">
+      <div class="two">
+        <div class="card stack">
+          <h3 id="campTitle">New campaign</h3>
+          <div><label>Name (internal)</label><input id="kName" placeholder="e.g. Trivia Thursday - Fitzgerald's"></div>
+          <div><label>Template</label><select id="kTemplate"><option value="">Start from a template...</option></select></div>
+          <div><label>Message</label><textarea id="kBody" maxlength="600" placeholder="Hey {first}! ..."></textarea><div class="sm" id="kCount"></div></div>
+          <details><summary class="sm" style="cursor:pointer">Audience filters</summary>
+            <div class="filters" style="margin-top:.6rem">
+              <div style="grid-column:1/-1"><label>Bars (any of)</label><div id="kVenues" class="row" style="flex-wrap:wrap;gap:.8rem"></div></div>
+              <div style="grid-column:1/-1"><label>Played (any of)</label><div id="kGames" class="row" style="flex-wrap:wrap;gap:.8rem"></div></div>
+              <div><label>Visited within (days)</label><input id="kWithin" type="number" min="1"></div>
+              <div><label>Lapsed (days)</label><input id="kLapsed" type="number" min="1"></div>
+              <div><label>Min visits</label><input id="kMin" type="number" min="1"></div>
+              <div><label>Max visits</label><input id="kMax" type="number" min="1"></div>
+              <div><label>Birthday month</label><select id="kBday"><option value="">Any</option></select></div>
+              <div><label>Not texted in (days)</label><input id="kNotTexted" type="number" min="1"></div>
+              <div><label>Tag</label><input id="kTag"></div>
+              <div class="checks"><label><input id="kFirst" type="checkbox"> First-time visitors</label><label><input id="kPrize" type="checkbox"> Has an unredeemed prize</label></div>
+            </div>
+          </details>
+          <div class="row" style="align-items:center;gap:1rem"><div><div class="count" id="kAudience">-</div><div class="sm">opted-in people will get this <span id="kTotal"></span></div></div><div class="grow"></div><button id="btnPreview" class="btn small">Recount</button></div>
+          <div class="row" style="flex-wrap:wrap">
+            <button id="btnSaveCamp" class="btn">Save draft</button>
+            <button id="btnTestCamp" class="btn">Text me a test</button>
+            <input id="kTestPhone" placeholder="your mobile" style="max-width:150px">
+            <div class="grow"></div>
+            <input id="kWhen" type="datetime-local" style="max-width:220px">
+            <button id="btnSendCamp" class="btn primary">Send</button>
+          </div>
+          <div id="campMsg"></div>
+          <p class="sm">Only people who opted in and have not replied STOP get campaigns. Sends outside quiet hours are moved to the next window, and nobody gets two campaigns inside the minimum gap (both in Settings). "Reply STOP to opt out" is added automatically. Use <b>{first}</b> for their first name.</p>
+        </div>
+        <div class="card stack">
+          <div class="row" style="align-items:center"><h3 style="margin:0">Campaigns</h3><div class="grow"></div><button id="btnNewCamp" class="btn small">New</button></div>
+          <div class="tablewrap" style="max-height:70vh"><table>
+            <thead><tr><th>Name</th><th>Status</th><th>Audience</th><th>Sent</th><th>Failed</th><th>When</th></tr></thead>
+            <tbody id="campBody"></tbody></table></div>
+          <div id="campDetail" class="hidden stack"><h3 id="campDetailTitle"></h3><div class="tablewrap" style="max-height:40vh"><table><thead><tr><th>Phone</th><th>Status</th><th>Sent</th><th>Error</th></tr></thead><tbody id="campMsgs"></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div id="tab-messages" class="stack hidden">
+      <div class="row" style="align-items:center"><div class="subtabs" id="msgSub"><button data-s="inbox" class="on">Inbox</button><button data-s="all">All texts</button><button data-s="failed">Failed</button><button data-s="queue">Queued</button></div><div class="grow"></div><select id="mPurpose" style="max-width:180px"><option value="">Any reason</option><option value="prize">Prize</option><option value="reminder">Reminder</option><option value="campaign">Campaign</option><option value="reply">Reply</option><option value="verify">Wallet code</option><option value="system">System</option><option value="inbound">Inbound</option></select><button id="btnMsgs" class="btn small">Refresh</button></div>
+      <div id="msgInbox" class="stack"></div>
+      <div id="msgTable" class="tablewrap hidden"><table><thead><tr><th>When</th><th>Dir</th><th>Phone</th><th>Reason</th><th>Message</th><th>Status</th><th>Error</th></tr></thead><tbody id="msgBody"></tbody></table></div>
+    </div>
+
+    <!-- PRIZES -->
+    <div id="tab-prizes" class="stack hidden">
+      <div class="row" style="align-items:center"><div class="subtabs" id="prizeSub"><button data-s="issued" class="on">Issued prizes</button><button data-s="catalog">Prize catalogue</button></div></div>
+      <div id="prizesIssued" class="stack">
+        <div class="card filters">
+          <div><label>Won at</label><select id="pVenue"><option value="">All bars</option></select></div>
+          <div><label>Status</label><select id="pStatus"><option value="">All</option><option value="active">Active</option><option value="not_yet">Valid tomorrow</option><option value="redeemed">Redeemed</option><option value="expired">Expired</option><option value="voided">Voided</option></select></div>
+          <div class="row"><button id="btnPrizes" class="btn primary">Apply</button><button id="btnExportPrizes" class="btn">Export CSV</button></div>
+        </div>
+        <div class="stats" id="prizeStats"></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Won</th><th>Bar</th><th>Name</th><th>Phone</th><th>Prize</th><th>Valid</th><th>Status</th><th>Redeemed</th><th></th></tr></thead>
+          <tbody id="prizesBody"></tbody></table></div>
+        <p class="sm">Staff redeem at <a href="staff.html">Prize Redemption</a> by phone number or by scanning the QR on the guest's wallet page. Compare redeemed counts per bar with the LCTG Prize comps in Toast.</p>
+      </div>
+      <div id="prizesCatalog" class="stack hidden">
+        <div class="card stack">
+          <p class="sm" style="margin:0">The catalogue feeds the prize picker in the Showrunner so DJs pick consistent wording. Value is for your own reporting only; guests never see it.</p>
+          <table><thead><tr><th>Order</th><th>Prize (what the guest reads)</th><th>Redemption note for staff</th><th>Value $</th><th>Active</th><th></th></tr></thead><tbody id="catBody"></tbody></table>
+          <div class="row"><input id="catName" placeholder="e.g. a free appetizer" class="grow"><input id="catDesc" placeholder="staff note, e.g. any starter up to $15" class="grow"><input id="catValue" type="number" step="0.01" placeholder="value $" style="max-width:110px"><button id="btnAddCat" class="btn primary">Add</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAMES -->
+    <div id="tab-games" class="stack hidden">
+      <div class="row" style="align-items:center"><div class="subtabs" id="gameSub"><button data-s="setup" class="on">Game setup</button><button data-s="racers">Racers</button><button data-s="board">Leaderboard</button><button data-s="rounds">Round history</button></div></div>
+      <div id="gamesSetup" class="stack"></div>
+      <div id="gamesRacers" class="card hidden">
+        <p class="muted" style="margin-top:0">Each racer ships with built-in animated artwork. To replace one: <b>Upload run/fall sheet</b> takes a square PNG with a 4 x 4 grid of equal frames (frames 0 to 7 running, 8 to 11 falling, 12 to 15 getting up, character facing right, feet at 94% of the frame height). <b>Upload idle/win sheet</b> is the optional second sheet (0 to 3 idle, 4 to 11 victory, 12 to 15 exhausted). <b>Upload still image</b> takes a single transparent PNG that bobs along the track instead. Give a racer a <b>season</b> (from/to, month-day) and it only shows up between those dates, e.g. a pumpkin from 10-01 to 11-01. <a href="preview.html" target="_blank">Preview every animation state</a>.</p>
+        <div id="racersBody" class="row" style="gap:1rem;align-items:stretch;flex-wrap:wrap"></div>
+      </div>
+      <div id="gamesBoard" class="stack hidden">
+        <div class="card filters">
+          <div><label>Bar (tonight's board)</label><select id="bVenue"></select></div>
+          <div class="row"><button id="btnBoard" class="btn primary">Refresh</button></div>
+        </div>
+        <div class="two">
+          <div class="card"><h3>Tonight</h3><table><thead><tr><th>#</th><th>Name</th><th>Plays</th><th>Wins</th><th>Points</th></tr></thead><tbody id="boardNight"></tbody></table></div>
+          <div class="card"><h3 id="boardSeasonTitle">Season</h3><table><thead><tr><th>#</th><th>Name</th><th>Plays</th><th>Wins</th><th>Points</th></tr></thead><tbody id="boardSeason"></tbody></table></div>
+        </div>
+        <div class="card stack">
+          <h3>Seasons</h3>
+          <div class="row"><div class="grow"><label>Name</label><input id="snName" placeholder="e.g. Fall 2026"></div><div><label>Starts</label><input id="snStart" type="date"></div><div><label>Ends</label><input id="snEnd" type="date"></div><button id="btnAddSeason" class="btn primary" style="align-self:flex-end">Add</button></div>
+          <table><thead><tr><th>Name</th><th>Starts</th><th>Ends</th><th></th></tr></thead><tbody id="seasonsBody"></tbody></table>
+          <p class="sm">The season board uses whichever season contains today's date. Points: 1 per play, 10 for backing the winner.</p>
+        </div>
+      </div>
+      <div id="gamesRounds" class="tablewrap hidden"><table>
         <thead><tr><th>When</th><th>Bar</th><th>Game</th><th>Code</th><th>Prize</th><th>Entries</th><th>Winning pick</th><th>Status</th></tr></thead>
         <tbody id="roundsBody"></tbody></table></div>
     </div>
@@ -103,49 +242,26 @@
     <!-- VENUES -->
     <div id="tab-venues" class="stack hidden">
       <div class="card">
-        <div class="venue-row" style="border-bottom:2px solid var(--line);color:var(--muted);font-size:.8rem;text-transform:uppercase"><div>Logo</div><div>Name</div><div>Main color</div><div>Accent</div><div>Tagline</div><div>Default prize</div><div></div></div>
+        <div class="venue-row" style="border-bottom:2px solid var(--line);color:var(--muted);font-size:.8rem;text-transform:uppercase"><div>Logo</div><div>Name</div><div>Main color</div><div>Accent</div><div>Tagline</div><div>Default prize</div><div>Games offered</div><div></div></div>
         <div id="venuesBody"></div>
-        <p class="muted" style="font-size:.85rem;margin-top:1rem">Logos: PNG or SVG with a transparent background looks best on the TV. Colors apply to the TV screen and the guest's phone.</p>
+        <p class="sm" style="margin-top:1rem">Logos: PNG or SVG with a transparent background looks best on the TV. Colors apply to the TV screen and the guest's phone. Untick a game to hide it from that bar's Showrunner.</p>
       </div>
     </div>
 
-    <!-- RACERS -->
-    <div id="tab-racers" class="stack hidden">
-      <div class="card">
-        <p class="muted" style="margin-top:0">Each racer ships with built-in animated artwork. To replace one: <b>Upload sprite sheet</b> takes a square PNG with a 4 x 4 grid of equal frames (frames 0 to 7 running, 8 to 11 falling, 12 to 15 getting up, character facing right, feet at 94% of the frame height). <b>Upload idle/win sheet</b> is the optional second sheet (0 to 3 idle, 4 to 11 victory, 12 to 15 exhausted). <b>Upload still image</b> takes a single transparent PNG that bobs along the track instead. <a href="preview.html" target="_blank">Preview every animation state</a>.</p>
-        <div id="racersBody" class="row" style="gap:1rem;align-items:stretch"></div>
-      </div>
-    </div>
-
-    <!-- PRIZES -->
-    <div id="tab-prizes" class="stack hidden">
-      <div class="card filters">
-        <div><label>Won at</label><select id="pVenue"><option value="">All bars</option></select></div>
-        <div><label>Status</label><select id="pStatus"><option value="">All</option><option value="active">Active</option><option value="not_yet">Valid tomorrow</option><option value="redeemed">Redeemed</option><option value="expired">Expired</option><option value="voided">Voided</option></select></div>
-        <div class="row"><button id="btnPrizes" class="btn primary">Apply</button><button id="btnExportPrizes" class="btn">Export CSV</button></div>
-      </div>
-      <div class="stats" id="prizeStats"></div>
-      <div class="tablewrap"><table>
-        <thead><tr><th>Won</th><th>Bar</th><th>Name</th><th>Phone</th><th>Prize</th><th>Valid</th><th>Status</th><th>Redeemed</th><th></th></tr></thead>
-        <tbody id="prizesBody"></tbody></table></div>
-      <p class="muted" style="font-size:.85rem">Managers redeem at <a href="staff.html">Prize Redemption</a> by looking up the guest's phone number. Compare redeemed counts per bar with the LCTG Prize comps in Toast.</p>
-    </div>
-
-    <!-- LEADERBOARD -->
-    <div id="tab-board" class="stack hidden">
-      <div class="card filters">
-        <div><label>Bar (tonight's board)</label><select id="bVenue"></select></div>
-        <div class="row"><button id="btnBoard" class="btn primary">Refresh</button></div>
-      </div>
-      <div class="row" style="align-items:flex-start;gap:1rem">
-        <div class="card grow"><h3>Tonight</h3><table><thead><tr><th>#</th><th>Name</th><th>Plays</th><th>Wins</th><th>Points</th></tr></thead><tbody id="boardNight"></tbody></table></div>
-        <div class="card grow"><h3 id="boardSeasonTitle">Season</h3><table><thead><tr><th>#</th><th>Name</th><th>Plays</th><th>Wins</th><th>Points</th></tr></thead><tbody id="boardSeason"></tbody></table></div>
-      </div>
-      <div class="card stack">
-        <h3>Seasons</h3>
-        <div class="row"><div class="grow"><label>Name</label><input id="snName" placeholder="e.g. Fall 2026"></div><div><label>Starts</label><input id="snStart" type="date"></div><div><label>Ends</label><input id="snEnd" type="date"></div><button id="btnAddSeason" class="btn primary" style="align-self:flex-end">Add</button></div>
-        <table><thead><tr><th>Name</th><th>Starts</th><th>Ends</th><th></th></tr></thead><tbody id="seasonsBody"></tbody></table>
-        <p class="muted" style="font-size:.85rem">The season board uses whichever season contains today's date. Points: 1 per play, 10 for backing the winning racer.</p>
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="stack hidden">
+      <div class="two">
+        <div class="card stack">
+          <h3>Texting</h3>
+          <div id="setSms"></div>
+          <h3 style="margin-top:1rem">Prizes and guests</h3>
+          <div id="setPrize"></div>
+          <p class="sm">Changes apply immediately. Every change is written to the audit log.</p>
+        </div>
+        <div class="card stack">
+          <div class="row" style="align-items:center"><h3 style="margin:0">Audit log</h3><div class="grow"></div><button id="btnAudit" class="btn small">Refresh</button></div>
+          <div class="tablewrap" style="max-height:70vh"><table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+        </div>
       </div>
     </div>
 
@@ -162,12 +278,14 @@
         <div id="userMsg"></div>
       </div>
       <div class="tablewrap"><table>
-        <thead><tr><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Last sign-in</th><th>Added</th><th></th></tr></thead>
         <tbody id="usersBody"></tbody></table></div>
-      <p class="muted" style="font-size:.85rem">DJs see the console only. Managers can also redeem prizes at <a href="staff.html">Prize Redemption</a>. Admins see everything. Disable a login instead of deleting it so past rounds keep their history. Passwords can be reset in Supabase > Authentication.</p>
+      <p class="sm">DJs see the Showrunner only. Managers can also redeem prizes and look up guests. Admins see everything. Disable a login instead of deleting it so past rounds keep their history. Passwords can be reset in Supabase > Authentication.</p>
     </div>
   </section>
 </div>
+
+<div id="drawer" class="hidden"></div>
 
 <script src="config.js?v=__BUILD__"></script>
 <script src="vendor/supabase.js?v=__BUILD__"></script>
@@ -177,9 +295,14 @@
 <script>
 (async function () {
   const { api, $, $$, esc, fmtPhone, decorateOptions } = window.BG;
-  let me = null, venues = [], games = [], entries = [], contacts = [];
+  let me = null, venues = [], games = [], entries = [], contacts = [], settings = {}, catalog = [];
   const fmt = (d) => d ? new Date(d).toLocaleString([], { month: "short", day: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit" }) : "";
+  const fmtDay = (d) => d ? new Date(d).toLocaleDateString([], { month: "short", day: "numeric" }) : "";
   const toast = (msg) => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); };
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const monthOpts = MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
+  const num = (id) => { const v = $(id).value.trim(); return v === "" ? null : +v; };
+  const arm = (b, label, fn) => { if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Sure?"; setTimeout(() => { delete b.dataset.armed; b.textContent = label; }, 3000); return; } fn(); };
 
   // ---- CSV ----
   function downloadCsv(filename, rows, cols) {
@@ -202,66 +325,290 @@
     if (!me || me.role !== "admin") { const err = $("#loginError"); err.textContent = "This login is not an admin."; err.classList.remove("hidden"); await api.signOut(); return; }
     $("#viewLogin").classList.add("hidden"); $("#viewAdmin").classList.remove("hidden"); $("#btnLogout").classList.remove("hidden");
     [venues, games] = await Promise.all([api.listAllVenues(), api.listGames()]);
-    $("#fVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
-    $("#pVenue").innerHTML += venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
-    $("#bVenue").innerHTML = venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
-    $("#fGame").innerHTML += games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
-    await loadEntries();
+    const vOpts = venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+    const gOpts = games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
+    ["#fVenue", "#pVenue", "#cVenue"].forEach((s) => ($(s).innerHTML += vOpts)); $("#bVenue").innerHTML = vOpts;
+    ["#fGame", "#cGame"].forEach((s) => ($(s).innerHTML += gOpts));
+    ["#cBday", "#kBday"].forEach((s) => ($(s).innerHTML += monthOpts));
+    $("#kVenues").innerHTML = venues.filter((v) => v.active).map((v) => `<label class="chk"><input type="checkbox" value="${v.id}"> ${esc(v.name)}</label>`).join("");
+    $("#kGames").innerHTML = games.map((g) => `<label class="chk"><input type="checkbox" value="${esc(g.key)}"> ${esc(g.name)}</label>`).join("");
+    try { settings = await api.settingsGet(); } catch {}
+    $("#testBanner").classList.toggle("hidden", settings.sms_test_mode !== "true");
+    await loadDash();
   }
 
   // ---- tabs ----
+  const TABS = { dash: loadDash, contacts: loadContacts, campaigns: loadCampaigns, messages: loadMessages, prizes: loadPrizes, games: renderGames, venues: renderVenues, settings: renderSettings, users: loadUsers };
   $$(".tabs button").forEach((b) => (b.onclick = () => {
     $$(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
-    ["entries", "contacts", "rounds", "venues", "racers", "prizes", "board", "users"].forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
-    ({ contacts: loadContacts, rounds: loadRounds, venues: renderVenues, racers: renderRacers, prizes: loadPrizes, board: loadBoard, users: loadUsers, entries: loadEntries })[b.dataset.tab]();
+    Object.keys(TABS).forEach((t) => $("#tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+    TABS[b.dataset.tab]();
   }));
+  function subtabs(sel, views, onChange) {
+    $$(sel + " button").forEach((b) => (b.onclick = () => {
+      $$(sel + " button").forEach((x) => x.classList.toggle("on", x === b));
+      Object.entries(views).forEach(([k, id]) => $(id).classList.toggle("hidden", k !== b.dataset.s));
+      onChange(b.dataset.s);
+    }));
+  }
 
-  // ---- entries ----
+  // ---- dashboard ----
+  let dashDays = 7;
+  $$("#dashDays button").forEach((b) => (b.onclick = () => { $$("#dashDays button").forEach((x) => x.classList.toggle("on", x === b)); dashDays = +b.dataset.d; loadDash(); }));
+  $("#btnDash").onclick = loadDash;
+  async function loadDash() {
+    let d; try { d = await api.dashboard(dashDays); } catch (e) { return toast(e.message); }
+    if (d.error) return toast(d.error);
+    const tile = (n, l, s) => `<div class="stat"><b>${n ?? 0}</b>${l}${s ? `<br><small>${s}</small>` : ""}</div>`;
+    $("#dashStats").innerHTML = tile(d.rounds, "rounds") + tile(d.players, "players", `${d.entries} entries`) + tile(d.new_contacts, "new contacts", `${d.contacts_total} total`) + tile(d.opted_in, "opted in to texts") + tile(d.prizes_issued, "prizes won", `${d.prizes_open} still open`) + tile(d.prizes_redeemed, "prizes redeemed", d.prizes_issued ? Math.round(100 * d.prizes_redeemed / d.prizes_issued) + "% of issued" : "");
+    $("#dashQueue").innerHTML = tile(d.texts_sent, "texts sent", `${d.texts_delivered} delivered`) + tile(d.texts_failed, "failed") + tile(d.texts_queued, "waiting to send") + tile(d.opt_outs, "opt-outs") + tile(d.needs_reply, "replies waiting") + `<div class="stat"><b style="font-size:1.2rem;margin-top:.4rem">${d.test_mode ? "TEST" : "LIVE"}</b>texting mode</div>`;
+    $("#dashVenues").innerHTML = (d.by_venue || []).map((v) => `<tr><td>${esc(v.venue)}</td><td>${v.rounds}</td><td>${v.players}</td><td>${v.prizes}</td><td>${v.redeemed}</td><td>${v.opted_in}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">Nothing yet.</td></tr>`;
+    $("#dashRounds").innerHTML = (d.recent_rounds || []).map((r) => `<tr><td>${fmt(r.at)}</td><td>${esc(r.venue)}</td><td>${esc(r.game)}</td><td>${r.players}</td><td>${r.winners}</td><td>${esc(r.prize || "")}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No rounds yet.</td></tr>`;
+    $("#inboxPill").textContent = d.needs_reply; $("#inboxPill").classList.toggle("hidden", !d.needs_reply);
+    $("#testBanner").classList.toggle("hidden", !d.test_mode);
+  }
+
+  // ---- contacts ----
+  subtabs("#contactSub", { people: "#contactsPeople", entries: "#contactsEntries" }, (s) => (s === "entries" ? loadEntries() : loadContacts()));
+  function contactFilter() {
+    const f = {};
+    if ($("#cQ").value.trim()) f.q = $("#cQ").value.trim();
+    if ($("#cVenue").value) f.venue_ids = [$("#cVenue").value];
+    if ($("#cGame").value) f.game_keys = [$("#cGame").value];
+    for (const [k, id] of [["visited_within_days", "#cWithin"], ["lapsed_days", "#cLapsed"], ["min_visits", "#cMin"], ["max_visits", "#cMax"], ["birthday_month", "#cBday"], ["not_texted_days", "#cNotTexted"]]) { const v = num(id); if (v != null && !Number.isNaN(v)) f[k] = v; }
+    if ($("#cTag").value.trim()) f.tags = [$("#cTag").value.trim()];
+    if ($("#cOptIn").checked) f.opted_in = true; if ($("#cFirst").checked) f.first_time = true; if ($("#cPrize").checked) f.has_unredeemed_prize = true;
+    return f;
+  }
+  async function loadContacts() {
+    try { contacts = await api.contactsSearch(contactFilter(), 1000); } catch (e) { toast(e.message); contacts = []; }
+    $("#contactStats").innerHTML = `<div class="stat"><b>${contacts.length}</b>people</div><div class="stat"><b>${contacts.filter((c) => c.sms_opt_in && !c.do_not_text).length}</b>textable</div><div class="stat"><b>${contacts.filter((c) => c.visits === 1).length}</b>first-timers</div><div class="stat"><b>${contacts.reduce((a, c) => a + (c.wins || 0), 0)}</b>wins</div>`;
+    $("#contactsBody").innerHTML = contacts.map((c) => `<tr class="click" data-phone="${c.phone}"><td>${esc(c.name)}</td><td>${fmtPhone(c.phone)}</td><td>${c.do_not_text ? '<span class="tag no">Do not text</span>' : c.sms_opt_in ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>'}</td><td>${c.visits}</td><td>${c.games}</td><td>${c.wins}</td><td>${(c.tags || []).map((t) => `<span class="tag admin">${esc(t)}</span>`).join(" ")}</td><td>${fmt(c.first_seen_at)}</td><td>${fmt(c.last_seen_at)}</td></tr>`).join("") || `<tr><td colspan="9" class="muted">Nobody matches.</td></tr>`;
+    $$("#contactsBody tr[data-phone]").forEach((tr) => (tr.onclick = () => openContact(tr.dataset.phone)));
+  }
+  $("#btnContacts").onclick = loadContacts; $("#cQ").addEventListener("keydown", (e) => e.key === "Enter" && loadContacts());
+  $("#btnClearContacts").onclick = () => { $$("#contactsPeople input, #contactsPeople select").forEach((i) => (i.type === "checkbox" ? (i.checked = false) : (i.value = ""))); loadContacts(); };
+  $("#btnExportContacts").onclick = () => downloadCsv(`contacts-${stamp()}.csv`, contacts, [
+    { label: "Phone", get: (c) => c.phone }, { label: "First name", get: (c) => String(c.name).trim().split(/\s+/)[0] }, { label: "Last name", get: (c) => String(c.name).trim().split(/\s+/).slice(1).join(" ") },
+    { label: "Full name", get: (c) => c.name }, { label: "SMS opt-in", get: (c) => c.sms_opt_in ? "Yes" : "No" }, { label: "Opted in at", get: (c) => fmt(c.opted_in_at) }, { label: "Consent text", get: (c) => c.opt_in_text }, { label: "Opted out at", get: (c) => fmt(c.opted_out_at) }, { label: "Do not text", get: (c) => c.do_not_text ? "Yes" : "No" },
+    { label: "Visits", get: (c) => c.visits }, { label: "Games", get: (c) => c.games }, { label: "Wins", get: (c) => c.wins }, { label: "Tags", get: (c) => (c.tags || []).join(" ") }, { label: "Birthday month", get: (c) => c.birthday_month ? MONTHS[c.birthday_month - 1] : "" }, { label: "Notes", get: (c) => c.notes },
+    { label: "First seen", get: (c) => fmt(c.first_seen_at) }, { label: "Last seen", get: (c) => fmt(c.last_seen_at) }]);
+  $("#btnContactsToCampaign").onclick = () => {
+    const f = contactFilter(); $$(".tabs button").find((b) => b.dataset.tab === "campaigns").click(); newCampaign();
+    $$("#kVenues input").forEach((i) => (i.checked = (f.venue_ids || []).includes(i.value))); $$("#kGames input").forEach((i) => (i.checked = (f.game_keys || []).includes(i.value)));
+    $("#kWithin").value = f.visited_within_days ?? ""; $("#kLapsed").value = f.lapsed_days ?? ""; $("#kMin").value = f.min_visits ?? ""; $("#kMax").value = f.max_visits ?? ""; $("#kBday").value = f.birthday_month ?? ""; $("#kNotTexted").value = f.not_texted_days ?? ""; $("#kTag").value = (f.tags || [])[0] || "";
+    $("#kFirst").checked = !!f.first_time; $("#kPrize").checked = !!f.has_unredeemed_prize; $("details").open = true; previewAudience();
+  };
+
+  // contact profile drawer
+  async function openContact(phone) {
+    let d; try { d = await api.contactDetail(phone); } catch (e) { return toast(e.message); }
+    if (!d || !d.contact) return toast("No profile for that number.");
+    const c = d.contact, w = (d.wallet && d.wallet.prizes) || [], ms = d.messages || [];
+    const PL = { active: "Ready to redeem", not_yet: "Starts tomorrow", redeemed: "Redeemed", expired: "Expired", voided: "Voided" };
+    const PURPOSE = { prize: "Prize text", reminder: "Prize reminder", campaign: "Campaign", reply: "Reply from us", verify: "Wallet code", system: "System", inbound: "From guest" };
+    const dr = $("#drawer"); dr.classList.remove("hidden");
+    dr.innerHTML = `<div class="drawer-bg"></div><div class="drawer stack">
+      <div class="row" style="align-items:center"><div><h2>${esc(c.name)}</h2><div class="sm">${fmtPhone(c.phone)} · first seen ${fmt(c.first_seen_at)} · last ${fmt(c.last_seen_at)}</div></div><div class="grow"></div><button class="btn small close">Close</button></div>
+      <div class="stats"><div class="stat"><b>${c.visits}</b>visits</div><div class="stat"><b>${c.games}</b>games</div><div class="stat"><b>${c.wins}</b>wins</div><div class="stat"><b>${w.filter((p) => p.status === "active").length}</b>prizes ready</div><div class="stat"><b>${ms.filter((m) => m.direction === "out" && m.purpose !== "verify").length}</b>texts from us</div></div>
+      <div class="two">
+        <div class="card stack">
+          <h3>Texting</h3>
+          <dl class="kv">
+            <dt>Opted in</dt><dd>${c.sms_opt_in ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>'} ${c.opted_out_at ? `<span class="tag no">Replied STOP ${fmt(c.opted_out_at)}</span>` : ""}</dd>
+            <dt>Consent given</dt><dd>${fmt(c.opted_in_at) || "-"}</dd>
+            <dt>Consent wording</dt><dd class="sm">${c.opt_in_text ? `<details><summary style="cursor:pointer">Show</summary>${esc(c.opt_in_text)}</details>` : "-"}</dd>
+            <dt>Failed sends</dt><dd>${c.failed_sends || 0}</dd>
+          </dl>
+          <label class="chk"><input type="checkbox" class="dnt" ${c.do_not_text ? "checked" : ""}> Do not text (staff hold, separate from STOP)</label>
+          <div><label>Birthday month</label><select class="bday"><option value="">Unknown</option>${monthOpts}</select></div>
+          <div class="tags"><label>Tags (space separated)</label><input class="tags" value="${esc((c.tags || []).join(" "))}" placeholder="vip regular trivia"></div>
+          <div><label>Notes</label><textarea class="notes">${esc(c.notes || "")}</textarea></div>
+          <button class="btn primary saveC">Save profile</button>
+          <h3 style="margin-top:.6rem">Send a text</h3>
+          <textarea class="sendBody" maxlength="600" placeholder="One-off message to this guest"></textarea>
+          <div class="row"><button class="btn sendOne" ${c.do_not_text || !c.sms_opt_in ? "disabled" : ""}>Send</button><button class="btn resendWallet" ${c.do_not_text ? "disabled" : ""}>Text their prize wallet link</button></div>
+        </div>
+        <div class="card stack">
+          <h3>Visits by bar</h3>
+          <table><thead><tr><th>Bar</th><th>Visits</th><th>First</th><th>Last</th></tr></thead><tbody>${(d.venues || []).map((v) => `<tr><td>${esc(v.venue)}</td><td>${v.visits}</td><td>${fmtDay(v.first)}</td><td>${fmtDay(v.last)}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">None</td></tr>'}</tbody></table>
+          <h3>Prizes</h3>
+          <div class="row" style="align-items:center;gap:.5rem"><span class="sm">Redeem at</span><select class="redeemVenue">${venues.filter((v) => v.active).map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("")}</select></div>
+          <table><thead><tr><th>Prize</th><th>Won</th><th>Valid</th><th>Status</th><th></th></tr></thead><tbody>${w.map((p) => `<tr data-id="${p.id}"><td>${esc(p.prize)}<br><span class="sm">${esc(p.venue)}</span></td><td>${fmtDay(p.won_at)}</td><td>${fmtDay(p.valid_from)} to ${fmtDay(new Date(Date.parse(p.expires_at) - 1))}</td><td><span class="tag ${p.status === "active" ? "win" : p.status === "redeemed" ? "ok" : "no"}">${PL[p.status] || p.status}</span>${p.redeemed_at ? `<br><span class="sm">${fmt(p.redeemed_at)} ${esc(p.redeemed_venue || "")}</span>` : ""}</td><td>${p.status === "active" ? '<button class="btn small primary redeem">Redeem</button>' : ["not_yet"].includes(p.status) ? '<button class="btn small danger void">Void</button>' : ""}</td></tr>`).join("") || '<tr><td colspan="5" class="muted">No prizes yet</td></tr>'}</tbody></table>
+        </div>
+      </div>
+      <div class="card"><h3>Text history</h3>${ms.map((m) => `<div class="msg ${m.direction === "in" ? "in" : ""}">${esc(m.body)}<div class="meta">${fmt(m.at)} · ${PURPOSE[m.purpose] || esc(m.purpose)}${m.campaign ? " · " + esc(m.campaign) : ""} · ${esc(m.status)}</div></div>`).join("") || '<p class="sm">No texts yet.</p>'}</div>
+    </div>`;
+    dr.querySelector(".bday").value = c.birthday_month || "";
+    const close = () => { dr.classList.add("hidden"); dr.innerHTML = ""; };
+    dr.querySelector(".close").onclick = close; dr.querySelector(".drawer-bg").onclick = close;
+    dr.querySelector(".saveC").onclick = async () => {
+      const patch = { notes: dr.querySelector(".notes").value, do_not_text: dr.querySelector(".dnt").checked, birthday_month: dr.querySelector(".bday").value, tags: dr.querySelector("input.tags").value.trim().split(/\s+/).filter(Boolean) };
+      try { await api.contactUpdate(c.phone, patch); toast("Saved"); loadContacts(); } catch (e) { toast(e.message); }
+    };
+    dr.querySelector(".sendOne").onclick = async () => { const b = dr.querySelector(".sendBody").value.trim(); if (!b) return; try { const r = await api.adminSendSms(c.phone, b); if (r && r.error) throw new Error(r.error); toast("Queued"); openContact(c.phone); } catch (e) { toast(e.message); } };
+    dr.querySelector(".resendWallet").onclick = async () => { try { const t = await api.walletTokenFor(c.phone); const url = (settings.wallet_url || location.origin + "/prizes.html") + "?t=" + t; const r = await api.adminSendSms(c.phone, `Last Call Tavern Games: your prizes are here ${url}`); if (r && r.error) throw new Error(r.error); toast("Wallet link queued"); openContact(c.phone); } catch (e) { toast(e.message); } };
+    dr.querySelectorAll(".redeem").forEach((b) => (b.onclick = async () => { try { const r = await api.redeemPrize(b.closest("tr").dataset.id, dr.querySelector(".redeemVenue").value); if (r && r.error) throw new Error(r.error); toast("Redeemed"); openContact(c.phone); } catch (e) { toast(e.message); } }));
+    dr.querySelectorAll(".void").forEach((b) => (b.onclick = () => arm(b, "Void", async () => { try { await api.voidPrize(b.closest("tr").dataset.id, "voided by admin"); openContact(c.phone); } catch (e) { toast(e.message); } })));
+  }
+
+  // ---- raw entries ----
   function filters() {
-    const f = { venue_id: $("#fVenue").value || null, game_key: $("#fGame").value || null, winners: $("#fWinners").checked, opt_in: $("#fOptIn").checked, untexted: $("#fUntexted").checked };
+    const f = { venue_id: $("#fVenue").value || null, game_key: $("#fGame").value || null, winners: $("#fWinners").checked, opt_in: $("#fOptIn").checked };
     if ($("#fFrom").value) f.from = new Date($("#fFrom").value + "T00:00:00").toISOString();
     if ($("#fTo").value) f.to = new Date($("#fTo").value + "T23:59:59").toISOString();
     return f;
   }
   async function loadEntries() {
     try { entries = await api.listEntries(filters()); } catch (e) { toast(e.message); entries = []; }
-    const optIn = entries.filter((e) => e.sms_opt_in).length, win = entries.filter((e) => e.is_winner).length, untexted = entries.filter((e) => e.is_winner && !e.texted).length;
-    $("#entryStats").innerHTML = `<div class="stat"><b>${entries.length}</b>entries</div><div class="stat"><b>${new Set(entries.map((e) => e.phone)).size}</b>unique phones</div><div class="stat"><b>${optIn}</b>opted in</div><div class="stat"><b>${win}</b>winners</div><div class="stat"><b>${untexted}</b>winners not texted</div>`;
+    $("#entryStats").innerHTML = `<div class="stat"><b>${entries.length}</b>entries</div><div class="stat"><b>${new Set(entries.map((e) => e.phone)).size}</b>unique phones</div><div class="stat"><b>${entries.filter((e) => e.sms_opt_in).length}</b>opted in</div><div class="stat"><b>${entries.filter((e) => e.is_winner).length}</b>winners</div>`;
     $("#entriesBody").innerHTML = entries.map((e) => `<tr data-id="${e.id}">
-      <td>${fmt(e.created_at)}</td><td>${esc(e.venue)}</td><td>${esc(e.game)}</td><td>${esc(e.round_code)}</td><td>${esc(e.name)}</td><td>${fmtPhone(e.phone)}</td><td>${esc(e.pick)}</td>
+      <td>${fmt(e.created_at)}</td><td>${esc(e.venue)}</td><td>${esc(e.game)}</td><td>${esc(e.round_code)}</td><td><a href="#" class="who">${esc(e.name)}</a></td><td>${fmtPhone(e.phone)}</td><td>${esc(e.pick)}</td>
       <td>${e.sms_opt_in ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>'}</td>
       <td>${e.is_winner ? '<span class="tag win">Winner</span>' : ""}</td><td>${esc(e.prize || "")}</td>
-      <td><input type="checkbox" class="texted" ${e.texted ? "checked" : ""}></td>
       <td><input class="notes" value="${esc(e.notes || "")}" placeholder="notes"></td>
-      <td><button class="btn small danger del" title="Delete entry">✕</button></td></tr>`).join("") || `<tr><td colspan="13" class="muted">No entries match.</td></tr>`;
+      <td><button class="btn small danger del" title="Delete entry">✕</button></td></tr>`).join("") || `<tr><td colspan="12" class="muted">No entries match.</td></tr>`;
     $$("#entriesBody tr[data-id]").forEach((tr) => {
-      const id = tr.dataset.id;
-      tr.querySelector(".texted").onchange = async (ev) => { try { await api.updateEntry(id, { texted: ev.target.checked }); } catch (e) { toast(e.message); } };
-      tr.querySelector(".notes").onblur = async (ev) => { try { await api.updateEntry(id, { notes: ev.target.value || null }); } catch (e) { toast(e.message); } };
-      tr.querySelector(".del").onclick = async () => { if (!tr.classList.contains("confirm")) { tr.classList.add("confirm"); tr.querySelector(".del").textContent = "Sure?"; setTimeout(() => { tr.classList.remove("confirm"); tr.querySelector(".del").textContent = "✕"; }, 3000); return; } try { await api.deleteEntry(id); loadEntries(); } catch (e) { toast(e.message); } };
+      const id = tr.dataset.id, e = entries.find((x) => x.id === id);
+      tr.querySelector(".who").onclick = (ev) => { ev.preventDefault(); openContact(e.phone); };
+      tr.querySelector(".notes").onblur = async (ev) => { try { await api.updateEntry(id, { notes: ev.target.value || null }); } catch (er) { toast(er.message); } };
+      tr.querySelector(".del").onclick = () => arm(tr.querySelector(".del"), "✕", async () => { try { await api.deleteEntry(id); loadEntries(); } catch (er) { toast(er.message); } });
     });
   }
   $("#btnFilter").onclick = loadEntries;
   $("#btnExportEntries").onclick = () => downloadCsv(`entries-${stamp()}.csv`, entries, [
     { label: "Date", get: (e) => fmt(e.created_at) }, { label: "Bar", get: (e) => e.venue }, { label: "Game", get: (e) => e.game }, { label: "Round code", get: (e) => e.round_code },
     { label: "Name", get: (e) => e.name }, { label: "Phone", get: (e) => e.phone }, { label: "Pick", get: (e) => e.pick }, { label: "SMS opt-in", get: (e) => e.sms_opt_in ? "Yes" : "No" },
-    { label: "Winner", get: (e) => e.is_winner ? "Yes" : "No" }, { label: "Prize", get: (e) => e.prize }, { label: "Texted", get: (e) => e.texted ? "Yes" : "No" }, { label: "Notes", get: (e) => e.notes }]);
+    { label: "Winner", get: (e) => e.is_winner ? "Yes" : "No" }, { label: "Prize", get: (e) => e.prize }, { label: "Notes", get: (e) => e.notes }]);
 
-  // ---- contacts ----
-  async function loadContacts() {
-    try { contacts = await api.listContacts({ opt_in: $("#cOptIn").checked }); } catch (e) { toast(e.message); contacts = []; }
-    $("#contactStats").innerHTML = `<div class="stat"><b>${contacts.length}</b>numbers</div><div class="stat"><b>${contacts.filter((c) => c.sms_opt_in).length}</b>opted in</div>`;
-    $("#contactsBody").innerHTML = contacts.map((c) => `<tr><td>${fmtPhone(c.phone)}</td><td>${esc(c.name)}</td><td>${c.sms_opt_in ? '<span class="tag ok">Yes</span>' : '<span class="tag no">No</span>'}</td><td>${c.entries}</td><td>${c.wins}</td><td>${esc(c.venues)}</td><td>${fmt(c.first_seen)}</td><td>${fmt(c.last_seen)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">No contacts yet.</td></tr>`;
+  // ---- campaigns ----
+  const TEMPLATES = [
+    ["Game night tonight", "Hey {first}! Last Call Tavern Games is on tonight at {bar}. Scan the QR on the TV to play. Prizes every round."],
+    ["We miss you", "Hey {first}, it's been a minute! Come play Last Call Tavern Games this week at {bar}. A prize is waiting to be won."],
+    ["Unredeemed prize nudge", "{first}, you've still got a prize waiting from Last Call Tavern Games. Show your number to the bartender before it expires."],
+    ["Birthday month", "Happy birthday month, {first}! Come celebrate with a game night at {bar} on us."],
+  ];
+  $("#kTemplate").innerHTML += TEMPLATES.map((t, i) => `<option value="${i}">${t[0]}</option>`).join("");
+  $("#kTemplate").onchange = () => { const t = TEMPLATES[$("#kTemplate").value]; if (t) { $("#kBody").value = t[1]; if (!$("#kName").value) $("#kName").value = t[0]; countBody(); } };
+  let editingCamp = null, campaigns = [];
+  function countBody() {
+    const b = $("#kBody").value, full = b + (/STOP/i.test(b) ? "" : " Reply STOP to opt out.");
+    const gsm = /^[\x20-\x7E\n\r£¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ¤¡ÄÖÑܧ¿äöñüà]*$/.test(full);
+    const len = full.replace(/\{first\}/g, "Jonathan").length, per = gsm ? (len <= 160 ? 160 : 153) : (len <= 70 ? 70 : 67), segs = Math.max(1, Math.ceil(len / per));
+    $("#kCount").textContent = `${len} characters as sent (incl. STOP line) · ${segs} segment${segs > 1 ? "s" : ""}${gsm ? "" : " · emoji/special characters make this cost double"}`;
   }
-  $("#btnLoadContacts").onclick = loadContacts; $("#cOptIn").onchange = loadContacts;
-  $("#btnExportContacts").onclick = () => downloadCsv(`sms-list-${stamp()}.csv`, contacts, [
-    { label: "Phone", get: (c) => c.phone }, { label: "First name", get: (c) => String(c.name).trim().split(/\s+/)[0] }, { label: "Last name", get: (c) => String(c.name).trim().split(/\s+/).slice(1).join(" ") },
-    { label: "Full name", get: (c) => c.name }, { label: "SMS opt-in", get: (c) => c.sms_opt_in ? "Yes" : "No" }, { label: "Bars", get: (c) => c.venues }, { label: "Entries", get: (c) => c.entries }, { label: "Wins", get: (c) => c.wins },
-    { label: "First seen", get: (c) => fmt(c.first_seen) }, { label: "Last seen", get: (c) => fmt(c.last_seen) }]);
+  $("#kBody").oninput = countBody; countBody();
+  function campFilter() {
+    const f = {};
+    const vs = $$("#kVenues input:checked").map((i) => i.value); if (vs.length) f.venue_ids = vs;
+    const gs = $$("#kGames input:checked").map((i) => i.value); if (gs.length) f.game_keys = gs;
+    for (const [k, id] of [["visited_within_days", "#kWithin"], ["lapsed_days", "#kLapsed"], ["min_visits", "#kMin"], ["max_visits", "#kMax"], ["birthday_month", "#kBday"], ["not_texted_days", "#kNotTexted"]]) { const v = num(id); if (v != null && !Number.isNaN(v)) f[k] = v; }
+    if ($("#kTag").value.trim()) f.tags = [$("#kTag").value.trim()];
+    if ($("#kFirst").checked) f.first_time = true; if ($("#kPrize").checked) f.has_unredeemed_prize = true;
+    return f;
+  }
+  async function previewAudience() { try { const r = await api.campaignPreview(campFilter()); $("#kAudience").textContent = r.count ?? 0; $("#kTotal").textContent = `(of ${r.opted_in_total ?? 0} opted in)`; } catch (e) { $("#kAudience").textContent = "?"; } }
+  $("#btnPreview").onclick = previewAudience; $$("#tab-campaigns details input, #tab-campaigns details select").forEach((i) => (i.onchange = previewAudience));
+  function newCampaign() { editingCamp = null; $("#campTitle").textContent = "New campaign"; $("#kName").value = ""; $("#kBody").value = ""; $("#kTemplate").value = ""; $$("#tab-campaigns details input").forEach((i) => (i.type === "checkbox" ? (i.checked = false) : (i.value = ""))); $("#kBday").value = ""; $("#kWhen").value = ""; $("#campMsg").innerHTML = ""; countBody(); previewAudience(); }
+  $("#btnNewCamp").onclick = newCampaign;
+  async function saveCampaign(quiet) {
+    const name = $("#kName").value.trim(), body = $("#kBody").value.trim();
+    if (!name || !body) { toast("Give the campaign a name and a message."); return null; }
+    try { const c = await api.saveCampaign({ id: editingCamp ? editingCamp.id : undefined, name, body, filter: campFilter() }); editingCamp = c; $("#campTitle").textContent = "Editing: " + c.name; if (!quiet) toast("Saved draft"); loadCampaigns(); return c; } catch (e) { toast(e.message); return null; }
+  }
+  $("#btnSaveCamp").onclick = () => saveCampaign(false);
+  $("#btnTestCamp").onclick = async () => {
+    const ph = $("#kTestPhone").value.trim(), body = $("#kBody").value.trim(); if (!ph || !body) return toast("Enter your mobile and a message first.");
+    try { const r = await api.adminSendSms(ph, body.replace(/\{first\}/g, "Jonathan").replace(/\{bar\}/g, (venues[0] || {}).name || "the bar") + " (TEST)"); if (r && r.error) throw new Error(r.error); toast("Test queued to " + fmtPhone(ph)); } catch (e) { toast(e.message + " (the number must already be a contact)"); }
+  };
+  $("#btnSendCamp").onclick = async () => {
+    const c = await saveCampaign(true); if (!c) return;
+    if (!["draft", "scheduled"].includes(c.status)) return toast("This campaign was already sent. Start a new one.");
+    const when = $("#kWhen").value ? new Date($("#kWhen").value).toISOString() : null;
+    const b = $("#btnSendCamp"); if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = `Really ${when ? "schedule" : "send"} to ${$("#kAudience").textContent}?`; setTimeout(() => { delete b.dataset.armed; b.textContent = "Send"; }, 5000); return; }
+    delete b.dataset.armed; b.textContent = "Send";
+    try { const r = await api.sendCampaign(c.id, when); if (r && r.error) throw new Error(r.error); newCampaign(); loadCampaigns(); $("#campMsg").innerHTML = `<div class="success">${r.queued} text${r.queued === 1 ? "" : "s"} queued${r.send_at ? ", going out " + fmt(r.send_at) : ""}.${settings.sms_test_mode === "true" ? " Test mode is on, so only test numbers will actually receive it." : ""}</div>`; } catch (e) { $("#campMsg").innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+  };
+  async function loadCampaigns() {
+    try { campaigns = await api.listCampaigns(); } catch (e) { toast(e.message); campaigns = []; }
+    $("#campBody").innerHTML = campaigns.map((c) => `<tr class="click" data-id="${c.id}"><td>${esc(c.name)}</td><td><span class="tag ${c.status === "sent" ? "ok" : c.status === "draft" ? "no" : "win"}">${esc(c.status)}</span></td><td>${c.audience_count ?? ""}</td><td>${c.sent_count}</td><td>${c.failed_count}</td><td>${fmt(c.sent_at || c.scheduled_for || c.created_at)}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">No campaigns yet.</td></tr>`;
+    $$("#campBody tr[data-id]").forEach((tr) => (tr.onclick = async () => {
+      const c = campaigns.find((x) => x.id === tr.dataset.id);
+      if (c.status === "draft") { editingCamp = c; $("#campTitle").textContent = "Editing: " + c.name; $("#kName").value = c.name; $("#kBody").value = c.body; const f = c.filter || {}; $$("#kVenues input").forEach((i) => (i.checked = (f.venue_ids || []).includes(i.value))); $$("#kGames input").forEach((i) => (i.checked = (f.game_keys || []).includes(i.value))); $("#kWithin").value = f.visited_within_days ?? ""; $("#kLapsed").value = f.lapsed_days ?? ""; $("#kMin").value = f.min_visits ?? ""; $("#kMax").value = f.max_visits ?? ""; $("#kBday").value = f.birthday_month ?? ""; $("#kNotTexted").value = f.not_texted_days ?? ""; $("#kTag").value = (f.tags || [])[0] || ""; $("#kFirst").checked = !!f.first_time; $("#kPrize").checked = !!f.has_unredeemed_prize; countBody(); previewAudience(); }
+      $("#campDetail").classList.remove("hidden"); $("#campDetailTitle").textContent = c.name + " · " + c.status;
+      try { const ms = await api.listMessages({ campaign_id: c.id }); $("#campMsgs").innerHTML = ms.map((m) => `<tr><td>${fmtPhone(m.phone)}</td><td>${esc(m.status)}</td><td>${fmt(m.sent_at)}</td><td class="sm">${esc(m.error || "")}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">No messages yet.</td></tr>`; } catch (e) { toast(e.message); }
+    }));
+    if (!editingCamp) previewAudience();
+  }
 
-  // ---- rounds ----
+  // ---- messages ----
+  let msgView = "inbox";
+  subtabs("#msgSub", {}, (s) => { msgView = s; loadMessages(); });
+  $("#btnMsgs").onclick = loadMessages; $("#mPurpose").onchange = loadMessages;
+  async function loadMessages() {
+    const inbox = msgView === "inbox"; $("#msgInbox").classList.toggle("hidden", !inbox); $("#msgTable").classList.toggle("hidden", inbox);
+    const f = { limit: 300 }; if ($("#mPurpose").value) f.purpose = $("#mPurpose").value;
+    if (inbox) f.needs_reply = true; else if (msgView === "failed") f.statuses = ["failed", "undelivered"]; else if (msgView === "queue") f.statuses = ["queued", "sending"];
+    let ms = []; try { ms = await api.listMessages(f); } catch (e) { toast(e.message); }
+    if (inbox) {
+      $("#msgInbox").innerHTML = ms.map((m) => `<div class="card stack" data-id="${m.id}" data-phone="${m.phone}"><div class="row" style="align-items:center"><b><a href="#" class="who">${fmtPhone(m.phone)}</a></b><span class="sm">${fmt(m.created_at)}</span><div class="grow"></div><button class="btn small done">Mark handled</button></div><div class="msg in">${esc(m.body)}</div><div class="row"><input class="reply grow" placeholder="Reply..."><button class="btn primary small send">Send reply</button></div></div>`).join("") || `<p class="sm">Inbox is empty. Replies from guests that are not STOP/HELP land here.</p>`;
+      $$("#msgInbox [data-id]").forEach((card) => {
+        card.querySelector(".who").onclick = (ev) => { ev.preventDefault(); openContact(card.dataset.phone); };
+        card.querySelector(".done").onclick = async () => { try { await api.markReplied(card.dataset.id); loadMessages(); loadDash(); } catch (e) { toast(e.message); } };
+        const send = async () => { const b = card.querySelector(".reply").value.trim(); if (!b) return; try { const r = await api.adminSendSms(card.dataset.phone, b, card.dataset.id); if (r && r.error) throw new Error(r.error); toast("Reply queued"); loadMessages(); loadDash(); } catch (e) { toast(e.message); } };
+        card.querySelector(".send").onclick = send; card.querySelector(".reply").addEventListener("keydown", (e) => e.key === "Enter" && send());
+      });
+    } else {
+      $("#msgBody").innerHTML = ms.map((m) => `<tr><td>${fmt(m.created_at)}</td><td>${m.direction === "in" ? "⬅" : "➡"}</td><td><a href="#" class="who" data-phone="${m.phone}">${fmtPhone(m.phone)}</a></td><td>${esc(m.purpose)}</td><td class="sm" style="max-width:420px">${esc(m.body)}</td><td><span class="tag ${["delivered", "sent", "received"].includes(m.status) ? "ok" : ["failed", "undelivered"].includes(m.status) ? "no" : "win"}">${esc(m.status)}</span></td><td class="sm">${esc(m.error || "")}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">Nothing here.</td></tr>`;
+      $$("#msgBody .who").forEach((a) => (a.onclick = (ev) => { ev.preventDefault(); openContact(a.dataset.phone); }));
+    }
+  }
+
+  // ---- prizes ----
+  let prizes = [];
+  const PLABEL = { active: "Active", redeemed: "Redeemed", expired: "Expired", not_yet: "Valid tomorrow", voided: "Voided" };
+  subtabs("#prizeSub", { issued: "#prizesIssued", catalog: "#prizesCatalog" }, (s) => (s === "catalog" ? loadCatalog() : loadPrizes()));
+  async function loadPrizes() {
+    try { prizes = await api.listPrizes({ venue_id: $("#pVenue").value || null, status: $("#pStatus").value || null }); } catch (e) { toast(e.message); prizes = []; }
+    const c = (st) => prizes.filter((p) => p.status === st).length;
+    $("#prizeStats").innerHTML = `<div class="stat"><b>${prizes.length}</b>issued</div><div class="stat"><b>${c("redeemed")}</b>redeemed</div><div class="stat"><b>${c("active") + c("not_yet")}</b>outstanding</div><div class="stat"><b>${c("expired")}</b>expired</div><div class="stat"><b>${prizes.length ? Math.round(100 * c("redeemed") / prizes.length) : 0}%</b>redemption rate</div>`;
+    $("#prizesBody").innerHTML = prizes.map((p) => `<tr data-id="${p.id}"><td>${fmt(p.issued_at)}</td><td>${esc(p.won_venue)}</td><td><a href="#" class="who" data-phone="${p.phone}">${esc(p.name)}</a></td><td>${fmtPhone(p.phone)}</td><td>${esc(p.prize)}</td><td>${fmtDay(p.valid_from)} to ${fmtDay(new Date(Date.parse(p.expires_at) - 1))}</td>
+      <td><span class="tag ${p.status === "redeemed" ? "ok" : p.status === "active" ? "win" : "no"}">${PLABEL[p.status] || p.status}</span></td>
+      <td>${p.redeemed_at ? `${fmt(p.redeemed_at)}<br><span class="muted">${esc(p.redeemed_venue || "")}${p.redeemed_by ? ", " + esc(p.redeemed_by) : ""}</span>` : ""}</td>
+      <td>${["active", "not_yet"].includes(p.status) ? `<button class="btn small danger void">Void</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="9" class="muted">No prizes match.</td></tr>`;
+    $$("#prizesBody .void").forEach((b) => (b.onclick = () => arm(b, "Void", async () => { try { await api.voidPrize(b.closest("tr").dataset.id, "voided by admin"); loadPrizes(); } catch (e) { toast(e.message); } })));
+    $$("#prizesBody .who").forEach((a) => (a.onclick = (ev) => { ev.preventDefault(); openContact(a.dataset.phone); }));
+  }
+  $("#btnPrizes").onclick = loadPrizes;
+  $("#btnExportPrizes").onclick = () => downloadCsv(`prizes-${stamp()}.csv`, prizes, [
+    { label: "Won", get: (p) => fmt(p.issued_at) }, { label: "Bar", get: (p) => p.won_venue }, { label: "Game", get: (p) => p.game }, { label: "Name", get: (p) => p.name }, { label: "Phone", get: (p) => p.phone }, { label: "Prize", get: (p) => p.prize },
+    { label: "Valid from", get: (p) => fmtDay(p.valid_from) }, { label: "Expires", get: (p) => fmtDay(p.expires_at) }, { label: "Status", get: (p) => PLABEL[p.status] || p.status }, { label: "Redeemed at", get: (p) => fmt(p.redeemed_at) }, { label: "Redeemed bar", get: (p) => p.redeemed_venue }, { label: "Redeemed by", get: (p) => p.redeemed_by }]);
+  async function loadCatalog() {
+    try { catalog = await api.listCatalog(); } catch (e) { toast(e.message); catalog = []; }
+    $("#catBody").innerHTML = catalog.map((p) => `<tr data-id="${p.id}"><td><input class="ord" type="number" value="${p.sort_order}" style="width:60px"></td><td><input class="nm" value="${esc(p.name)}"></td><td><input class="ds" value="${esc(p.description || "")}"></td><td><input class="val" type="number" step="0.01" value="${p.value_cents != null ? (p.value_cents / 100).toFixed(2) : ""}" style="width:90px"></td><td><input type="checkbox" class="act" ${p.active ? "checked" : ""}></td><td class="row"><button class="btn small primary save">Save</button><button class="btn small danger del">✕</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">Empty. Add the prizes you give away.</td></tr>`;
+    $$("#catBody tr[data-id]").forEach((tr) => {
+      const p = catalog.find((x) => x.id === tr.dataset.id);
+      tr.querySelector(".save").onclick = async () => { const v = tr.querySelector(".val").value; try { await api.saveCatalog({ id: p.id, name: tr.querySelector(".nm").value.trim(), description: tr.querySelector(".ds").value.trim() || null, value_cents: v === "" ? null : Math.round(+v * 100), active: tr.querySelector(".act").checked, sort_order: +tr.querySelector(".ord").value || 0 }); toast("Saved"); loadCatalog(); } catch (e) { toast(e.message); } };
+      tr.querySelector(".del").onclick = () => arm(tr.querySelector(".del"), "✕", async () => { try { await api.deleteCatalog(p.id); loadCatalog(); } catch (e) { toast(e.message); } });
+    });
+  }
+  $("#btnAddCat").onclick = async () => { const name = $("#catName").value.trim(); if (!name) return toast("Name the prize."); const v = $("#catValue").value; try { await api.saveCatalog({ name, description: $("#catDesc").value.trim() || null, value_cents: v === "" ? null : Math.round(+v * 100), sort_order: catalog.length + 1 }); $("#catName").value = ""; $("#catDesc").value = ""; $("#catValue").value = ""; loadCatalog(); } catch (e) { toast(e.message); } };
+
+  // ---- games ----
+  subtabs("#gameSub", { setup: "#gamesSetup", racers: "#gamesRacers", board: "#gamesBoard", rounds: "#gamesRounds" }, (s) => ({ setup: renderGames, racers: renderRacers, board: loadBoard, rounds: loadRounds })[s]());
+  const GAME_SETTINGS = {
+    shellgame: [["swaps", "Shuffles per round", "20 is hard, 12 is easy"], ["pick_seconds", "Seconds to choose on the phone", "10"]],
+    barmarbles: [["pick_seconds", "Seconds to pick a marble", "Leave blank for default"]],
+  };
+  function renderGames() {
+    $("#gamesSetup").innerHTML = games.map((g) => { const s = g.settings || {}, fields = GAME_SETTINGS[g.key] || []; return `<div class="card game-card" data-key="${esc(g.key)}">
+      <div><h3 style="margin:0 0 .3rem">${esc(g.name)}</h3><div class="sm">${esc(g.description || "")} · key <code>${esc(g.key)}</code> · offered at ${venues.filter((v) => v.active && (!v.games_enabled || v.games_enabled.includes(g.key))).length} of ${venues.filter((v) => v.active).length} bars</div>
+        ${fields.length ? `<div class="filters" style="margin-top:.8rem">${fields.map(([k, l, ph]) => `<div><label>${l}</label><input data-k="${k}" type="number" value="${s[k] ?? ""}" placeholder="${ph}"></div>`).join("")}</div>` : `<p class="sm" style="margin:.6rem 0 0">No tunable settings. ${g.key === "mascot" || g.options ? 'Racers are under the <b>Racers</b> sub-tab.' : ""}</p>`}</div>
+      <div class="stack">${fields.length ? '<button class="btn primary small save">Save</button>' : ""}</div></div>`; }).join("");
+    $$("#gamesSetup .save").forEach((b) => (b.onclick = async () => { const card = b.closest(".game-card"), g = games.find((x) => x.key === card.dataset.key), s = { ...(g.settings || {}) }; card.querySelectorAll("input[data-k]").forEach((i) => { if (i.value === "") delete s[i.dataset.k]; else s[i.dataset.k] = +i.value; }); try { await api.updateGame(g.key, { settings: s }); g.settings = s; toast("Saved " + g.name); } catch (e) { toast(e.message); } }));
+  }
   async function loadRounds() {
-    let rounds = []; try { rounds = await api.listRounds(200); } catch (e) { toast(e.message); }
+    let rounds = []; try { rounds = await api.listRounds(300); } catch (e) { toast(e.message); }
     $("#roundsBody").innerHTML = rounds.map((r) => `<tr><td>${fmt(r.created_at)}</td><td>${esc(r.venue)}</td><td>${esc(r.game)}</td><td>${esc(r.code)}</td><td>${esc(r.prize || "")}</td><td>${r.entries}</td><td>${esc(r.winning_pick || "")}</td><td>${esc(r.status)}</td></tr>`).join("") || `<tr><td colspan="8" class="muted">No rounds yet.</td></tr>`;
   }
 
@@ -273,21 +620,23 @@
       <div class="swatch"><input type="color" class="vPrimary" value="${esc(v.color_primary)}"><span class="muted" style="font-size:.75rem">${esc(v.color_primary)}</span></div>
       <div class="swatch"><input type="color" class="vAccent" value="${esc(v.color_accent)}"><span class="muted" style="font-size:.75rem">${esc(v.color_accent)}</span></div>
       <input class="vTag" value="${esc(v.tagline || "")}" placeholder="tagline">
-      <input class="vPrize" value="${esc(v.default_prize || "")}" placeholder="default prize">
-      <button class="btn small primary save">Save</button></div>`).join("");
+      <input class="vPrize" value="${esc(v.default_prize || "")}" placeholder="default prize" list="catalogList">
+      <div class="stack" style="gap:.2rem">${games.map((g) => `<label class="chk" style="font-size:.8rem"><input type="checkbox" class="vGame" value="${esc(g.key)}" ${!v.games_enabled || v.games_enabled.includes(g.key) ? "checked" : ""}> ${esc(g.name)}</label>`).join("")}</div>
+      <button class="btn small primary save">Save</button></div>`).join("") + `<datalist id="catalogList">${catalog.map((p) => `<option value="${esc(p.name)}">`).join("")}</datalist>`;
     $$("#venuesBody .venue-row").forEach((row) => {
       const v = venues.find((x) => x.id === row.dataset.id);
       row.querySelector(".save").onclick = async () => {
-        const patch = { name: row.querySelector(".vName").value.trim(), color_primary: row.querySelector(".vPrimary").value, color_accent: row.querySelector(".vAccent").value, tagline: row.querySelector(".vTag").value.trim() || null, default_prize: row.querySelector(".vPrize").value.trim() || null };
+        const en = $$(".vGame:checked", row).map((i) => i.value);
+        const patch = { name: row.querySelector(".vName").value.trim(), color_primary: row.querySelector(".vPrimary").value, color_accent: row.querySelector(".vAccent").value, tagline: row.querySelector(".vTag").value.trim() || null, default_prize: row.querySelector(".vPrize").value.trim() || null, games_enabled: en.length === games.length ? null : en };
         try { await api.updateVenue(v.id, patch); Object.assign(v, patch); toast("Saved " + v.name); renderVenues(); } catch (e) { toast(e.message); }
       };
       row.querySelector(".logoFile").onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; try { v.logo_url = await api.uploadLogo(v, f); toast("Logo updated"); renderVenues(); } catch (e) { toast(e.message); } };
     });
+    if (!catalog.length) api.listCatalog().then((c) => { catalog = c; $("#catalogList").innerHTML = catalog.map((p) => `<option value="${esc(p.name)}">`).join(""); }).catch(() => {});
   }
 
   // ---- racers ----
   async function cropIconBlob(file) {
-    // frame 0 of a 4x4 atlas, trimmed, as a PNG blob
     const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
     const fw = img.naturalWidth / 4, fh = img.naturalHeight / 4, c = document.createElement("canvas"); c.width = fw; c.height = fh;
     const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0, fw, fh, 0, 0, fw, fh);
@@ -297,12 +646,14 @@
     o.getContext("2d").drawImage(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1, 0, 0, o.width, o.height);
     return new Promise((res) => o.toBlob(res, "image/png"));
   }
+  const inSeason = (o) => { if (!o.from || !o.to) return true; const d = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }).slice(5); return o.from <= o.to ? d >= o.from && d <= o.to : d >= o.from || d <= o.to; };
   function renderRacers() {
     $("#racersBody").innerHTML = games.filter((g) => !["barmarbles", "shellgame"].includes(g.key)).map((g) => decorateOptions(g.options).map((o, i) => `<div class="card stack" style="width:210px;text-align:center" data-game="${esc(g.key)}" data-i="${i}">
-      <div style="height:150px;display:flex;align-items:flex-end;justify-content:center">${o.icon_url ? `<img src="${esc(o.icon_url)}" style="max-height:150px;max-width:100%">` : o.image_url ? `<img src="${esc(o.image_url)}" style="max-height:150px;max-width:100%">` : MASCOTS.standalone(o.id, 140, { emoji: o.emoji })}</div>
-      <div class="muted" style="font-size:.78rem">${g.options[i].sprite_url ? "Custom sprite sheet" : g.options[i].image_url ? "Custom still image" : "Built-in artwork"}</div>
+      <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;${inSeason(g.options[i]) ? "" : "opacity:.4"}">${o.icon_url ? `<img src="${esc(o.icon_url)}" style="max-height:150px;max-width:100%">` : o.image_url ? `<img src="${esc(o.image_url)}" style="max-height:150px;max-width:100%">` : MASCOTS.standalone(o.id, 140, { emoji: o.emoji })}</div>
+      <div class="muted" style="font-size:.78rem">${g.options[i].sprite_url ? "Custom sprite sheet" : g.options[i].image_url ? "Custom still image" : "Built-in artwork"}${inSeason(g.options[i]) ? "" : " · out of season"}</div>
       <input class="oLabel" value="${esc(o.label)}" style="text-align:center">
-      <button class="btn small primary oSave">Save name</button>
+      <div class="row" style="gap:.3rem"><input class="oFrom" value="${esc(g.options[i].from || "")}" placeholder="from 10-01" style="text-align:center;font-size:.8rem"><input class="oTo" value="${esc(g.options[i].to || "")}" placeholder="to 11-01" style="text-align:center;font-size:.8rem"></div>
+      <button class="btn small primary oSave">Save</button>
       <label class="btn small" style="margin:0;color:var(--text)">Upload run/fall sheet<input type="file" accept="image/png" class="hidden oSheet"></label>
       <label class="btn small" style="margin:0;color:var(--text)">Upload idle/win sheet<input type="file" accept="image/png" class="hidden oExtra"></label>
       <label class="btn small" style="margin:0;color:var(--text)">Upload still image<input type="file" accept="image/*" class="hidden oFile"></label>
@@ -311,7 +662,13 @@
     $$("#racersBody [data-game]").forEach((card) => {
       const g = games.find((x) => x.key === card.dataset.game), i = +card.dataset.i, o = g.options[i];
       const save = async () => { try { await api.updateGameOptions(g.key, g.options); toast("Saved"); renderRacers(); } catch (e) { toast(e.message); } };
-      card.querySelector(".oSave").onclick = () => { o.label = card.querySelector(".oLabel").value.trim() || o.label; save(); };
+      card.querySelector(".oSave").onclick = () => {
+        o.label = card.querySelector(".oLabel").value.trim() || o.label;
+        const f = card.querySelector(".oFrom").value.trim(), t = card.querySelector(".oTo").value.trim(), ok = (x) => /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(x);
+        if ((f || t) && !(ok(f) && ok(t))) return toast("Season dates must both be MM-DD, e.g. 10-01 and 11-01.");
+        if (f && t) { o.from = f; o.to = t; } else { delete o.from; delete o.to; }
+        save();
+      };
       card.querySelector(".oFile").onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; try { o.image_url = await api.uploadRacerImage(o.id, f); delete o.sprite_url; delete o.icon_url; await save(); } catch (e) { toast(e.message); } };
       card.querySelector(".oSheet").onchange = async (ev) => {
         const f = ev.target.files[0]; if (!f) return;
@@ -338,25 +695,6 @@
     });
   }
 
-  // ---- prizes ----
-  let prizes = [];
-  const PLABEL = { active: "Active", redeemed: "Redeemed", expired: "Expired", not_yet: "Valid tomorrow", voided: "Voided" };
-  const fmtDay = (d) => d ? new Date(d).toLocaleDateString([], { month: "short", day: "numeric" }) : "";
-  async function loadPrizes() {
-    try { prizes = await api.listPrizes({ venue_id: $("#pVenue").value || null, status: $("#pStatus").value || null }); } catch (e) { toast(e.message); prizes = []; }
-    const c = (st) => prizes.filter((p) => p.status === st).length;
-    $("#prizeStats").innerHTML = `<div class="stat"><b>${prizes.length}</b>issued</div><div class="stat"><b>${c("redeemed")}</b>redeemed</div><div class="stat"><b>${c("active") + c("not_yet")}</b>outstanding</div><div class="stat"><b>${c("expired")}</b>expired</div><div class="stat"><b>${prizes.length ? Math.round(100 * c("redeemed") / prizes.length) : 0}%</b>redemption rate</div>`;
-    $("#prizesBody").innerHTML = prizes.map((p) => `<tr data-id="${p.id}"><td>${fmt(p.issued_at)}</td><td>${esc(p.won_venue)}</td><td>${esc(p.name)}</td><td>${fmtPhone(p.phone)}</td><td>${esc(p.prize)}</td><td>${fmtDay(p.valid_from)} to ${fmtDay(new Date(Date.parse(p.expires_at) - 1))}</td>
-      <td><span class="tag ${p.status === "redeemed" ? "ok" : p.status === "active" ? "win" : "no"}">${PLABEL[p.status] || p.status}</span></td>
-      <td>${p.redeemed_at ? `${fmt(p.redeemed_at)}<br><span class="muted">${esc(p.redeemed_venue || "")}${p.redeemed_by ? ", " + esc(p.redeemed_by) : ""}</span>` : ""}</td>
-      <td>${["active", "not_yet"].includes(p.status) ? `<button class="btn small danger void">Void</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="9" class="muted">No prizes match.</td></tr>`;
-    $$("#prizesBody .void").forEach((b) => (b.onclick = async () => { const tr = b.closest("tr"); if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Sure?"; setTimeout(() => { delete b.dataset.armed; b.textContent = "Void"; }, 3000); return; } try { await api.voidPrize(tr.dataset.id, "voided by admin"); loadPrizes(); } catch (e) { toast(e.message); } }));
-  }
-  $("#btnPrizes").onclick = loadPrizes;
-  $("#btnExportPrizes").onclick = () => downloadCsv(`prizes-${stamp()}.csv`, prizes, [
-    { label: "Won", get: (p) => fmt(p.issued_at) }, { label: "Bar", get: (p) => p.won_venue }, { label: "Game", get: (p) => p.game }, { label: "Name", get: (p) => p.name }, { label: "Phone", get: (p) => p.phone }, { label: "Prize", get: (p) => p.prize },
-    { label: "Valid from", get: (p) => fmtDay(p.valid_from) }, { label: "Expires", get: (p) => fmtDay(p.expires_at) }, { label: "Status", get: (p) => PLABEL[p.status] || p.status }, { label: "Redeemed at", get: (p) => fmt(p.redeemed_at) }, { label: "Redeemed bar", get: (p) => p.redeemed_venue }, { label: "Redeemed by", get: (p) => p.redeemed_by }]);
-
   // ---- leaderboard + seasons ----
   async function loadBoard() {
     const rows = (r) => r.map((t) => `<tr><td>${t.rank}</td><td>${esc(t.display_name)}</td><td>${t.plays}</td><td>${t.wins}</td><td><b>${t.points}</b></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nothing yet.</td></tr>`;
@@ -364,16 +702,48 @@
       const [night, season, cur, seasons] = await Promise.all([api.leaderboard($("#bVenue").value, "night", 25), api.leaderboard($("#bVenue").value, "season", 25), api.currentSeason(), api.listSeasons()]);
       $("#boardNight").innerHTML = rows(night); $("#boardSeason").innerHTML = rows(season); $("#boardSeasonTitle").textContent = cur ? `${cur.name} (${cur.starts_on} to ${cur.ends_on})` : "Season (none covers today)";
       $("#seasonsBody").innerHTML = seasons.map((sn) => `<tr data-id="${sn.id}"><td>${esc(sn.name)}</td><td>${sn.starts_on}</td><td>${sn.ends_on}</td><td><button class="btn small danger del">✕</button></td></tr>`).join("") || `<tr><td colspan="4" class="muted">No seasons. Add one.</td></tr>`;
-      $$("#seasonsBody .del").forEach((b) => (b.onclick = async () => { const tr = b.closest("tr"); if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Sure?"; setTimeout(() => { delete b.dataset.armed; b.textContent = "✕"; }, 3000); return; } try { await api.deleteSeason(tr.dataset.id); loadBoard(); } catch (e) { toast(e.message); } }));
+      $$("#seasonsBody .del").forEach((b) => (b.onclick = () => arm(b, "✕", async () => { try { await api.deleteSeason(b.closest("tr").dataset.id); loadBoard(); } catch (e) { toast(e.message); } })));
     } catch (e) { toast(e.message); }
   }
   $("#btnBoard").onclick = loadBoard; $("#bVenue").onchange = loadBoard;
   $("#btnAddSeason").onclick = async () => { const name = $("#snName").value.trim(), starts_on = $("#snStart").value, ends_on = $("#snEnd").value; if (!name || !starts_on || !ends_on || ends_on < starts_on) return toast("Give the season a name and a valid date range."); try { await api.saveSeason({ name, starts_on, ends_on }); $("#snName").value = ""; loadBoard(); } catch (e) { toast(e.message); } };
 
+  // ---- settings ----
+  const SETTINGS = {
+    sms: [
+      ["sms_test_mode", "Test mode", "bool", "While on, only the test numbers below actually receive texts; everyone else's are held and marked skipped. Turn off after your Twilio test."],
+      ["sms_test_numbers", "Test numbers", "text", "Comma separated 10-digit numbers that receive texts in test mode."],
+      ["campaign_quiet_start", "Campaigns may go out from", "time", "Chicago time. Earlier sends wait until this time."],
+      ["campaign_quiet_end", "...until", "time", "Later sends move to the next morning."],
+      ["campaign_min_days_between", "Minimum days between campaigns", "int", "Nobody gets two campaign texts closer together than this."],
+      ["prize_text_dedupe_minutes", "One prize text per", "int", "Minutes. A guest winning twice in this window gets one text."],
+      ["reminder_start", "Remind when a prize becomes valid", "bool", "Texts the morning the prize can be used."],
+      ["reminder_expiry", "Remind 2 days before expiry", "bool", "Only for prizes that are still unredeemed."],
+    ],
+    prize: [
+      ["prize_valid_from_days", "Prize usable after (days)", "int", "1 = starting the day after it is won."],
+      ["prize_valid_days", "Prize valid for (days)", "int", "Counted from the day it becomes usable."],
+      ["express_hours", "Express entry window (hours)", "int", "How long a phone stays signed in for the night after one sign-up."],
+      ["lapsed_days", "Lapsed guest after (days)", "int", "Default for the lapsed filter."],
+      ["retention_months", "Forget never-opted-in guests after (months)", "int", "Monthly purge anonymises guests who never opted in and have not played since."],
+      ["wallet_url", "Prize wallet address", "text", "Used in prize texts."],
+      ["short_link_base", "Short link base", "text", "Tracked links in texts start with this."],
+    ],
+  };
+  async function renderSettings() {
+    try { settings = await api.settingsGet(); } catch (e) { return toast(e.message); }
+    const row = ([k, label, type, help]) => { const v = settings[k] ?? ""; const input = type === "bool" ? `<select data-k="${k}"><option value="true" ${v === "true" ? "selected" : ""}>On</option><option value="false" ${v !== "true" ? "selected" : ""}>Off</option></select>` : `<input data-k="${k}" type="${type === "int" ? "number" : type === "time" ? "time" : "text"}" value="${esc(v)}">`; return `<div class="set-row"><div>${label}<small>${help}</small></div><div class="row" style="gap:.4rem">${input}<button class="btn small primary save">Save</button></div></div>`; };
+    $("#setSms").innerHTML = SETTINGS.sms.map(row).join(""); $("#setPrize").innerHTML = SETTINGS.prize.map(row).join("");
+    $$("#tab-settings .set-row .save").forEach((b) => (b.onclick = async () => { const i = b.parentElement.querySelector("[data-k]"); try { await api.settingsSet(i.dataset.k, i.value.trim()); settings[i.dataset.k] = i.value.trim(); toast("Saved"); $("#testBanner").classList.toggle("hidden", settings.sms_test_mode !== "true"); loadAudit(); } catch (e) { toast(e.message); } }));
+    loadAudit();
+  }
+  async function loadAudit() { let a = []; try { a = await api.listAudit(200); } catch (e) { toast(e.message); } $("#auditBody").innerHTML = a.map((r) => `<tr><td>${fmt(r.at)}</td><td>${esc(r.username || "system")}</td><td>${esc(r.action)}</td><td>${esc(r.target || "")}</td><td class="sm">${esc(r.details ? JSON.stringify(r.details) : "")}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nothing logged yet.</td></tr>`; }
+  $("#btnAudit").onclick = loadAudit;
+
   // ---- users ----
   async function loadUsers() {
-    let users = []; try { users = await api.listUsers(); } catch (e) { toast(e.message); }
-    $("#usersBody").innerHTML = users.map((u) => `<tr data-id="${u.id}"><td>${esc(u.username)}</td><td><span class="tag ${u.role === "admin" ? "admin" : "no"}">${esc(u.role)}</span></td><td>${u.active ? '<span class="tag ok">Active</span>' : '<span class="tag no">Disabled</span>'}</td>
+    let users = []; try { users = await api.listLogins(); } catch (e) { toast(e.message); }
+    $("#usersBody").innerHTML = users.map((u) => `<tr data-id="${u.id}"><td>${esc(u.username)}</td><td><span class="tag ${u.role === "admin" ? "admin" : "no"}">${esc(u.role)}</span></td><td>${u.active ? '<span class="tag ok">Active</span>' : '<span class="tag no">Disabled</span>'}</td><td>${fmt(u.last_sign_in_at) || '<span class="muted">never</span>'}</td><td>${fmtDay(u.created_at)}</td>
       <td class="row">${u.id !== me.id ? `<button class="btn small role">Make ${({ dj: "manager", manager: "admin", admin: "DJ" })[u.role]}</button><button class="btn small toggle">${u.active ? "Disable" : "Enable"}</button>` : '<span class="muted">you</span>'}</td></tr>`).join("");
     $$("#usersBody tr").forEach((tr) => {
       const u = users.find((x) => x.id === tr.dataset.id);
