@@ -28,15 +28,30 @@ The first account created becomes the admin. Open `admin.html` on the hosted sit
 1. Open the portal on the laptop, log in, choose Showrunner, pick the bar and tonight's prize, click "Go to the TV screen". From here everything on the laptop is safe to mirror to the TVs.
 2. The landing screen is "Wanna play a game?" with the QR code live, so guests can scan any time. Up/down arrows pick the game. Press **Enter** to start the clock (default 2 minutes, change it in settings). The race starts when it hits zero, or press **Enter** again to race now. **Esc** stops the clock. During a race, **Esc** aborts it (nothing scored, no prizes). On the landing screen, **Esc** goes back to the bar/prize menu.
 3. Race, winner screen (14 s), leaderboard (15 s), then back to the landing screen with a fresh code. **Enter** skips ahead at any point.
-4. The key bar at the bottom of the screen shows what each key does. **S** settings (bar, prize, countdown, game, which 4 racers run, mute, log out), **F** fullscreen, **M** mute. Clicking the screen also advances.
+4. The key bar at the bottom of the screen shows what each key does. **S** settings (bar, prize, countdown, game, which 4 racers run, mute, log out), **F** fullscreen, **M** mute, **R** replays the last round's winner screen (for anyone who missed it), **P** puts up a "Back soon" screen for breaks (any key returns). Clicking the screen also advances. The prize box suggests names from the prize catalogue (Admin > Prizes > Prize catalogue). Each bar only sees the games ticked for it under Admin > Bars.
 
 ## Leaderboards
 
-1 point per play, 10 for backing the winning racer. "Tonight" is per bar, Chicago time. The season board covers all six bars for whichever season includes today; manage seasons in Admin > Leaderboard.
+1 point per play, 10 for backing the winning racer. "Tonight" is per bar, Chicago time. The season board covers all six bars for whichever season includes today; manage seasons in Admin > Games > Leaderboard.
 
-## Sending prizes
+## Texting (prizes, reminders, campaigns)
 
-Admin page > **Entries** > tick "Winners only" + "Not yet texted" > **Export CSV**. Send the texts from your SMS platform, then tick **Texted** on each row. The **SMS list** tab is the de-duplicated opt-in list for general marketing.
+Texts go out through Twilio from the `sms` edge function. Three kinds happen on their own: the winner text when a round finishes (one per guest per 2 hours, with a short link to their prize wallet), a reminder the morning a prize becomes valid, and a last-call reminder two days before it expires (both can be switched off in Admin > Settings). Everything else is a campaign.
+
+**Admin tabs**
+- **Dashboard**: rounds, players, new contacts, prizes won/redeemed, texts sent/failed/queued, replies waiting, by-bar table, recent rounds. Pick 1/7/30/90 days.
+- **Contacts**: the guest database. Filter by bar, game, visited-within, lapsed, visits, birthday month, tag, not-texted-in, opted in, first-timers, has an unredeemed prize. Click a row for the profile: visits by bar, every prize (redeem or void right there), every text and why it was sent, the consent record (when and the exact wording), do-not-text hold, birthday month, tags, notes, a one-off text, and "text their wallet link". **Export CSV** includes the consent record. **Text this list** carries the filters into a new campaign. **Raw entries** is the per-game log.
+- **Campaigns**: name, message (use `{first}` for the first name; "Reply STOP to opt out" is added automatically; the counter shows characters and segments), audience filters with a live count, **Text me a test** (your number must already be a contact), **Save draft**, **Send** now or at a chosen time. Sends outside the quiet-hours window move to the next window; nobody gets two campaigns inside the minimum gap. Click a campaign to see per-number delivery.
+- **Messages**: **Inbox** is guest replies that need an answer (STOP/HELP are handled automatically); reply inline. **All texts**, **Failed**, **Queued**.
+- **Prizes**: issued prizes with status and CSV; **Prize catalogue** feeds the Showrunner's prize picker.
+- **Games**: shell game shuffles and pick seconds; racers with seasonal from/to dates (MM-DD, e.g. a pumpkin 10-01 to 11-01); leaderboard and seasons; round history.
+- **Bars**: name, colours, logo, tagline, default prize, which games the bar offers.
+- **Settings**: test mode and test numbers, quiet hours, minimum days between campaigns, prize validity window, express entry hours, lapsed days, reminders on/off, retention months. Every change is in the audit log beside it.
+- **Logins**: DJs, managers, admins, with last sign-in.
+
+**Test mode** is on until Twilio is connected and tested: only the numbers in Settings > Test numbers receive anything; everyone else's texts are marked skipped. Turn it off in Settings when you are ready.
+
+**Short links** in texts look like `lastcalltaverngames.com/r/abc12`; `site/404.html` hands them to `site/r/index.html`, which counts the click and forwards to the wallet.
 
 ## Announcer clips
 
@@ -67,7 +82,7 @@ MP3s in `site/sfx/` replace the generated sounds when present. Keys: `music-1`, 
 
 ## Prize redemption (managers)
 
-Managers log in at the portal and choose Prize Redemption (`staff.html`), pick their bar, type the guest's phone number, and tap Redeem. Prizes are created automatically for winners when a race ends, valid from midnight the next day for 14 days, at any LCTG bar, once. Admin > Prizes shows issued, redeemed, outstanding and a CSV export; admins can void a prize. Give manager accounts the Manager role under Admin > Logins. Reconcile: redeemed count per bar should match the LCTG Prize comps in Toast.
+Managers log in at the portal and choose Prize Redemption (`staff.html`), pick their bar, type the guest's phone number (or scan the QR on the guest's prize page with the phone camera, which opens the same page with the guest already looked up), and tap Redeem. Guests see their own wallet at `prizes.html` via the link in their text or by phone number + texted code. Prizes are created automatically for winners when a race ends, valid from midnight the next day for 14 days, at any LCTG bar, once. Admin > Prizes shows issued, redeemed, outstanding and a CSV export; admins can void a prize. Give manager accounts the Manager role under Admin > Logins. Reconcile: redeemed count per bar should match the LCTG Prize comps in Toast.
 
 ## Track themes
 

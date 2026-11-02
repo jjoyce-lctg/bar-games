@@ -79,7 +79,11 @@
     let last = null; try { last = localStorage.getItem("bg.venue"); } catch {} if (last && venues.some((v) => v.id === last)) sel.value = last;
     show("viewVenue");
   }
-  $("#btnVenue").onclick = () => { venue = venues.find((v) => v.id === $("#venueSelect").value); try { localStorage.setItem("bg.venue", venue.id); } catch {} $("#venuePill").textContent = venue.name; $("#venuePill").classList.remove("hidden"); show("viewMain"); $("#phone").focus(); };
+  $("#btnVenue").onclick = async () => { venue = venues.find((v) => v.id === $("#venueSelect").value); try { localStorage.setItem("bg.venue", venue.id); } catch {} $("#venuePill").textContent = venue.name; $("#venuePill").classList.remove("hidden"); show("viewMain"); $("#phone").focus();
+    // opened by scanning the QR on a guest's wallet page: staff.html?t=<wallet token>
+    const t = new URLSearchParams(location.search).get("t");
+    if (t) { history.replaceState(null, "", "staff.html"); try { const ph = await api.walletPhoneByToken(t); if (ph) { $("#phone").value = fmtPhone(ph); lookup(); } else { const err = $("#lookupError"); err.textContent = "That QR code has expired. Ask for their phone number."; err.classList.remove("hidden"); } } catch (e) { const err = $("#lookupError"); err.textContent = e.message; err.classList.remove("hidden"); } }
+  };
 
   $("#phone").addEventListener("input", (e) => { const d = normPhone(e.target.value); if (d.length === 10) e.target.value = fmtPhone(d); });
   $("#phone").addEventListener("keydown", (e) => e.key === "Enter" && lookup());

@@ -25,6 +25,7 @@
   .prize .when { color: var(--muted); font-size: .9rem; }
   .prize .tag { display: inline-block; font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: .2rem .5rem; border-radius: 6px; margin-bottom: .5rem; }
   .tag.active { background: var(--accent); color: #111; } .tag.not_yet { background: #2d6cdf; color: #fff; } .tag.redeemed { background: #2e8b57; color: #fff; } .tag.expired, .tag.voided { background: var(--line); color: var(--muted); }
+  .qr { margin: .6rem auto 1.2rem; text-align: center; } .qr svg { width: 150px; height: 150px; background: #fff; padding: 8px; border-radius: 10px; } .qr p { margin: .4rem 0 0; font-size: .85rem; color: var(--muted); }
   .show { margin-top: .7rem; padding: .7rem .9rem; border-radius: 10px; background: rgba(255,205,0,.12); color: #ffe27a; font-weight: 700; font-size: .92rem; }
   .code-row { display: grid; grid-template-columns: 1fr auto; gap: .6rem; }
   input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-weight: 800; }
@@ -40,7 +41,7 @@
   <p class="fine">Prizes are valid from the day after they're won, for 14 days, at any Last Call Tavern Group bar. Must be 21+ to claim. One redemption per prize. <a href="index.html">lastcalltaverngames.com</a></p>
 </div>
 
-<script src="config.js?v=__BUILD__"></script><script src="vendor/supabase.js?v=__BUILD__"></script><script src="common.js?v=__BUILD__"></script>
+<script src="config.js?v=__BUILD__"></script><script src="vendor/supabase.js?v=__BUILD__"></script><script src="vendor/qrcode.js?v=__BUILD__"></script><script src="common.js?v=__BUILD__"></script>
 <script>
 (async function () {
   const { api, $, $$, esc, normPhone, fmtPhone } = window.BG;
@@ -64,12 +65,13 @@
       </div>`;
     content.innerHTML = `<h1>${first ? `${esc(first.toUpperCase())}'S` : "MY"} <span>PRIZES</span></h1><p class="sub">${esc(fmtPhone(w.phone))} &middot; <a href="prizes.html?edit=1" id="notme">Not you?</a></p>
       ${ps.length ? "" : `<div class="empty"><div class="e">🎲</div><b>No prizes yet.</b><p>Win a game night at any of our bars and it'll show up here.</p></div>`}
-      ${active.length ? `<div class="sec hot">Ready to redeem</div>${active.map(card).join("")}` : ""}
+      ${active.length ? `<div class="sec hot">Ready to redeem</div>${active.map(card).join("")}<div class="qr">${qrSvg(location.origin + "/staff.html?t=" + encodeURIComponent(token))}<p>Staff can also scan this instead of typing your number.</p></div>` : ""}
       ${soon.length ? `<div class="sec">Starting tomorrow</div>${soon.map(card).join("")}` : ""}
       ${rest.length ? `<div class="sec">Earlier</div>${rest.map(card).join("")}` : ""}`;
     $("#notme").onclick = () => { try { localStorage.removeItem("bg.wallet"); } catch {} };
   }
 
+  function qrSvg(text) { try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); } catch { return ""; } }
   function renderLookup(msg) {
     content.innerHTML = `<h1>MY <span>PRIZES</span></h1><p class="sub">Enter the mobile number you play with and we'll text you a code.</p>
       ${msg ? `<div class="error">${esc(msg)}</div>` : ""}

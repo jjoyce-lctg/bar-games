@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Last Call Tavern Games</title>
+<link rel="stylesheet" href="/style.css?v=__BUILD__">
+<style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.box{text-align:center;padding:2rem}.box h1{font-family:var(--display);letter-spacing:.04em}.box h1 span{color:var(--accent)}</style>
+</head>
+<body>
+<div class="box"><h1>LAST CALL <span>TAVERN GAMES</span></h1><p id="msg" class="muted">One moment...</p></div>
+<script>
+  // GitHub Pages serves this for any unknown path. Short links /r/<code> are handed to the resolver; anything else goes home.
+  const m = location.pathname.match(/\/r\/([A-Za-z0-9]{3,12})\/?$/);
+  if (m) location.replace("/r/?" + m[1]); else document.getElementById("msg").innerHTML = 'That page does not exist. <a href="/">Go to the home page</a> or <a href="/prizes.html">look up your prizes</a>.';
+</script>
+</body>
+</html>

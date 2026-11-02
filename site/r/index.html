@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Last Call Tavern Games</title>
+<link rel="stylesheet" href="/style.css?v=__BUILD__">
+<style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.box{text-align:center;padding:2rem}.box h1{font-family:var(--display);letter-spacing:.04em}.box h1 span{color:var(--accent)}</style>
+</head>
+<body>
+<div class="box"><h1>LAST CALL <span>TAVERN GAMES</span></h1><p id="msg" class="muted">One moment...</p></div>
+<script src="/config.js?v=__BUILD__"></script>
+<script src="/vendor/supabase.js?v=__BUILD__"></script>
+<script src="/common.js?v=__BUILD__"></script>
+<script>
+(async function () {
+  // short links look like /r/abc12 (served by 404.html on GitHub Pages) or /r/?abc12 or /r/#abc12
+  const m = location.pathname.match(/\/r\/([A-Za-z0-9]{3,12})\/?$/);
+  const code = (m && m[1]) || location.search.slice(1).replace(/[^A-Za-z0-9]/g, "") || location.hash.slice(1).replace(/[^A-Za-z0-9]/g, "");
+  const msg = document.getElementById("msg");
+  if (!code) { msg.innerHTML = 'That link is missing its code. <a href="/prizes.html">Look up your prizes by phone number</a>.'; return; }
+  try {
+    const url = await window.BG.api.linkResolve(code);
+    if (url && /^https?:\/\//.test(url)) { location.replace(url); return; }
+    msg.innerHTML = 'That link has expired. <a href="/prizes.html">Look up your prizes by phone number</a>.';
+  } catch (e) { msg.innerHTML = 'Something went wrong. <a href="/prizes.html">Look up your prizes by phone number</a>.'; }
+})();
+</script>
+</body>
+</html>

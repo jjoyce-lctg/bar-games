@@ -103,7 +103,7 @@
   <section id="viewVenue" class="card login-box stack hidden">
     <h1>Which bar are you at?</h1>
     <select id="venueSelect"></select>
-    <div><label>Tonight's prize</label><input id="prize" placeholder="e.g. a free round, $10 gift card, a shot"></div>
+    <div><label>Tonight's prize</label><input id="prize" list="prizeList" placeholder="e.g. a free round, $10 gift card, a shot"><datalist id="prizeList"></datalist></div>
     <button id="btnVenue" class="btn primary big" style="width:100%">Go to the TV screen</button>
     <p class="muted" style="font-size:.85rem">From here on everything is TV-safe. The key bar at the bottom of the screen shows what each key does.</p>
   </section>
@@ -124,7 +124,7 @@
 <div id="settings" class="stack">
   <h2>Settings</h2>
   <div><label>Bar</label><select id="sVenue"></select></div>
-  <div><label>Tonight's prize</label><input id="sPrize"></div>
+  <div><label>Tonight's prize</label><input id="sPrize" list="prizeList"></div>
   <div><label>Sign-up countdown (seconds)</label><input id="sCountdown" type="number" min="20" max="600" step="5"></div>
   <div><label>Game</label><select id="sGame"></select></div>
   <div id="sRacersRow"><label>Racers (pick 4)</label><div id="sRacers" class="stack" style="gap:.4rem"></div></div>
@@ -169,7 +169,10 @@
   $("#btnLogin").onclick = doLogin; $("#password").addEventListener("keydown", (e) => e.key === "Enter" && doLogin()); $("#username").addEventListener("keydown", (e) => e.key === "Enter" && $("#password").focus());
   async function afterLogin() {
     state.venues = await api.listVenues();
-    state.games = (await api.listGames()).map((g) => ({ ...g, options: decorateOptions(g.options) }));
+    const inSeason = (o) => { if (!o.from || !o.to) return true; const d = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }).slice(5); return o.from <= o.to ? d >= o.from && d <= o.to : d >= o.from || d <= o.to; };
+    state.allGames = (await api.listGames()).map((g) => ({ ...g, options: decorateOptions((g.options || []).filter(inSeason)) }));
+    state.games = state.allGames;
+    try { state.catalog = await api.listCatalog(); $("#prizeList").innerHTML = state.catalog.filter((c) => c.active).map((c) => `<option value="${esc(c.name)}">`).join(""); } catch {}
     try { state.season = await api.currentSeason(); } catch {}
     for (const id of ["venueSelect", "sVenue"]) $("#" + id).innerHTML = state.venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
     $("#sGame").innerHTML = state.games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
@@ -180,6 +183,9 @@
   }
   function setVenue(id) {
     state.venue = state.venues.find((v) => v.id === id); try { localStorage.setItem("bg.venue", id); } catch {}
+    const en = state.venue.games_enabled; state.games = en && en.length ? state.allGames.filter((g) => en.includes(g.key)) : state.allGames; if (!state.games.length) state.games = state.allGames;
+    if (!state.games.some((g) => g.key === state.settings.gameKey)) state.settings.gameKey = state.games[0].key;
+    $("#sGame").innerHTML = state.games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
     const v = state.venue; stage.style.setProperty("--primary", v.color_primary || "#004c54"); stage.style.setProperty("--accent", v.color_accent || "#ffcd00");
     $("#stVenue").textContent = v.name; $("#stTag").textContent = v.tagline || "";
     const img = $("#stLogo"); if (v.logo_url) { img.src = v.logo_url; img.classList.remove("hidden"); } else img.classList.add("hidden");
@@ -238,7 +244,7 @@
   const prizeText = () => state.settings.prize || state.venue.default_prize || "";
   function qrSvg(text) { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
 
-  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["T", "Demo race"], ["S", "Settings"], ["M", "Mute"], ["ESC", "Menu"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [["ESC", "Abort race"]] };
+  const KEYS = { landing: [["ENTER", "Start the clock"], ["↑↓", "Game"], ["T", "Demo race"], ["R", "Replay results"], ["P", "Pause"], ["S", "Settings"], ["M", "Mute"], ["ESC", "Menu"]], paused: [["ANY KEY", "Back to the game"]], signup: [["ENTER", "Race now"], ["ESC", "Stop clock"], ["M", "Mute"]], results: [["ENTER", "Leaderboard"]], board: [["ENTER", "Next"]], running: [["ESC", "Abort race"]] };
   const keybar = (phase) => { $("#stHint").innerHTML = `<div class="keys">${(KEYS[phase] || []).filter(([k]) => k !== "T" || isMarbles()).map(([k, l]) => `<span><b>${k}</b>${l}</span>`).join("")}</div>`; };
 
   // LANDING: "Wanna play a game?" with the QR live; the clock starts on Enter
@@ -334,7 +340,8 @@
     $("#stFootLeft").innerHTML = ""; $("#stageBody").innerHTML = `<div id="raceHost" style="position:absolute;inset:0"></div>`;
     const mod = await import("./shellgame.js?v=__BUILD__");
     const chan = api.roundChannel(state.round.code); const round = state.round;
-    state.raceCtl = await mod.run($("#raceHost"), { pickSeconds: 10, swaps: 20,
+    const gs = state.game.settings || {};
+    state.raceCtl = await mod.run($("#raceHost"), { pickSeconds: Math.max(5, Math.min(30, +gs.pick_seconds || 10)), swaps: Math.max(6, Math.min(40, +gs.swaps || 20)),
       onPickOpen: async (secs) => { let closes = null; try { closes = await api.openPicks(round.id, secs); } catch (e) { toast(e.message); } if (!closes) closes = new Date(Date.now() + secs * 1000).toISOString(); chan.send({ t: "pick", closes }); try { AUDIO.event("choose"); } catch {} return closes; },
       onDone: async ({ ballSlot }) => { const winner = { id: "c" + (ballSlot + 1), label: "Cup " + (ballSlot + 1), image_url: "shell/cup.png" }; try { await api.finishRound(round.id, winner.id); } catch (e) { toast(e.message); } chan.send({ t: "finished" }); setTimeout(() => chan.close(), 3000); renderResults(winner); } });
   }
@@ -364,8 +371,21 @@
       } });
   }
 
-  async function renderResults(winner) {
+  // P on the lobby: a quiet "back soon" screen for breaks. R: show the last round's results again.
+  function renderPause() {
+    clearTimers(); state.phase = "paused"; stage.classList.add("dark"); try { AUDIO.event("end"); } catch {}
+    $("#stageBody").innerHTML = `<div class="results" style="justify-content:center"><h1 style="font-size:12vh">BACK <span>SOON</span></h1><p style="font-size:3.2vh;opacity:.8">Last Call Tavern Games is taking a short break. Keep your phone handy.</p></div>`;
+    $("#stFootLeft").innerHTML = ""; keybar("paused");
+  }
+  function endReplay() { state.replaying = false; state.round = state.replayFrom; renderLanding(); }
+  async function replayLast() {
+    if (!state.lastResult) return toast("No round to replay yet tonight.");
+    clearTimers(); const cur = state.round; state.round = state.lastResult.round; state.replayFrom = cur;
+    await renderResults(state.lastResult.winner, { replay: true });
+  }
+  async function renderResults(winner, opts = {}) {
     state.phase = "results"; try { AUDIO.event("results"); } catch {}
+    state.replaying = !!opts.replay; if (!opts.replay) state.lastResult = { winner, round: state.round };
     let s = { winners: [], count: 0 }; try { s = await api.roundStats(state.round.id); } catch {}
     const names = s.winners.map(firstLast);
     $("#stageBody").innerHTML = `<div class="results">
@@ -382,7 +402,8 @@
       const tick = (now) => { if (state.phase !== "results") return; a.tick((now - lastT) / 1000, 1); lastT = now; requestAnimationFrame(tick); }; requestAnimationFrame(tick);
     })();
     confetti($("#confetti"));
-    state.auto = setTimeout(renderBoard, 14000);
+    if (opts.replay) { $("#stFootLeft").innerHTML += ` <span style="opacity:.6">(replay)</span>`; state.auto = setTimeout(endReplay, 14000); }
+    else state.auto = setTimeout(renderBoard, 14000);
   }
 
   async function renderBoard() {
@@ -413,14 +434,17 @@
     try { AUDIO.unlock(); } catch {}
     if (state.phase === "landing") startSignup();
     else if (state.phase === "signup") startRace();
-    else if (state.phase === "results") renderBoard();
+    else if (state.phase === "results") { if (state.replaying) endReplay(); else renderBoard(); }
     else if (state.phase === "board") renderLanding({ fresh: true });
   }
   document.addEventListener("keydown", async (e) => {
     const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
     if (settings.classList.contains("on")) { if (e.key === "Escape" || (e.key.toLowerCase() === "s" && !typing)) { e.preventDefault(); closeSettings(); } return; }
     if (typing || state.phase === "console") return;
+    if (state.phase === "paused") { e.preventDefault(); renderLanding(); return; }
     if (e.key.toLowerCase() === "f") { toggleFullscreen(); return; }
+    if (e.key.toLowerCase() === "p" && state.phase === "landing") { e.preventDefault(); renderPause(); return; }
+    if (e.key.toLowerCase() === "r" && state.phase === "landing") { e.preventDefault(); replayLast(); return; }
     if (e.key.toLowerCase() === "s") { e.preventDefault(); openSettings(); return; }
     if (e.key.toLowerCase() === "t") { e.preventDefault(); demoMarbles(); return; }
     if (e.key.toLowerCase() === "d" && state.raceCtl && state.raceCtl.toggleStats) { state.raceCtl.toggleStats(); return; }
@@ -429,6 +453,7 @@
     if (e.key === "Escape") {
       if (state.phase === "signup") stopClock();                       // clock running: stop it, keep the sign-ups
       else if (state.phase === "running") abortRace();                  // mid-race: throw the race out, nothing saved
+      else if (state.phase === "results" && state.replaying) endReplay();
       else if (state.phase === "results" || state.phase === "board") renderLanding({ fresh: true });
       else if (state.phase === "landing") exitToMenu();                 // lobby: back to the bar/prize screen
     }
